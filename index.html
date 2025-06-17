@@ -1,0 +1,3274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRT・PRA理論 インタラクティブ・シミュレータ v4.0 - 多重重力源モデル</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            width: 320px;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        #control-panel.collapsed {
+            height: auto;
+            max-height: 60px;
+            overflow: hidden;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .collapse-button {
+            width: 30px;
+            height: 30px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        .collapse-button:hover {
+            background: #d1d5db;
+        }
+        .panel-content {
+            transition: all 0.3s ease;
+        }
+        #control-panel.collapsed .panel-content {
+            display: none;
+        }
+        h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #1f2937;
+        }
+        h2 {
+            font-size: 14px;
+            margin: 15px 0 10px 0;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 5px;
+        }
+        .parameter-group {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .parameter {
+            margin-bottom: 12px;
+        }
+        .parameter label {
+            display: block;
+            font-size: 12px;
+            color: #4b5563;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .parameter input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .parameter input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .parameter input[type="range"]::-webkit-slider-thumb:hover {
+            background: #2563eb;
+        }
+        .parameter-value {
+            display: inline-block;
+            font-size: 11px;
+            color: #6b7280;
+            margin-left: 8px;
+            min-width: 40px;
+            text-align: right;
+        }
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .preset-button {
+            padding: 6px 12px;
+            background: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        .preset-button:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+        .preset-button.active {
+            background: #10b981;
+        }
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 280px;
+        }
+        .stat-item {
+            margin: 8px 0;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-label {
+            color: #4b5563;
+            font-weight: 600;
+        }
+        .stat-value {
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .stat-highlight {
+            background: #fef3c7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+        }
+        .info-box {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 10px;
+            margin: 12px 0;
+            font-size: 11px;
+            color: #1e40af;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 10px;
+            margin: 12px 0;
+            font-size: 11px;
+            color: #991b1b;
+            border-radius: 4px;
+        }
+        .toggle-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .toggle-button {
+            padding: 5px 10px;
+            background: #e5e7eb;
+            color: #4b5563;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 60px;
+        }
+        .toggle-button:hover {
+            background: #d1d5db;
+        }
+        .toggle-button.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            max-width: 200px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            border-radius: 3px;
+            border: 1px solid #e5e7eb;
+        }
+        .legend-shape {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            border: 2px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .time-controls {
+            background: #ecfdf5;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border: 1px solid #86efac;
+        }
+        .simulation-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .control-button {
+            padding: 6px 12px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .control-button:hover {
+            background: #059669;
+        }
+        .control-button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        .success-counter {
+            background: #fef3c7;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #92400e;
+        }
+        /* Comparison Mode Styles */
+        .comparison-panel {
+            position: absolute;
+            top: 200px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            z-index: 99;
+            width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            transition: all 0.3s ease;
+        }
+        .comparison-panel.collapsed {
+            height: auto;
+            max-height: 50px;
+            overflow: hidden;
+        }
+        .comparison-panel.collapsed #comparison-content {
+            display: none;
+        }
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .comparison-header h2 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .comparison-collapse-btn {
+            width: 24px;
+            height: 24px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .comparison-collapse-btn:hover {
+            background: #d1d5db;
+        }
+        .comparison-panel.active {
+            display: block;
+        }
+        .scenario-card {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        .scenario-card.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .scenario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .scenario-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .scenario-controls {
+            display: flex;
+            gap: 4px;
+        }
+        .scenario-button {
+            padding: 4px 8px;
+            background: #e5e7eb;
+            color: #4b5563;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+        .scenario-button:hover {
+            background: #d1d5db;
+        }
+        .comparison-chart {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            height: 300px;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .mode-button {
+            padding: 8px 16px;
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .mode-button.active {
+            background: white;
+            color: #1f2937;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .cluster-visualization {
+            position: absolute;
+            bottom: 280px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 200px;
+        }
+        .cluster-item {
+            margin: 6px 0;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cluster-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        /* Tooltip styles */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            background: #6b7280;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 14px;
+            font-size: 10px;
+            margin-left: 4px;
+            cursor: help;
+        }
+        .tooltip-content {
+            visibility: hidden;
+            width: 250px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .tooltip-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1f2937 transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <div class="legend">
+            <h2 style="margin-top: 0; font-size: 14px;">資源の発展段階</h2>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #8b5cf6;"></div>
+                <span>純粋探索</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ef4444;"></div>
+                <span>移行期</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f97316;"></div>
+                <span>応用開発</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #10b981;"></div>
+                <span>市場活用</span>
+            </div>
+            <h2 style="font-size: 14px; margin-top: 15px;">資源タイプ</h2>
+            <div class="legend-item">
+                <div class="legend-shape" style="border-radius: 50%;">●</div>
+                <span>標準資源</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-shape">▲</div>
+                <span>探索特化型</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-shape">■</div>
+                <span>活用特化型</span>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <h2 style="margin-top: 0; font-size: 16px;">リアルタイム指標</h2>
+            
+            <div class="stat-highlight">
+                <div class="stat-item">
+                    <span class="stat-label">シミュレーション時間:</span>
+                    <span class="stat-value" id="sim-time">0.0年</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">市場化成功数:</span>
+                    <span class="stat-value" id="success-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">成功率:</span>
+                    <span class="stat-value" id="success-rate">0.0%</span>
+                </div>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">活性資源数:</span>
+                <span class="stat-value" id="active-particles">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">累計投入資源:</span>
+                <span class="stat-value" id="total-spawned">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">平均TRT進行度:</span>
+                <span class="stat-value" id="avg-trt">0.000</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">PRA分散度:</span>
+                <span class="stat-value" id="pra-dispersion">0.000</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">資源多様性指数:</span>
+                <span class="stat-value" id="diversity-index">0.000</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">クラスター数:</span>
+                <span class="stat-value" id="cluster-count">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">重力源数:</span>
+                <span class="stat-value" id="gravity-sources">1</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">頂点混雑度:</span>
+                <span class="stat-value" id="vertex-congestion">0%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">待機中資源数:</span>
+                <span class="stat-value" id="queued-particles">0</span>
+            </div>
+        </div>
+
+        <div id="control-panel">
+            <div class="panel-header">
+                <h1>TRT・PRA 戦略シミュレータ v4.0</h1>
+                <button class="collapse-button" onclick="togglePanel()">▼</button>
+            </div>
+            
+            <div class="panel-content">
+                <div class="warning-box">
+                    <strong>v4.0 革新的機能：</strong>多重重力源モデル - 中央戦略、クラスター、プロジェクト間の複雑な引力相互作用を実装
+                </div>
+                
+                <div class="mode-selector">
+                    <button class="mode-button active" onclick="setMode('single', this)">単独シミュレーション</button>
+                    <button class="mode-button" onclick="setMode('comparison', this)">比較分析モード <span style="font-size: 10px;">(開発中)</span></button>
+                </div>
+                
+                <div class="time-controls">
+                    <h2>時間シミュレーション</h2>
+                    <div class="parameter">
+                        <label>時間スケール（1秒 = X年）<span class="parameter-value" id="timeScale-value">0.1</span></label>
+                        <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01">
+                    </div>
+                    <div class="parameter">
+                        <label>資源投入間隔（年）<span class="parameter-value" id="spawnInterval-value">0.5</span></label>
+                        <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>バッチサイズ（同時投入数）<span class="parameter-value" id="batchSize-value">3</span></label>
+                        <input type="range" id="batchSize" min="1" max="10" value="3" step="1">
+                    </div>
+                    <div class="simulation-controls">
+                        <button class="control-button" onclick="startSimulation()">開始</button>
+                        <button class="control-button" onclick="pauseSimulation()">一時停止</button>
+                        <button class="control-button" onclick="resetSimulation()">リセット</button>
+                    </div>
+                </div>
+                
+                <div class="preset-buttons">
+                    <button class="preset-button" onclick="loadPreset('centralized', this)">中央集権型</button>
+                    <button class="preset-button" onclick="loadPreset('distributed', this)">分散自律型</button>
+                    <button class="preset-button" onclick="loadPreset('hybrid', this)">ハイブリッド型</button>
+                    <button class="preset-button" onclick="loadPreset('emergent', this)">創発重視型</button>
+                </div>
+
+                <div class="parameter-group">
+                    <h2>資源特性</h2>
+                    <div class="parameter">
+                        <label>資源異質性<span class="parameter-value" id="heterogeneity-value">0.5</span></label>
+                        <input type="range" id="heterogeneity" min="0" max="1.0" value="0.5" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>資源寿命変動<span class="parameter-value" id="lifespanVariance-value">0.3</span></label>
+                        <input type="range" id="lifespanVariance" min="0" max="1.0" value="0.3" step="0.1">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <h2>TRT（時間軸的資源移行）
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-content">
+                                探索から活用への段階的な移行を表します。<br>
+                                垂直推進力：研究開発から市場投入への移行速度<br>
+                                上昇加速度：成熟段階での成長加速度<br>
+                                ティッピングポイント：急成長が始まる臨界点
+                            </span>
+                        </span>
+                    </h2>
+                    <div class="parameter">
+                        <label>垂直推進力<span class="parameter-value" id="trtForce-value">0.015</span></label>
+                        <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001">
+                    </div>
+                    <div class="parameter">
+                        <label>上昇加速度<span class="parameter-value" id="trtAcceleration-value">1.0</span></label>
+                        <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>ティッピングポイント<span class="parameter-value" id="tippingPoint-value">0.7</span></label>
+                        <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <h2>PRA（並列的資源配分）
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-content">
+                                多様な研究プロジェクトへの同時的な資源配分を表します。<br>
+                                水平拡散力：プロジェクト間の資源分散度<br>
+                                多様性維持係数：ポートフォリオの多様性を保つ強さ
+                            </span>
+                        </span>
+                    </h2>
+                    <div class="parameter">
+                        <label>水平拡散力<span class="parameter-value" id="praForce-value">0.02</span></label>
+                        <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001">
+                    </div>
+                    <div class="parameter">
+                        <label>多様性維持係数<span class="parameter-value" id="praDiversity-value">1.0</span></label>
+                        <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="parameter-group" style="background: #f0fdf4; border-color: #86efac;">
+                    <h2>多重重力源ダイナミクス【NEW】
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-content">
+                                組織内の多層的な引力構造を表現します。<br>
+                                中央収束力：本社・経営陣の戦略的統制力<br>
+                                クラスター収束力：部門間の協働の強さ<br>
+                                クラスター慣性：過度な内部結束による市場化阻害<br>
+                                市場引力：市場ニーズによる牽引力<br>
+                                粒子間引力：個人/プロジェクト間の自発的協力
+                            </span>
+                        </span>
+                    </h2>
+                    <div class="parameter">
+                        <label>中央収束力<span class="parameter-value" id="centralConvergence-value">0.03</span></label>
+                        <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>クラスター内収束力<span class="parameter-value" id="clusterConvergence-value">0.02</span></label>
+                        <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>クラスター慣性【NEW】<span class="parameter-value" id="clusterInertia-value">0.015</span></label>
+                        <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>市場引力【NEW】<span class="parameter-value" id="marketPull-value">0.02</span></label>
+                        <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>クラスター透過性【NEW】<span class="parameter-value" id="clusterPermeability-value">0.8</span></label>
+                        <input type="range" id="clusterPermeability" min="0" max="1.0" value="0.8" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>粒子間引力<span class="parameter-value" id="peerAttraction-value">0.01</span></label>
+                        <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>引力作用範囲<span class="parameter-value" id="attractionRange-value">5</span></label>
+                        <input type="range" id="attractionRange" min="2" max="10" value="5" step="1">
+                    </div>
+                    <div class="parameter">
+                        <label>クラスター形成閾値<span class="parameter-value" id="clusterThreshold-value">3</span></label>
+                        <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <h2>収束ダイナミクス</h2>
+                    <div class="parameter">
+                        <label>成功閾値（高さ）<span class="parameter-value" id="successThreshold-value">38</span></label>
+                        <input type="range" id="successThreshold" min="35" max="39.5" value="38" step="0.5">
+                    </div>
+                </div>
+
+                <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
+                    <h2>産業特性と資源再利用【NEW】
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-content">
+                                産業による成功率の違いと失敗資源の扱いを設定します。<br>
+                                バイオ：低成功率・高知識価値<br>
+                                ソフトウェア：高成功率・渋滞発生<br>
+                                消費財：中成功率・中程度の再利用
+                            </span>
+                        </span>
+                    </h2>
+                    <div class="parameter">
+                        <label>産業プロファイル<span class="parameter-value" id="industryProfile-value">hybrid</span></label>
+                        <select id="industryProfile" style="width: 100%; padding: 4px; font-size: 11px;">
+                            <option value="biotech">バイオテクノロジー</option>
+                            <option value="software">ソフトウェア・IT</option>
+                            <option value="consumer">消費財・製造業</option>
+                            <option value="hybrid" selected>ハイブリッド型</option>
+                        </select>
+                    </div>
+                    <div class="parameter">
+                        <label>資源リサイクル率<span class="parameter-value" id="resourceRecycleRate-value">0.7</span></label>
+                        <input type="range" id="resourceRecycleRate" min="0" max="1.0" value="0.7" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>知識継承率<span class="parameter-value" id="knowledgeTransferRate-value">0.3</span></label>
+                        <input type="range" id="knowledgeTransferRate" min="0" max="1.0" value="0.3" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>自然減衰率<span class="parameter-value" id="attritionRate-value">0.02</span></label>
+                        <input type="range" id="attritionRate" min="0" max="0.1" value="0.02" step="0.01">
+                    </div>
+                </div>
+
+                <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
+                    <h2>頂点容量制限</h2>
+                    <div class="parameter">
+                        <label>頂点最大容量<span class="parameter-value" id="vertexCapacity-value">5</span></label>
+                        <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1">
+                    </div>
+                    <div class="parameter">
+                        <label>容量制限半径<span class="parameter-value" id="capacityRadius-value">2</span></label>
+                        <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5">
+                    </div>
+                    <div class="parameter">
+                        <label>混雑効果係数<span class="parameter-value" id="congestionEffect-value">0.8</span></label>
+                        <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05">
+                    </div>
+                    <div class="parameter">
+                        <label>待機行動<span class="parameter-value" id="queueingBehavior-value">priority</span></label>
+                        <select id="queueingBehavior" style="width: 100%; padding: 4px; font-size: 11px;">
+                            <option value="priority">優先順位</option>
+                            <option value="random">ランダム</option>
+                            <option value="pushback">押し戻し</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="parameter-group" style="background: #e0f2fe; border-color: #0284c7;">
+                    <h2>環境バイアス【新機能】</h2>
+                    <div class="parameter">
+                        <label>円錐傾斜X軸（度）<span class="parameter-value" id="coneTiltX-value">0</span></label>
+                        <input type="range" id="coneTiltX" min="-30" max="30" value="0" step="5">
+                    </div>
+                    <div class="parameter">
+                        <label>円錐傾斜Z軸（度）<span class="parameter-value" id="coneTiltZ-value">0</span></label>
+                        <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5">
+                    </div>
+                    <div class="parameter">
+                        <label>断面非対称性X<span class="parameter-value" id="asymmetryX-value">1.0</span></label>
+                        <input type="range" id="asymmetryX" min="0.5" max="2.0" value="1.0" step="0.1">
+                    </div>
+                    <div class="parameter">
+                        <label>断面非対称性Z<span class="parameter-value" id="asymmetryZ-value">1.0</span></label>
+                        <input type="range" id="asymmetryZ" min="0.5" max="2.0" value="1.0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="parameter-group" style="background: #f0fdf4; border-color: #16a34a;">
+                    <h2>経路記憶システム【新機能】</h2>
+                    <div class="parameter">
+                        <label>経路記憶<span class="parameter-value" id="pathMemoryEnabled-value">有効</span></label>
+                        <input type="checkbox" id="pathMemoryEnabled" checked style="width: auto;">
+                    </div>
+                    <div class="parameter">
+                        <label>記憶強度<span class="parameter-value" id="pathMemoryStrength-value">0.02</span></label>
+                        <input type="range" id="pathMemoryStrength" min="0" max="0.1" value="0.02" step="0.005">
+                    </div>
+                    <div class="parameter">
+                        <label>記憶持続性<span class="parameter-value" id="pathMemoryPersistence-value">0.005</span></label>
+                        <input type="range" id="pathMemoryPersistence" min="0" max="0.02" value="0.005" step="0.001">
+                    </div>
+                </div>
+
+                <div class="toggle-buttons">
+                    <button class="toggle-button active" id="toggleCone" onclick="toggleElement('cone')">円錐</button>
+                    <button class="toggle-button active" id="toggleSections" onclick="toggleElement('sections')">断面</button>
+                    <button class="toggle-button active" id="toggleSpiral" onclick="toggleElement('spiral')">螺旋</button>
+                    <button class="toggle-button active" id="toggleSuccess" onclick="toggleElement('success')">成功表示</button>
+                    <button class="toggle-button" id="toggleTrails" onclick="toggleElement('trails')">軌跡</button>
+                    <button class="toggle-button active" id="toggleClusters" onclick="toggleElement('clusters')">クラスター</button>
+                    <button class="toggle-button" id="toggleGravity" onclick="toggleElement('gravity')" style="opacity: 0.5; cursor: not-allowed;" disabled title="重力場表示機能は開発中です">重力場 (開発中)</button>
+                    <button class="toggle-button" id="togglePathMemory" onclick="toggleElement('pathMemory')">経路記憶</button>
+                </div>
+                
+                <div class="success-counter" id="period-stats" style="display: none;">
+                    <div>5年間：<span id="five-year-stats">0/0 (0%)</span></div>
+                    <div>10年間：<span id="ten-year-stats">0/0 (0%)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cluster Visualization Panel -->
+        <div class="cluster-visualization" id="cluster-vis" style="display: none;">
+            <h2 style="margin-top: 0; font-size: 14px;">活性クラスター</h2>
+            <div id="cluster-list">
+                <!-- Clusters will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Comparison Panel -->
+        <div id="comparison-panel" class="comparison-panel">
+            <div class="comparison-header">
+                <h2 style="margin: 0; font-size: 16px;">シナリオ比較分析</h2>
+                <button class="comparison-collapse-btn" onclick="toggleComparisonPanel()">▼</button>
+            </div>
+            
+            <div id="comparison-content">
+                <div id="scenario-list">
+                    <!-- Scenarios will be dynamically added here -->
+                </div>
+                
+                <button class="control-button" onclick="addScenario()" style="width: 100%; margin: 10px 0;">
+                    ＋ シナリオ追加
+                </button>
+                
+                <div class="parameter">
+                    <label>分析期間（年）<span class="parameter-value" id="analysisYears-value">10</span></label>
+                    <input type="range" id="analysisYears" min="5" max="30" value="10" step="5">
+                </div>
+                
+                <button class="control-button" onclick="runComparison()" style="width: 100%; margin: 10px 0; background: #9ca3af; cursor: not-allowed;" disabled>
+                    比較分析実行（開発中）
+                </button>
+                
+                <div id="comparison-results" style="display: none;">
+                    <h2 style="font-size: 14px;">分析結果</h2>
+                    <div id="success-rate-chart" class="comparison-chart"></div>
+                    <div id="efficiency-chart" class="comparison-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f8f8);
+        scene.fog = new THREE.Fog(0xf8f8f8, 100, 300);
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(50, 40, 60);
+        camera.lookAt(0, 20, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 100, 50);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Ground plane
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xe0e0e0,
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Parameters object - Updated for v4.0
+        const parameters = {
+            initialParticles: 20,
+            simulationSpeed: 1.0,
+            trtForce: 0.015,
+            trtAcceleration: 1.0,
+            tippingPoint: 0.7,
+            praForce: 0.02,
+            praDiversity: 1.0,
+            // Multi-gravity source parameters - Updated for v4.0
+            centralConvergence: 0.03,      // Central strategic control
+            clusterConvergence: 0.02,      // Within-cluster cohesion
+            clusterInertia: 0.015,         // NEW: Cluster inertia effect (higher = more resistance to leaving)
+            marketPull: 0.02,              // NEW: Direct market attraction force
+            clusterPermeability: 0.8,      // NEW: Cluster boundary permeability (0=closed, 1=open)
+            peerAttraction: 0.01,          // Peer-to-peer attraction
+            attractionRange: 5,            // Attraction effect radius
+            clusterThreshold: 3,           // Minimum particles to form cluster
+            successThreshold: 38,
+            timeScale: 0.1,
+            spawnInterval: 0.5,
+            batchSize: 3,
+            heterogeneity: 0.5,
+            lifespanVariance: 0.3,
+            // Vertex Capacity Parameters - Re-implemented
+            vertexCapacity: 5,             // Maximum resources near vertex
+            capacityRadius: 2,             // Radius from vertex where capacity limit applies
+            congestionEffect: 0.8,         // Velocity reduction factor when congested
+            queueingBehavior: 'priority',  // 'priority', 'random', 'pushback'
+            // Environmental Bias Parameters - NEW
+            coneTiltX: 0,                  // Cone tilt in X direction (-30 to 30 degrees)
+            coneTiltZ: 0,                  // Cone tilt in Z direction (-30 to 30 degrees)
+            asymmetryX: 1.0,               // Cross-section asymmetry X axis (0.5 to 2.0)
+            asymmetryZ: 1.0,               // Cross-section asymmetry Z axis (0.5 to 2.0)
+            // Path Memory Parameters - NEW
+            pathMemoryEnabled: true,       // Enable path reinforcement
+            pathMemoryStrength: 0.02,      // Strength of path attraction
+            pathMemoryPersistence: 0.005,  // Memory persistence (0=no memory, 1=perfect memory)
+            pathMemoryResolution: 20,      // Grid resolution for path memory
+            // Industry and Resource Recycling - NEW
+            industryProfile: 'hybrid',     // 'biotech', 'software', 'consumer', 'hybrid'
+            resourceRecycleRate: 0.7,      // Probability of recycling failed resources
+            knowledgeTransferRate: 0.3,    // Knowledge transfer from failures
+            attritionRate: 0.02            // Natural resource attrition
+        };
+
+        // Simulation state
+        const simulationState = {
+            isRunning: false,
+            isPaused: false,
+            elapsedTime: 0,
+            lastSpawnTime: 0,
+            totalSpawned: 0,
+            successCount: 0,
+            periodStats: {
+                fiveYear: { spawned: 0, success: 0 },
+                tenYear: { spawned: 0, success: 0 }
+            },
+            mode: 'single', // 'single' or 'comparison'
+            clusters: [],   // NEW: Active clusters
+            gravitySources: [] // NEW: Multiple gravity sources
+        };
+
+        // Comparison mode data
+        const comparisonData = {
+            scenarios: [],
+            results: []
+        };
+
+        // Visibility toggles
+        const visibility = {
+            cone: true,
+            sections: true,
+            spiral: true,
+            success: true,
+            trails: false,
+            clusters: true,    // NEW
+            gravity: false,    // NEW
+            pathMemory: false  // NEW
+        };
+
+        // Main groups
+        const coneGroup = new THREE.Group();
+        const sectionsGroup = new THREE.Group();
+        const spiralGroup = new THREE.Group();
+        const particlesGroup = new THREE.Group();
+        const successGroup = new THREE.Group();
+        const trailsGroup = new THREE.Group();
+        const clustersGroup = new THREE.Group();  // NEW
+        const gravityGroup = new THREE.Group();   // NEW
+        const pathMemoryGroup = new THREE.Group(); // NEW
+        
+        scene.add(coneGroup);
+        scene.add(sectionsGroup);
+        scene.add(spiralGroup);
+        scene.add(particlesGroup);
+        scene.add(successGroup);
+        scene.add(trailsGroup);
+        scene.add(clustersGroup);
+        scene.add(gravityGroup);
+        scene.add(pathMemoryGroup);
+
+        // Cone parameters
+        const coneHeight = 40;
+        const coneRadius = 20;
+
+        // Particle types enum
+        const ParticleType = {
+            STANDARD: 'standard',
+            EXPLORER: 'explorer',
+            EXPLOITER: 'exploiter'
+        };
+
+        // Path Memory System Class
+        class PathMemory {
+            constructor(resolution = 20) {
+                this.resolution = resolution;
+                this.grid = [];
+                this.maxValue = 0;
+                
+                // Initialize 3D grid
+                for (let x = 0; x < resolution; x++) {
+                    this.grid[x] = [];
+                    for (let y = 0; y < resolution; y++) {
+                        this.grid[x][y] = [];
+                        for (let z = 0; z < resolution; z++) {
+                            this.grid[x][y][z] = 0;
+                        }
+                    }
+                }
+                
+                // Visual representation
+                this.createVisual();
+            }
+            
+            createVisual() {
+                // Create visual elements for path memory
+                this.visualElements = [];
+            }
+            
+            // Convert world position to grid coordinates
+            worldToGrid(position) {
+                const x = Math.floor((position.x / coneRadius + 1) * 0.5 * this.resolution);
+                const y = Math.floor(position.y / coneHeight * this.resolution);
+                const z = Math.floor((position.z / coneRadius + 1) * 0.5 * this.resolution);
+                
+                return {
+                    x: Math.max(0, Math.min(this.resolution - 1, x)),
+                    y: Math.max(0, Math.min(this.resolution - 1, y)),
+                    z: Math.max(0, Math.min(this.resolution - 1, z))
+                };
+            }
+            
+            // Add memory at position (success paths)
+            addMemory(position, strength = 1.0) {
+                const coords = this.worldToGrid(position);
+                
+                // Add memory with Gaussian falloff
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dy = -2; dy <= 2; dy++) {
+                        for (let dz = -2; dz <= 2; dz++) {
+                            const x = coords.x + dx;
+                            const y = coords.y + dy;
+                            const z = coords.z + dz;
+                            
+                            if (x >= 0 && x < this.resolution &&
+                                y >= 0 && y < this.resolution &&
+                                z >= 0 && z < this.resolution) {
+                                
+                                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                                const falloff = Math.exp(-distance * 0.5);
+                                this.grid[x][y][z] += strength * falloff;
+                                
+                                this.maxValue = Math.max(this.maxValue, this.grid[x][y][z]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Get memory strength at position
+            getMemoryAt(position) {
+                const coords = this.worldToGrid(position);
+                return this.grid[coords.x][coords.y][coords.z] / (this.maxValue + 0.01);
+            }
+            
+            // Apply decay to all memories
+            decay(factor) {
+                for (let x = 0; x < this.resolution; x++) {
+                    for (let y = 0; y < this.resolution; y++) {
+                        for (let z = 0; z < this.resolution; z++) {
+                            this.grid[x][y][z] *= factor;
+                        }
+                    }
+                }
+                this.maxValue *= factor;
+            }
+            
+            // Update visual representation
+            updateVisual() {
+                // Clear old visuals
+                pathMemoryGroup.children.forEach(child => {
+                    pathMemoryGroup.remove(child);
+                });
+                
+                // Create new visuals for high-memory areas
+                for (let x = 0; x < this.resolution; x += 2) {
+                    for (let y = 0; y < this.resolution; y += 2) {
+                        for (let z = 0; z < this.resolution; z += 2) {
+                            const value = this.grid[x][y][z];
+                            if (value > this.maxValue * 0.3) {
+                                const worldX = (x / this.resolution * 2 - 1) * coneRadius;
+                                const worldY = y / this.resolution * coneHeight;
+                                const worldZ = (z / this.resolution * 2 - 1) * coneRadius;
+                                
+                                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                                const material = new THREE.MeshBasicMaterial({
+                                    color: 0x00ff00,
+                                    transparent: true,
+                                    opacity: value / this.maxValue * 0.3
+                                });
+                                const cube = new THREE.Mesh(geometry, material);
+                                cube.position.set(worldX, worldY, worldZ);
+                                pathMemoryGroup.add(cube);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Initialize path memory system
+        const pathMemory = new PathMemory(parameters.pathMemoryResolution);
+
+        // Cluster class for v4.0
+        class Cluster {
+            constructor(id, center, members) {
+                this.id = id;
+                this.center = center.clone();
+                this.members = new Set(members);
+                this.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                this.strength = 1.0;
+                this.age = 0;
+                
+                // Visual representation
+                this.createVisual();
+            }
+            
+            createVisual() {
+                // Sphere to represent cluster center
+                const geometry = new THREE.SphereGeometry(1, 16, 16);
+                const material = new THREE.MeshBasicMaterial({
+                    color: this.color,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(this.center);
+                clustersGroup.add(this.mesh);
+                
+                // Ring to show influence area
+                const ringGeometry = new THREE.RingGeometry(
+                    parameters.attractionRange - 0.5,
+                    parameters.attractionRange,
+                    32
+                );
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: this.color,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                this.ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                this.ring.rotation.x = -Math.PI / 2;
+                this.ring.position.copy(this.center);
+                clustersGroup.add(this.ring);
+            }
+            
+            update(particles) {
+                // Update center based on member positions
+                if (this.members.size > 0) {
+                    const memberParticles = particles.filter(p => this.members.has(p.id));
+                    if (memberParticles.length > 0) {
+                        this.center.set(0, 0, 0);
+                        memberParticles.forEach(p => {
+                            this.center.add(p.position);
+                        });
+                        this.center.divideScalar(memberParticles.length);
+                        
+                        // Update visual position
+                        this.mesh.position.copy(this.center);
+                        this.ring.position.copy(this.center);
+                        
+                        // Update strength based on member count
+                        this.strength = Math.min(2.0, 0.5 + this.members.size * 0.1);
+                        this.mesh.scale.setScalar(this.strength);
+                    }
+                }
+                
+                this.age++;
+            }
+            
+            remove() {
+                clustersGroup.remove(this.mesh);
+                clustersGroup.remove(this.ring);
+            }
+        }
+
+        // Create cone with tilt and asymmetry
+        function createCone() {
+            while(coneGroup.children.length > 0) {
+                coneGroup.remove(coneGroup.children[0]);
+            }
+
+            // Apply transformations for tilt and asymmetry
+            coneGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
+            coneGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
+
+            // Create asymmetric cone using scaling
+            const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
+            
+            // Apply asymmetry by scaling vertices
+            const positions = coneGeometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i);
+                const z = positions.getZ(i);
+                
+                // Apply asymmetry scaling
+                positions.setX(i, x * parameters.asymmetryX);
+                positions.setZ(i, z * parameters.asymmetryZ);
+            }
+            positions.needsUpdate = true;
+            coneGeometry.computeVertexNormals();
+
+            const coneMaterial = new THREE.MeshPhongMaterial({
+                color: 0x3b82f6,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide
+            });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            cone.position.y = coneHeight / 2;
+            coneGroup.add(cone);
+
+            // Create wireframe with same transformations
+            const wireframeGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 16, 8, true);
+            
+            // Apply asymmetry to wireframe
+            const wirePositions = wireframeGeometry.attributes.position;
+            for (let i = 0; i < wirePositions.count; i++) {
+                const x = wirePositions.getX(i);
+                const z = wirePositions.getZ(i);
+                wirePositions.setX(i, x * parameters.asymmetryX);
+                wirePositions.setZ(i, z * parameters.asymmetryZ);
+            }
+            wirePositions.needsUpdate = true;
+
+            const wireframeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x2563eb,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+            wireframe.position.y = coneHeight / 2;
+            coneGroup.add(wireframe);
+        }
+
+        // Create sections with asymmetry consideration
+        function createSections() {
+            while(sectionsGroup.children.length > 0) {
+                sectionsGroup.remove(sectionsGroup.children[0]);
+            }
+
+            // Apply same transformations as cone
+            sectionsGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
+            sectionsGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
+
+            const heights = [5, 15, 25, 35];
+            const colors = [0x8b5cf6, 0xef4444, 0xf97316, 0x10b981];
+            
+            heights.forEach((height, index) => {
+                const radius = coneRadius * (1 - height / coneHeight);
+                
+                // Create elliptical ring for asymmetric sections
+                const curve = new THREE.EllipseCurve(
+                    0, 0,
+                    radius * parameters.asymmetryX,
+                    radius * parameters.asymmetryZ,
+                    0, 2 * Math.PI,
+                    false,
+                    0
+                );
+                
+                const points = curve.getPoints(50);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: colors[index],
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const ellipse = new THREE.Line(geometry, material);
+                ellipse.rotation.x = -Math.PI / 2;
+                ellipse.position.y = height;
+                sectionsGroup.add(ellipse);
+            });
+
+            // Success threshold line
+            const successHeight = parameters.successThreshold;
+            const successRadius = coneRadius * (1 - successHeight / coneHeight);
+            const successCurve = new THREE.EllipseCurve(
+                0, 0,
+                successRadius * parameters.asymmetryX,
+                successRadius * parameters.asymmetryZ,
+                0, 2 * Math.PI,
+                false,
+                0
+            );
+            
+            const successPoints = successCurve.getPoints(50);
+            const successGeometry = new THREE.BufferGeometry().setFromPoints(successPoints);
+            const successMaterial = new THREE.LineBasicMaterial({
+                color: 0xfbbf24,
+                transparent: true,
+                opacity: 0.8,
+                linewidth: 3
+            });
+            const successLine = new THREE.Line(successGeometry, successMaterial);
+            successLine.rotation.x = -Math.PI / 2;
+            successLine.position.y = successHeight;
+            sectionsGroup.add(successLine);
+        }
+
+        // Create spiral
+        function createSpiral() {
+            while(spiralGroup.children.length > 0) {
+                spiralGroup.remove(spiralGroup.children[0]);
+            }
+
+            const points = [];
+            const segments = 300;
+            
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const height = t * coneHeight;
+                const maxRadius = coneRadius * (1 - t) * 0.9;
+                const angle = t * Math.PI * 8;
+                
+                points.push(new THREE.Vector3(
+                    Math.cos(angle) * maxRadius,
+                    height,
+                    Math.sin(angle) * maxRadius
+                ));
+            }
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x6366f1,
+                transparent: true,
+                opacity: 0.8,
+                linewidth: 3
+            });
+            const spiral = new THREE.Line(geometry, material);
+            spiralGroup.add(spiral);
+        }
+
+        // Industry profiles with realistic success characteristics
+        const industryProfiles = {
+            biotech: {
+                baseSuccessRate: 0.02,      // 2% - Very low
+                congestionEffect: 0.95,     // Almost no congestion effect
+                attritionRate: 0.05,        // High natural failure
+                recycleValue: 0.9,          // High knowledge value from failures
+                capacityConstraint: false,   // No bottleneck at regulatory stage
+                description: "超低成功率・規制ゲート・高知識価値"
+            },
+            software: {
+                baseSuccessRate: 0.3,       // 30% - High
+                congestionEffect: 0.6,      // Strong congestion effect
+                attritionRate: 0.01,        // Low natural failure
+                recycleValue: 0.5,          // Moderate reuse value
+                capacityConstraint: true,    // Marketing/sales bottleneck
+                description: "高成功率・市場渋滞・迅速な再利用"
+            },
+            consumer: {
+                baseSuccessRate: 0.2,       // 20% - Moderate
+                congestionEffect: 0.7,      // Moderate congestion
+                attritionRate: 0.02,        // Moderate failure
+                recycleValue: 0.6,          // Good reuse potential
+                capacityConstraint: true,    // Shelf space limits
+                description: "中成功率・棚競争・ブランド転用可"
+            },
+            hybrid: {
+                baseSuccessRate: 0.15,      // Balanced
+                congestionEffect: 0.75,     // Balanced
+                attritionRate: 0.02,        // Balanced
+                recycleValue: 0.7,          // Balanced
+                capacityConstraint: true,    // Some constraints
+                description: "バランス型・多様な制約"
+            }
+        };
+
+        // Get current industry profile - Define before ResourceParticle class
+        function getCurrentIndustryProfile() {
+            return industryProfiles[parameters.industryProfile] || industryProfiles.hybrid;
+        }
+        
+        // Set industry-specific parameters when profile changes
+        function setIndustryParameters(profileName) {
+            const profile = industryProfiles[profileName];
+            if (!profile) return;
+            
+            // Update related parameters based on industry characteristics
+            if (profileName === 'biotech') {
+                // Ultra-low success, no congestion, high knowledge value
+                parameters.attritionRate = 0.05;
+                parameters.vertexCapacity = 15;  // No real bottleneck
+                parameters.resourceRecycleRate = 0.9;
+                parameters.knowledgeTransferRate = 0.5;
+                parameters.congestionEffect = 0.95;  // Almost no effect
+                parameters.marketPull = 0.01;  // Weak market pull
+            } else if (profileName === 'software') {
+                // High success, strong congestion, moderate recycling
+                parameters.attritionRate = 0.01;
+                parameters.vertexCapacity = 3;   // Strong bottleneck
+                parameters.resourceRecycleRate = 0.5;
+                parameters.knowledgeTransferRate = 0.2;
+                parameters.congestionEffect = 0.6;
+                parameters.marketPull = 0.04;  // Strong market pull
+            } else if (profileName === 'consumer') {
+                // Moderate everything
+                parameters.attritionRate = 0.02;
+                parameters.vertexCapacity = 5;
+                parameters.resourceRecycleRate = 0.6;
+                parameters.knowledgeTransferRate = 0.3;
+                parameters.congestionEffect = 0.7;
+                parameters.marketPull = 0.03;
+            } else { // hybrid
+                // Keep current parameter values
+                parameters.attritionRate = 0.02;
+                parameters.vertexCapacity = 5;
+                parameters.resourceRecycleRate = 0.7;
+                parameters.knowledgeTransferRate = 0.3;
+                parameters.congestionEffect = 0.75;
+                parameters.marketPull = 0.02;
+            }
+            
+            // Update UI to reflect changes
+            updateParameterDisplays();
+        }
+        
+        // Update parameter displays in UI
+        function updateParameterDisplays() {
+            // Update all parameter value displays
+            Object.keys(parameters).forEach(key => {
+                const element = document.getElementById(`${key}-value`);
+                const input = document.getElementById(key);
+                if (element && input) {
+                    input.value = parameters[key];
+                    if (typeof parameters[key] === 'number') {
+                        element.textContent = key.includes('Rate') || key.includes('Persistence') || 
+                                            key.includes('Effect') || key.includes('Force') || 
+                                            key.includes('Convergence') || key.includes('Pull') || 
+                                            key.includes('Attraction') || key.includes('Permeability') ? 
+                                            parameters[key].toFixed(3) : parameters[key];
+                    } else {
+                        element.textContent = parameters[key];
+                    }
+                }
+            });
+        }
+        class SpatialGrid {
+            constructor(size, divisions) {
+                this.size = size;
+                this.divisions = divisions;
+                this.cellSize = size / divisions;
+                this.grid = {};
+            }
+            
+            getKey(x, y, z) {
+                const ix = Math.floor((x + this.size/2) / this.cellSize);
+                const iy = Math.floor(y / this.cellSize);
+                const iz = Math.floor((z + this.size/2) / this.cellSize);
+                return `${ix},${iy},${iz}`;
+            }
+            
+            clear() {
+                this.grid = {};
+            }
+            
+            insert(particle) {
+                const key = this.getKey(particle.position.x, particle.position.y, particle.position.z);
+                if (!this.grid[key]) {
+                    this.grid[key] = [];
+                }
+                this.grid[key].push(particle);
+            }
+            
+            getNearbyParticles(position, radius) {
+                const nearby = [];
+                const cellRadius = Math.ceil(radius / this.cellSize);
+                
+                const centerX = Math.floor((position.x + this.size/2) / this.cellSize);
+                const centerY = Math.floor(position.y / this.cellSize);
+                const centerZ = Math.floor((position.z + this.size/2) / this.cellSize);
+                
+                for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+                    for (let dy = -cellRadius; dy <= cellRadius; dy++) {
+                        for (let dz = -cellRadius; dz <= cellRadius; dz++) {
+                            const key = `${centerX + dx},${centerY + dy},${centerZ + dz}`;
+                            if (this.grid[key]) {
+                                this.grid[key].forEach(particle => {
+                                    if (position.distanceTo(particle.position) <= radius) {
+                                        nearby.push(particle);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                return nearby;
+            }
+        }
+        
+        // Initialize spatial grid
+        const spatialGrid = new SpatialGrid(coneRadius * 2, 10);
+
+        // Find clusters using DBSCAN-like algorithm with spatial optimization
+        function findClusters(particles) {
+            const clusters = [];
+            const visited = new Set();
+            const noise = new Set();
+            
+            // Rebuild spatial grid for efficient neighbor search
+            spatialGrid.clear();
+            particles.forEach(p => spatialGrid.insert(p));
+            
+            particles.forEach(particle => {
+                if (visited.has(particle.id)) return;
+                visited.add(particle.id);
+                
+                // Use spatial grid for efficient neighbor search
+                const neighbors = spatialGrid.getNearbyParticles(particle.position, parameters.attractionRange)
+                    .filter(other => other.id !== particle.id);
+                
+                if (neighbors.length < parameters.clusterThreshold - 1) {
+                    noise.add(particle.id);
+                } else {
+                    const cluster = new Set([particle.id]);
+                    const stack = [...neighbors];
+                    
+                    while (stack.length > 0) {
+                        const current = stack.pop();
+                        if (visited.has(current.id)) continue;
+                        visited.add(current.id);
+                        cluster.add(current.id);
+                        
+                        // Use spatial grid for neighbor search
+                        const currentNeighbors = spatialGrid.getNearbyParticles(current.position, parameters.attractionRange)
+                            .filter(other => other.id !== current.id);
+                        
+                        if (currentNeighbors.length >= parameters.clusterThreshold - 1) {
+                            currentNeighbors.forEach(n => {
+                                if (!visited.has(n.id)) stack.push(n);
+                            });
+                        }
+                    }
+                    
+                    if (cluster.size >= parameters.clusterThreshold) {
+                        // Calculate cluster center
+                        const center = new THREE.Vector3(0, 0, 0);
+                        const clusterParticles = particles.filter(p => cluster.has(p.id));
+                        clusterParticles.forEach(p => center.add(p.position));
+                        center.divideScalar(clusterParticles.length);
+                        
+                        clusters.push({
+                            members: Array.from(cluster),
+                            center: center
+                        });
+                    }
+                }
+            });
+            
+            return clusters;
+        }
+
+        // Update cluster visualization
+        function updateClusters(particles) {
+            const newClusters = findClusters(particles.filter(p => p.isActive));
+            
+            // Remove old clusters
+            simulationState.clusters.forEach(cluster => cluster.remove());
+            simulationState.clusters = [];
+            
+            // Create new clusters
+            newClusters.forEach((clusterData, index) => {
+                const cluster = new Cluster(
+                    `cluster_${Date.now()}_${index}`,
+                    clusterData.center,
+                    clusterData.members
+                );
+                simulationState.clusters.push(cluster);
+            });
+            
+            // Update cluster panel
+            updateClusterPanel();
+        }
+
+        function updateClusterPanel() {
+            const clusterList = document.getElementById('cluster-list');
+            clusterList.innerHTML = '';
+            
+            simulationState.clusters.forEach((cluster, index) => {
+                const item = document.createElement('div');
+                item.className = 'cluster-item';
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <div class="cluster-color" style="background: #${cluster.color.getHexString()};"></div>
+                        <span>クラスター ${index + 1}</span>
+                    </div>
+                    <span>${cluster.members.size} 資源</span>
+                `;
+                clusterList.appendChild(item);
+            });
+            
+            // Show/hide panel based on cluster count
+            document.getElementById('cluster-vis').style.display = 
+                simulationState.clusters.length > 0 ? 'block' : 'none';
+        }
+
+        // Resource particle class with heterogeneity - Updated for v4.0
+        class ResourceParticle {
+            constructor(id, spawnTime = 0) {
+                this.id = id;
+                this.spawnTime = spawnTime;
+                this.age = 0;
+                this.clusterId = null;  // NEW
+                this.generation = 0;    // NEW: Track recycling generations
+                this.inheritedKnowledge = 0;  // NEW: Accumulated knowledge from failures
+                
+                // Determine particle type based on heterogeneity
+                const typeRandom = Math.random();
+                if (parameters.heterogeneity > 0) {
+                    if (typeRandom < parameters.heterogeneity * 0.3) {
+                        this.type = ParticleType.EXPLORER;
+                    } else if (typeRandom < parameters.heterogeneity * 0.6) {
+                        this.type = ParticleType.EXPLOITER;
+                    } else {
+                        this.type = ParticleType.STANDARD;
+                    }
+                } else {
+                    this.type = ParticleType.STANDARD;
+                }
+                
+                // Set particle attributes based on type
+                this.setAttributesByType();
+                
+                // Initial position
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * coneRadius * 0.8;
+                
+                this.position = new THREE.Vector3(
+                    Math.cos(angle) * radius,
+                    0.5,
+                    Math.sin(angle) * radius
+                );
+                
+                this.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.05,
+                    Math.random() * 0.02 + 0.01,
+                    (Math.random() - 0.5) * 0.05
+                );
+                
+                // Create visual representation
+                this.createMesh();
+                
+                // Trail for path tracking
+                this.trail = [];
+                this.maxTrailLength = 50;
+                
+                this.isActive = true;
+                this.hasSucceeded = false;
+                
+                // Lifespan with variance
+                const baseLifespan = 100;
+                this.maxAge = baseLifespan * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
+                
+                // Apply inherited knowledge boost
+                if (this.inheritedKnowledge > 0) {
+                    this.velocity.y *= (1 + this.inheritedKnowledge * 0.1);
+                    this.trtAffinity *= (1 + this.inheritedKnowledge * 0.05);
+                }
+            }
+            
+            setAttributesByType() {
+                switch(this.type) {
+                    case ParticleType.EXPLORER:
+                        this.trtAffinity = 0.7;
+                        this.praAffinity = 1.3;
+                        this.size = 0.35;
+                        break;
+                    case ParticleType.EXPLOITER:
+                        this.trtAffinity = 1.3;
+                        this.praAffinity = 0.7;
+                        this.size = 0.4;
+                        break;
+                    default: // STANDARD
+                        this.trtAffinity = 1.0;
+                        this.praAffinity = 1.0;
+                        this.size = 0.3;
+                }
+            }
+            
+            createMesh() {
+                let geometry;
+                switch(this.type) {
+                    case ParticleType.EXPLORER:
+                        geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4);
+                        geometry.rotateZ(Math.PI);
+                        break;
+                    case ParticleType.EXPLOITER:
+                        geometry = new THREE.BoxGeometry(this.size * 1.5, this.size * 1.5, this.size * 1.5);
+                        break;
+                    default:
+                        geometry = new THREE.SphereGeometry(this.size, 16, 16);
+                }
+                
+                const material = new THREE.MeshPhongMaterial({
+                    color: this.getColorByHeight(),
+                    transparent: true,
+                    opacity: 0.9,
+                    emissive: this.getColorByHeight(),
+                    emissiveIntensity: 0.3
+                });
+                
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(this.position);
+                this.mesh.castShadow = true;
+                
+                particlesGroup.add(this.mesh);
+            }
+            
+            getColorByHeight() {
+                const height = this.position.y;
+                if (height < 10) return 0x8b5cf6;
+                if (height < 20) return 0xef4444;
+                if (height < 30) return 0xf97316;
+                return 0x10b981;
+            }
+            
+            update(deltaTime, particles, params) {
+                if (!this.isActive) return;
+                
+                this.age += deltaTime * params.timeScale;
+                
+                // Check for age-based death or natural attrition
+                const industryProfile = getCurrentIndustryProfile();
+                if (this.age > this.maxAge && this.position.y < params.successThreshold * 0.8) {
+                    this.die('natural');
+                    return;
+                }
+                
+                // Industry-specific natural attrition
+                if (Math.random() < industryProfile.attritionRate * deltaTime) {
+                    this.die('attrition');
+                    return;
+                }
+                
+                const heightRatio = this.position.y / coneHeight;
+                
+                // === VERTEX CAPACITY CHECK === //
+                // Check if particle is near vertex and apply congestion effects
+                const nearVertexThreshold = params.successThreshold - params.capacityRadius;
+                if (this.position.y >= nearVertexThreshold && !this.hasSucceeded) {
+                    const nearVertexParticles = particles.filter(p => 
+                        p.isActive && 
+                        p.position.y >= nearVertexThreshold &&
+                        !p.hasSucceeded
+                    );
+                    
+                    if (nearVertexParticles.length > params.vertexCapacity) {
+                        // Apply congestion effect
+                        this.velocity.y *= params.congestionEffect;
+                        
+                        // Apply queueing behavior
+                        switch (params.queueingBehavior) {
+                            case 'pushback':
+                                // Push particles back down
+                                if (this.position.y >= params.successThreshold - 0.5) {
+                                    this.velocity.y -= 0.02;
+                                }
+                                break;
+                            case 'random':
+                                // Random lateral movement when congested
+                                this.velocity.x += (Math.random() - 0.5) * 0.03;
+                                this.velocity.z += (Math.random() - 0.5) * 0.03;
+                                break;
+                            case 'priority':
+                                // Slower particles yield to faster ones
+                                const avgVelocity = nearVertexParticles.reduce((sum, p) => sum + p.velocity.y, 0) / nearVertexParticles.length;
+                                if (this.velocity.y < avgVelocity) {
+                                    this.velocity.y *= 0.9;
+                                }
+                                break;
+                        }
+                        
+                        // Mark as queued
+                        this.isQueued = true;
+                    } else {
+                        this.isQueued = false;
+                    }
+                }
+                
+                // TRT force with type affinity
+                const trtStrength = params.trtForce * (1 - heightRatio) * params.trtAcceleration * this.trtAffinity;
+                if (heightRatio < params.tippingPoint) {
+                    this.velocity.y += trtStrength * deltaTime;
+                } else {
+                    this.velocity.y += trtStrength * deltaTime * 1.5;
+                }
+                
+                // PRA force with type affinity
+                const praStrength = params.praForce * (1 - heightRatio) * params.praDiversity * this.praAffinity;
+                this.velocity.x += (Math.random() - 0.5) * praStrength * deltaTime;
+                this.velocity.z += (Math.random() - 0.5) * praStrength * deltaTime;
+                
+                // === MULTI-GRAVITY SOURCE IMPLEMENTATION === //
+                
+                // 1. Central convergence force (traditional)
+                const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
+                this.velocity.x += toCenter.x * params.centralConvergence * heightRatio * deltaTime;
+                this.velocity.z += toCenter.z * params.centralConvergence * heightRatio * deltaTime;
+                
+                // 2. Cluster convergence force with inertia effect
+                const myCluster = simulationState.clusters.find(c => c.members.has(this.id));
+                if (myCluster) {
+                    // Calculate cluster density (members per unit volume)
+                    const clusterDensity = myCluster.members.size / (Math.PI * params.attractionRange * params.attractionRange);
+                    
+                    // Base cluster attraction
+                    const toClusterCenter = new THREE.Vector3()
+                        .subVectors(myCluster.center, this.position)
+                        .setY(0)  // Only horizontal attraction
+                        .normalize();
+                    const clusterForce = params.clusterConvergence * myCluster.strength;
+                    
+                    // Apply cluster inertia effect - reduces upward movement in dense clusters
+                    if (clusterDensity > 0.5) {
+                        const inertiaFactor = 1 - (params.clusterInertia * Math.min(clusterDensity, 1));
+                        this.velocity.y *= inertiaFactor;
+                        
+                        // Add compensating market pull to prevent complete stagnation
+                        const marketPullForce = params.marketPull * (1 - inertiaFactor);
+                        this.velocity.y += marketPullForce * deltaTime;
+                    }
+                    
+                    // Apply cluster permeability - chance to escape cluster
+                    const escapeChance = Math.random();
+                    if (escapeChance > params.clusterPermeability) {
+                        // Temporarily reduce cluster attraction
+                        this.velocity.x += toClusterCenter.x * clusterForce * deltaTime * 0.5;
+                        this.velocity.z += toClusterCenter.z * clusterForce * deltaTime * 0.5;
+                    } else {
+                        // Normal cluster attraction
+                        this.velocity.x += toClusterCenter.x * clusterForce * deltaTime;
+                        this.velocity.z += toClusterCenter.z * clusterForce * deltaTime;
+                    }
+                    
+                    // Visual feedback - tint particle with cluster color
+                    const baseColor = this.getColorByHeight();
+                    const clusterColor = myCluster.color.getHex();
+                    const blendedColor = new THREE.Color(baseColor).lerp(myCluster.color, 0.3);
+                    this.mesh.material.color.copy(blendedColor);
+                }
+                
+                // 3. Peer attraction force with spatial optimization
+                const nearbyParticles = spatialGrid.getNearbyParticles(this.position, params.attractionRange);
+                nearbyParticles.forEach(other => {
+                    if (other.id === this.id || !other.isActive) return;
+                    
+                    const distance = this.position.distanceTo(other.position);
+                    if (distance > 0.5) {
+                        // Apply inverse square law for more realistic physics
+                        const attractionMagnitude = params.peerAttraction / (distance * distance);
+                        const attractionForce = new THREE.Vector3()
+                            .subVectors(other.position, this.position)
+                            .normalize()
+                            .multiplyScalar(attractionMagnitude);
+                        
+                        this.velocity.add(attractionForce.multiplyScalar(deltaTime));
+                    }
+                });
+                
+                // === PATH MEMORY EFFECT === //
+                // Apply attraction to successful paths if enabled
+                if (params.pathMemoryEnabled && pathMemory) {
+                    const memoryStrength = pathMemory.getMemoryAt(this.position);
+                    if (memoryStrength > 0) {
+                        // Calculate gradient of memory field
+                        const gradientStep = 0.5;
+                        const memoryGradient = new THREE.Vector3();
+                        
+                        // Sample memory field around current position
+                        const memoryRight = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x + gradientStep, this.position.y, this.position.z)
+                        );
+                        const memoryLeft = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x - gradientStep, this.position.y, this.position.z)
+                        );
+                        const memoryUp = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x, this.position.y + gradientStep, this.position.z)
+                        );
+                        const memoryDown = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x, this.position.y - gradientStep, this.position.z)
+                        );
+                        const memoryForward = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x, this.position.y, this.position.z + gradientStep)
+                        );
+                        const memoryBack = pathMemory.getMemoryAt(
+                            new THREE.Vector3(this.position.x, this.position.y, this.position.z - gradientStep)
+                        );
+                        
+                        // Calculate gradient direction
+                        memoryGradient.x = (memoryRight - memoryLeft) / (2 * gradientStep);
+                        memoryGradient.y = (memoryUp - memoryDown) / (2 * gradientStep);
+                        memoryGradient.z = (memoryForward - memoryBack) / (2 * gradientStep);
+                        
+                        // Apply gradient-based force
+                        const gradientForce = memoryGradient.multiplyScalar(params.pathMemoryStrength * deltaTime * 0.7);
+                        
+                        // Additionally, find the strongest memory point in a wider radius
+                        // This helps escape local optima
+                        let strongestMemory = memoryStrength;
+                        let strongestPoint = this.position.clone();
+                        const searchRadius = 5;
+                        const searchSteps = 8;
+                        
+                        for (let i = 0; i < searchSteps; i++) {
+                            const angle = (i / searchSteps) * Math.PI * 2;
+                            const searchX = this.position.x + Math.cos(angle) * searchRadius;
+                            const searchZ = this.position.z + Math.sin(angle) * searchRadius;
+                            const searchPoint = new THREE.Vector3(searchX, this.position.y + 2, searchZ);
+                            const searchMemory = pathMemory.getMemoryAt(searchPoint);
+                            
+                            if (searchMemory > strongestMemory * 1.5) {
+                                strongestMemory = searchMemory;
+                                strongestPoint = searchPoint;
+                            }
+                        }
+                        
+                        // If found a significantly stronger memory point, add attraction to it
+                        if (strongestMemory > memoryStrength * 1.5) {
+                            const toStrongest = new THREE.Vector3()
+                                .subVectors(strongestPoint, this.position)
+                                .normalize()
+                                .multiplyScalar(params.pathMemoryStrength * deltaTime * 0.3);
+                            this.velocity.add(toStrongest);
+                        }
+                        
+                        // Apply the gradient force
+                        this.velocity.add(gradientForce);
+                    }
+                }
+                
+                // Update position
+                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * params.simulationSpeed));
+                
+                // Add to trail
+                if (visibility.trails && this.trail.length < this.maxTrailLength) {
+                    this.trail.push(this.position.clone());
+                }
+                
+                // === ASYMMETRIC BOUNDARY CONSTRAINTS === //
+                // Account for cone tilt and asymmetry in boundary checking
+                const tiltMatrix = new THREE.Matrix4();
+                tiltMatrix.makeRotationFromEuler(new THREE.Euler(
+                    -params.coneTiltX * Math.PI / 180,
+                    0,
+                    -params.coneTiltZ * Math.PI / 180
+                ));
+                
+                // Transform position to cone's local space
+                const localPos = this.position.clone().applyMatrix4(tiltMatrix);
+                
+                // Apply asymmetry to radius calculation
+                let effectiveX = localPos.x / params.asymmetryX;
+                let effectiveZ = localPos.z / params.asymmetryZ;
+                let currentRadius = Math.sqrt(effectiveX ** 2 + effectiveZ ** 2);
+                
+                const maxRadiusAtCurrentHeight = coneRadius * (1 - localPos.y / coneHeight);
+                
+                if (currentRadius > maxRadiusAtCurrentHeight) {
+                    // Scale back to boundary with safety margin
+                    const scale = maxRadiusAtCurrentHeight / currentRadius * 0.95;
+                    effectiveX *= scale;
+                    effectiveZ *= scale;
+                    
+                    // Apply asymmetry back
+                    localPos.x = effectiveX * params.asymmetryX;
+                    localPos.z = effectiveZ * params.asymmetryZ;
+                    
+                    // Transform back to world space
+                    const invertTilt = tiltMatrix.clone().invert();
+                    this.position.copy(localPos.applyMatrix4(invertTilt));
+                    
+                    // Adjust velocity for bounce
+                    const normal = new THREE.Vector3(effectiveX, 0, effectiveZ).normalize();
+                    const dot = this.velocity.dot(normal);
+                    this.velocity.sub(normal.multiplyScalar(2 * dot));
+                    this.velocity.multiplyScalar(0.5);
+                }
+                
+                // Safety check: ensure particle is always within bounds
+                const finalLocalPos = this.position.clone().applyMatrix4(tiltMatrix);
+                const finalEffectiveX = finalLocalPos.x / params.asymmetryX;
+                const finalEffectiveZ = finalLocalPos.z / params.asymmetryZ;
+                const finalRadius = Math.sqrt(finalEffectiveX ** 2 + finalEffectiveZ ** 2);
+                const finalMaxRadius = coneRadius * (1 - finalLocalPos.y / coneHeight);
+                
+                if (finalRadius > finalMaxRadius * 0.99) {
+                    // Force particle back inside with small margin
+                    const forcedScale = finalMaxRadius * 0.98 / finalRadius;
+                    finalLocalPos.x *= forcedScale;
+                    finalLocalPos.z *= forcedScale;
+                    const invertTilt = tiltMatrix.clone().invert();
+                    this.position.copy(finalLocalPos.applyMatrix4(invertTilt));
+                }
+                
+                // Check for success (only if within capacity limit and passes industry success rate)
+                if (this.position.y >= params.successThreshold && !this.hasSucceeded) {
+                    // Check current vertex occupancy
+                    const vertexOccupants = particles.filter(p => 
+                        p.hasSucceeded || 
+                        (p.isActive && p.position.y >= params.successThreshold)
+                    );
+                    
+                    // Industry-specific success probability
+                    const successProbability = industryProfile.baseSuccessRate + 
+                                             (this.inheritedKnowledge * 0.05) + // Knowledge bonus
+                                             (this.generation * 0.02); // Experience bonus
+                    
+                    if (vertexOccupants.length < params.vertexCapacity && Math.random() < successProbability) {
+                        this.succeed();
+                    } else if (industryProfile.capacityConstraint && vertexOccupants.length >= params.vertexCapacity) {
+                        // Apply congestion pushback for capacity-constrained industries
+                        this.die('congestion');
+                    }
+                }
+                
+                // Update visual
+                this.mesh.position.copy(this.position);
+                if (!myCluster) {
+                    this.mesh.material.color.setHex(this.getColorByHeight());
+                }
+                this.mesh.material.emissive.setHex(this.getColorByHeight());
+                
+                // Update opacity based on age and queuing status
+                const ageRatio = this.age / this.maxAge;
+                const baseOpacity = 0.9 * (1 - ageRatio * 0.3);
+                this.mesh.material.opacity = this.isQueued ? baseOpacity * 0.6 : baseOpacity;
+                
+                // Velocity damping
+                this.velocity.multiplyScalar(0.98);
+            }
+            
+            succeed() {
+                this.hasSucceeded = true;
+                simulationState.successCount++;
+                
+                // === KNOWLEDGE TRANSFER ON SUCCESS === //
+                const industryProfile = getCurrentIndustryProfile();
+                
+                // Transfer knowledge to nearby particles based on industry profile
+                if (parameters.knowledgeTransferRate > 0) {
+                    const nearbyParticles = spatialGrid.getNearbyParticles(
+                        this.position, 
+                        parameters.attractionRange * 2
+                    );
+                    
+                    nearbyParticles.forEach(other => {
+                        if (other.isActive && other.id !== this.id) {
+                            // Industry-specific knowledge boost
+                            const knowledgeBoost = industryProfile.recycleValue * parameters.knowledgeTransferRate;
+                            other.inheritedKnowledge += knowledgeBoost;
+                            
+                            // Apply immediate benefits
+                            other.trtAffinity *= (1 + knowledgeBoost * 0.1);
+                            
+                            // Visual feedback
+                            other.mesh.material.emissiveIntensity = Math.min(0.6, other.inheritedKnowledge * 0.2);
+                        }
+                    });
+                }
+                
+                // === RECORD SUCCESS PATH IN MEMORY === //
+                if (parameters.pathMemoryEnabled && pathMemory) {
+                    // Record the entire successful path with industry-specific strength
+                    const memoryStrength = industryProfile.recycleValue;
+                    
+                    if (this.trail.length > 0) {
+                        this.trail.forEach((position, index) => {
+                            // Stronger memory closer to success
+                            const strength = (index / this.trail.length) * 0.5 + 0.5;
+                            pathMemory.addMemory(position, strength * memoryStrength);
+                        });
+                    }
+                    // Add strong memory at success point
+                    pathMemory.addMemory(this.position, 2.0 * memoryStrength);
+                }
+                
+                // Create fountain effect with multiple particles
+                const particleCount = 20;
+                const fountainParticles = [];
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+                    const speed = 0.3 + Math.random() * 0.2;
+                    
+                    const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                    const particleMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x10b981,
+                        transparent: true,
+                        opacity: 0.9,
+                        emissive: 0x10b981,
+                        emissiveIntensity: 0.6
+                    });
+                    const particleMesh = new THREE.Mesh(particleGeometry, particleMaterial);
+                    particleMesh.position.copy(this.position);
+                    
+                    particleMesh.velocity = new THREE.Vector3(
+                        Math.cos(angle) * speed * 0.5,
+                        speed * 2,
+                        Math.sin(angle) * speed * 0.5
+                    );
+                    
+                    successGroup.add(particleMesh);
+                    fountainParticles.push({
+                        mesh: particleMesh,
+                        material: particleMaterial,
+                        life: 1.0
+                    });
+                }
+                
+                // Create central bloom effect
+                const bloomGeometry = new THREE.RingGeometry(0.5, 2, 32);
+                const bloomMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x3b82f6,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide
+                });
+                const bloomMesh = new THREE.Mesh(bloomGeometry, bloomMaterial);
+                bloomMesh.position.copy(this.position);
+                bloomMesh.rotation.x = -Math.PI / 2;
+                successGroup.add(bloomMesh);
+                
+                // Animate fountain particles
+                const animateFountain = () => {
+                    let allDead = true;
+                    
+                    fountainParticles.forEach(particle => {
+                        if (particle.life > 0) {
+                            allDead = false;
+                            particle.mesh.position.add(particle.mesh.velocity.clone().multiplyScalar(0.1));
+                            particle.mesh.velocity.y -= 0.02;
+                            particle.life -= 0.02;
+                            particle.material.opacity = particle.life * 0.9;
+                            particle.mesh.scale.setScalar(particle.life);
+                        }
+                    });
+                    
+                    bloomMesh.scale.multiplyScalar(1.08);
+                    bloomMaterial.opacity *= 0.92;
+                    
+                    if (!allDead || bloomMaterial.opacity > 0.01) {
+                        requestAnimationFrame(animateFountain);
+                    } else {
+                        fountainParticles.forEach(p => successGroup.remove(p.mesh));
+                        successGroup.remove(bloomMesh);
+                    }
+                };
+                animateFountain();
+                
+                setTimeout(() => {
+                    this.remove();
+                }, 500);
+            }
+            
+            die(reason = 'natural') {
+                // Mark as inactive immediately to prevent multiple death calls
+                if (!this.isActive) return;
+                this.isActive = false;
+                
+                const industryProfile = getCurrentIndustryProfile();
+                const shouldRecycle = Math.random() < parameters.resourceRecycleRate * industryProfile.recycleValue;
+                
+                if (reason === 'congestion' || reason === 'pushback') {
+                    // Higher recycle rate for congestion-related failures
+                    if (shouldRecycle || Math.random() < 0.8) {
+                        this.recycle(reason);
+                        return;
+                    }
+                }
+                
+                // Knowledge transfer to nearby particles before dying
+                if (parameters.knowledgeTransferRate > 0) {
+                    this.transferKnowledge();
+                }
+                
+                // === MISFIRE EFFECT - Like a failed firework === //
+                this.createMisfireEffect();
+            }
+            
+            recycle(reason) {
+                // Industry-specific recycling behavior
+                const industryProfile = getCurrentIndustryProfile();
+                
+                // Create new particle at recycling location
+                if (Math.random() < industryProfile.recycleValue) {
+                    // Spawn a new particle with inherited knowledge
+                    const newParticle = new ResourceParticle(nextParticleId++, simulationState.elapsedTime);
+                    newParticle.generation = this.generation + 1;
+                    newParticle.inheritedKnowledge = this.inheritedKnowledge + 0.3;
+                    
+                    // Position at mid-level with boost based on knowledge
+                    const recycleHeight = 10 + this.inheritedKnowledge * 5;
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * coneRadius * 0.6;
+                    
+                    newParticle.position.set(
+                        Math.cos(angle) * radius,
+                        Math.min(recycleHeight, 25),
+                        Math.sin(angle) * radius
+                    );
+                    
+                    // Enhanced attributes from recycling
+                    newParticle.trtAffinity *= (1 + industryProfile.recycleValue * 0.2);
+                    newParticle.maxAge *= 1.3;
+                    
+                    // Add to particle list
+                    particles.push(newParticle);
+                    
+                    // Visual effect for recycling
+                    this.createRecycleEffect();
+                }
+                
+                // Transfer remaining value to nearby particles
+                this.transferKnowledge();
+                
+                // Remove this particle after recycling
+                setTimeout(() => {
+                    this.remove();
+                }, 300);
+            }
+            
+            transferKnowledge() {
+                const nearbyParticles = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange * 2);
+                const knowledgePerParticle = this.inheritedKnowledge / Math.max(1, nearbyParticles.length);
+                
+                nearbyParticles.forEach(other => {
+                    if (other.isActive && other.id !== this.id) {
+                        other.inheritedKnowledge += knowledgePerParticle * parameters.knowledgeTransferRate;
+                        // Visual feedback for knowledge transfer
+                        other.mesh.material.emissiveIntensity = Math.min(0.5, other.inheritedKnowledge * 0.1);
+                    }
+                });
+            }
+            
+            createRecycleEffect() {
+                // Green spiral effect for recycling
+                const spiralGeometry = new THREE.TorusGeometry(1, 0.1, 8, 16);
+                const spiralMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x10b981,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const spiral = new THREE.Mesh(spiralGeometry, spiralMaterial);
+                spiral.position.copy(this.position);
+                particlesGroup.add(spiral);
+                
+                // Animate the spiral
+                const animateSpiral = () => {
+                    spiral.rotation.y += 0.1;
+                    spiral.scale.multiplyScalar(1.05);
+                    spiralMaterial.opacity *= 0.95;
+                    
+                    if (spiralMaterial.opacity > 0.01) {
+                        requestAnimationFrame(animateSpiral);
+                    } else {
+                        particlesGroup.remove(spiral);
+                    }
+                };
+                animateSpiral();
+            }
+            
+            createMisfireEffect() {
+                // Previous misfire effect implementation
+                // 1. Final inertial flight - lose propulsion but maintain some upward momentum
+                this.velocity.y *= 0.3;
+                this.velocity.x *= 0.5;
+                this.velocity.z *= 0.5;
+                
+                // Continue physics simulation for a brief moment
+                const finalFlightDuration = 300; // 0.3 seconds
+                const startTime = Date.now();
+                
+                const animateFinalFlight = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / finalFlightDuration;
+                    
+                    if (progress < 1) {
+                        // Apply gravity-like deceleration
+                        this.velocity.y -= 0.002;
+                        this.position.add(this.velocity.clone().multiplyScalar(0.1));
+                        this.mesh.position.copy(this.position);
+                        
+                        // Gradually dim the particle
+                        this.mesh.material.opacity = this.mesh.material.opacity * 0.98;
+                        
+                        requestAnimationFrame(animateFinalFlight);
+                    } else {
+                        // 2. Dull flash at the peak of final flight
+                        this.createMisfireFlash();
+                    }
+                };
+                
+                animateFinalFlight();
+            }
+            
+            createMisfireFlash() {
+                // Create a dull, muted explosion effect
+                const flashColor = 0xff6b6b; // Dull red-orange
+                const fragmentCount = 8; // Fewer fragments than success
+                const fragments = [];
+                
+                // Central flash
+                const flashGeometry = new THREE.SphereGeometry(1, 16, 16);
+                const flashMaterial = new THREE.MeshBasicMaterial({
+                    color: flashColor,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const flashMesh = new THREE.Mesh(flashGeometry, flashMaterial);
+                flashMesh.position.copy(this.position);
+                particlesGroup.add(flashMesh);
+                
+                // Create fragments
+                for (let i = 0; i < fragmentCount; i++) {
+                    const angle = (Math.PI * 2 * i) / fragmentCount;
+                    const fragmentGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                    const fragmentMaterial = new THREE.MeshPhongMaterial({
+                        color: flashColor,
+                        transparent: true,
+                        opacity: 0.7,
+                        emissive: flashColor,
+                        emissiveIntensity: 0.2
+                    });
+                    const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
+                    fragment.position.copy(this.position);
+                    
+                    // Give fragments outward velocity with downward bias
+                    fragment.velocity = new THREE.Vector3(
+                        Math.cos(angle) * 0.15,
+                        -0.1 + Math.random() * 0.05, // Mostly downward
+                        Math.sin(angle) * 0.15
+                    );
+                    
+                    particlesGroup.add(fragment);
+                    fragments.push({
+                        mesh: fragment,
+                        material: fragmentMaterial,
+                        velocity: fragment.velocity,
+                        life: 1.0
+                    });
+                }
+                
+                // Animate the misfire effect
+                const animateMisfire = () => {
+                    let allDead = true;
+                    
+                    // Animate central flash
+                    flashMesh.scale.multiplyScalar(1.05);
+                    flashMaterial.opacity *= 0.85;
+                    
+                    // Animate fragments falling
+                    fragments.forEach(fragment => {
+                        if (fragment.life > 0) {
+                            allDead = false;
+                            
+                            // Apply gravity
+                            fragment.velocity.y -= 0.01;
+                            fragment.mesh.position.add(fragment.velocity);
+                            
+                            // Rotate for visual interest
+                            fragment.mesh.rotation.x += 0.1;
+                            fragment.mesh.rotation.y += 0.15;
+                            
+                            // Fade out
+                            fragment.life -= 0.03;
+                            fragment.material.opacity = fragment.life * 0.7;
+                            fragment.mesh.scale.setScalar(fragment.life);
+                        }
+                    });
+                    
+                    if (flashMaterial.opacity > 0.01 || !allDead) {
+                        requestAnimationFrame(animateMisfire);
+                    } else {
+                        // Clean up
+                        particlesGroup.remove(flashMesh);
+                        fragments.forEach(f => particlesGroup.remove(f.mesh));
+                        
+                        // Remove the original particle
+                        this.remove();
+                    }
+                };
+                
+                // Add a brief smoke trail effect
+                const smokeCount = 5;
+                for (let i = 0; i < smokeCount; i++) {
+                    setTimeout(() => {
+                        const smokeGeometry = new THREE.SphereGeometry(0.3 + i * 0.1, 8, 8);
+                        const smokeMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x666666,
+                            transparent: true,
+                            opacity: 0.3 - i * 0.05
+                        });
+                        const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
+                        smoke.position.copy(this.position);
+                        smoke.position.y -= i * 0.2;
+                        particlesGroup.add(smoke);
+                        
+                        // Fade out smoke
+                        const fadeSmoke = () => {
+                            smoke.scale.multiplyScalar(1.02);
+                            smokeMaterial.opacity *= 0.95;
+                            if (smokeMaterial.opacity > 0.01) {
+                                requestAnimationFrame(fadeSmoke);
+                            } else {
+                                particlesGroup.remove(smoke);
+                            }
+                        };
+                        fadeSmoke();
+                    }, i * 50);
+                }
+                
+                animateMisfire();
+            }
+            
+            remove() {
+                this.isActive = false;
+                particlesGroup.remove(this.mesh);
+            }
+        }
+
+        // Initialize particles
+        let particles = [];
+        let nextParticleId = 0;
+        
+        function spawnParticles(count) {
+            for (let i = 0; i < count; i++) {
+                const particle = new ResourceParticle(nextParticleId++, simulationState.elapsedTime);
+                particles.push(particle);
+                simulationState.totalSpawned++;
+                
+                // Track period stats
+                if (simulationState.elapsedTime <= 5) {
+                    simulationState.periodStats.fiveYear.spawned++;
+                }
+                if (simulationState.elapsedTime <= 10) {
+                    simulationState.periodStats.tenYear.spawned++;
+                }
+            }
+        }
+        
+        function createInitialParticles() {
+            particles.forEach(p => p.remove());
+            particles = [];
+            nextParticleId = 0;
+            
+            // Don't spawn initial particles in comparison mode
+            if (simulationState.mode === 'single' && parameters.initialParticles > 0) {
+                spawnParticles(parameters.initialParticles);
+            }
+        }
+
+        // Create gravity field visualization
+        function updateGravityFieldVisualization() {
+            // Clear existing gravity field visualization
+            while(gravityGroup.children.length > 0) {
+                gravityGroup.remove(gravityGroup.children[0]);
+            }
+            
+            if (!visibility.gravity) return;
+            
+            // Create a grid of points to visualize the gravity field
+            const gridSize = 20;
+            const gridStep = coneRadius * 2 / gridSize;
+            const heights = [5, 15, 25, 35];
+            
+            heights.forEach(height => {
+                for (let x = -coneRadius; x <= coneRadius; x += gridStep) {
+                    for (let z = -coneRadius; z <= coneRadius; z += gridStep) {
+                        const position = new THREE.Vector3(x, height, z);
+                        
+                        // Calculate combined gravity field strength at this point
+                        let fieldStrength = 0;
+                        
+                        // Central gravity
+                        const distToCenter = Math.sqrt(x * x + z * z);
+                        fieldStrength += parameters.centralConvergence / (distToCenter + 1);
+                        
+                        // Cluster gravity
+                        simulationState.clusters.forEach(cluster => {
+                            const distToCluster = position.distanceTo(cluster.center);
+                            if (distToCluster < parameters.attractionRange * 2) {
+                                fieldStrength += parameters.clusterConvergence * cluster.strength / (distToCluster + 1);
+                            }
+                        });
+                        
+                        // Visualize field strength
+                        if (fieldStrength > 0.01) {
+                            const intensity = Math.min(fieldStrength * 10, 1);
+                            const geometry = new THREE.SphereGeometry(0.3 * intensity, 8, 8);
+                            const material = new THREE.MeshBasicMaterial({
+                                color: new THREE.Color(intensity, 0, 1 - intensity),
+                                transparent: true,
+                                opacity: intensity * 0.5
+                            });
+                            const sphere = new THREE.Mesh(geometry, material);
+                            sphere.position.copy(position);
+                            gravityGroup.add(sphere);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize scene
+        createCone();
+        createSections();
+        createSpiral();
+        createInitialParticles();
+
+        // Mode switching
+        function setMode(mode, button) {
+            simulationState.mode = mode;
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            if (button) {
+                button.classList.add('active');
+            }
+            
+            const comparisonPanel = document.getElementById('comparison-panel');
+            if (mode === 'comparison') {
+                comparisonPanel.classList.add('active');
+                // Initialize comparison scenarios if empty
+                if (comparisonData.scenarios.length === 0) {
+                    addScenario();
+                    addScenario();
+                }
+            } else {
+                comparisonPanel.classList.remove('active');
+            }
+            
+            resetSimulation();
+        }
+
+        // Comparison mode functions
+        function addScenario() {
+            const scenarioId = Date.now();
+            const scenario = {
+                id: scenarioId,
+                name: `シナリオ ${comparisonData.scenarios.length + 1}`,
+                params: JSON.parse(JSON.stringify(parameters)), // Deep copy of all parameters
+                results: null
+            };
+            
+            comparisonData.scenarios.push(scenario);
+            renderScenarios();
+        }
+        
+        function removeScenario(id) {
+            comparisonData.scenarios = comparisonData.scenarios.filter(s => s.id !== id);
+            renderScenarios();
+        }
+        
+        function editScenario(id) {
+            const scenario = comparisonData.scenarios.find(s => s.id === id);
+            if (scenario) {
+                // Load scenario parameters into controls
+                Object.keys(scenario.params).forEach(key => {
+                    const input = document.getElementById(key);
+                    if (input) {
+                        parameters[key] = scenario.params[key];
+                        
+                        // Handle different input types
+                        if (input.type === 'checkbox') {
+                            input.checked = scenario.params[key];
+                        } else if (input.type === 'select-one') {
+                            input.value = scenario.params[key];
+                        } else {
+                            input.value = scenario.params[key];
+                        }
+                        
+                        // Update display value
+                        const valueElement = document.getElementById(`${key}-value`);
+                        if (valueElement) {
+                            // Check if the parameter is a number or string
+                            if (typeof scenario.params[key] === 'number') {
+                                if (key.includes('Size') || key.includes('Particles') || key === 'attractionRange' || 
+                                    key === 'clusterThreshold' || key === 'vertexCapacity' || key === 'batchSize' ||
+                                    key === 'pathMemoryResolution') {
+                                    valueElement.textContent = scenario.params[key];
+                                } else if (key.includes('Rate') || key.includes('Persistence') || 
+                                         key.includes('Effect') || key.includes('Force') || 
+                                         key.includes('Convergence') || key.includes('Pull') || 
+                                         key.includes('Attraction') || key.includes('Permeability') ||
+                                         key.includes('Inertia') || key.includes('Strength')) {
+                                    valueElement.textContent = scenario.params[key].toFixed(3);
+                                } else if (key.includes('Radius') && key !== 'attractionRange') {
+                                    valueElement.textContent = scenario.params[key].toFixed(1);
+                                } else if (key === 'timeScale' || key === 'spawnInterval') {
+                                    valueElement.textContent = scenario.params[key].toFixed(1);
+                                } else {
+                                    valueElement.textContent = scenario.params[key];
+                                }
+                            } else if (typeof scenario.params[key] === 'boolean') {
+                                valueElement.textContent = scenario.params[key] ? '有効' : '無効';
+                            } else {
+                                // For string parameters like queueingBehavior, industryProfile
+                                valueElement.textContent = scenario.params[key];
+                            }
+                        }
+                    }
+                });
+                
+                // Apply industry-specific parameters if industry profile was loaded
+                if (scenario.params.industryProfile) {
+                    setIndustryParameters(scenario.params.industryProfile);
+                }
+                
+                // Update visual elements if needed
+                createCone();
+                createSections();
+                
+                // Highlight active scenario
+                document.querySelectorAll('.scenario-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                const activeCard = document.querySelector(`[data-scenario-id="${id}"]`);
+                if (activeCard) {
+                    activeCard.classList.add('active');
+                }
+            }
+        }
+        
+        function saveScenario(id) {
+            const scenario = comparisonData.scenarios.find(s => s.id === id);
+            if (scenario) {
+                // Create a complete copy of current parameters
+                scenario.params = {};
+                Object.keys(parameters).forEach(key => {
+                    scenario.params[key] = parameters[key];
+                });
+                
+                // Update the scenario info display
+                renderScenarios();
+                
+                // Show visual feedback
+                const card = document.querySelector(`[data-scenario-id="${id}"]`);
+                if (card) {
+                    card.style.backgroundColor = '#d1fae5';
+                    setTimeout(() => {
+                        card.style.backgroundColor = '';
+                    }, 500);
+                }
+            }
+        }
+        
+        function renderScenarios() {
+            const container = document.getElementById('scenario-list');
+            container.innerHTML = '';
+            
+            comparisonData.scenarios.forEach((scenario, index) => {
+                const card = document.createElement('div');
+                card.className = 'scenario-card';
+                card.dataset.scenarioId = scenario.id;
+                
+                const header = document.createElement('div');
+                header.className = 'scenario-header';
+                
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'scenario-name';
+                nameInput.value = scenario.name;
+                nameInput.style.cssText = 'background: transparent; border: none; font-weight: 600; color: #1f2937;';
+                nameInput.onchange = function() { updateScenarioName(scenario.id, this.value); };
+                
+                const controls = document.createElement('div');
+                controls.className = 'scenario-controls';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'scenario-button';
+                editBtn.textContent = '編集';
+                editBtn.onclick = function() { editScenario(scenario.id); };
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'scenario-button';
+                saveBtn.textContent = '保存';
+                saveBtn.onclick = function() { saveScenario(scenario.id); };
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'scenario-button';
+                deleteBtn.textContent = '削除';
+                deleteBtn.onclick = function() { removeScenario(scenario.id); };
+                if (comparisonData.scenarios.length <= 2) {
+                    deleteBtn.disabled = true;
+                }
+                
+                controls.appendChild(editBtn);
+                controls.appendChild(saveBtn);
+                controls.appendChild(deleteBtn);
+                
+                header.appendChild(nameInput);
+                header.appendChild(controls);
+                
+                const info = document.createElement('div');
+                info.style.cssText = 'font-size: 11px; color: #6b7280;';
+                info.innerHTML = `中央: ${scenario.params.centralConvergence.toFixed(3)} | クラスター: ${scenario.params.clusterConvergence.toFixed(3)} | ピア: ${scenario.params.peerAttraction.toFixed(3)}`;
+                
+                card.appendChild(header);
+                card.appendChild(info);
+                
+                container.appendChild(card);
+            });
+        }
+        
+        function updateScenarioName(id, name) {
+            const scenario = comparisonData.scenarios.find(s => s.id === id);
+            if (scenario) {
+                scenario.name = name;
+            }
+        }
+        
+        function runComparison() {
+            // Disable button to prevent confusion
+            const runButton = event.target;
+            runButton.disabled = true;
+            runButton.textContent = '開発中';
+            
+            // Show development notice with timeline
+            const resultsDiv = document.getElementById('comparison-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="info-box">
+                    <strong>比較分析機能は現在開発中です</strong><br>
+                    予定機能：複数シナリオの並行実行と結果の統計的比較
+                </div>
+            `;
+        }
+
+        // Preset configurations
+        const presets = {
+            centralized: {
+                centralConvergence: 0.06,
+                clusterConvergence: 0.01,
+                clusterInertia: 0.03,
+                marketPull: 0.01,
+                clusterPermeability: 0.5,
+                peerAttraction: 0.005,
+                attractionRange: 3,
+                clusterThreshold: 5,
+                trtForce: 0.02,
+                praForce: 0.01
+            },
+            distributed: {
+                centralConvergence: 0.01,
+                clusterConvergence: 0.04,
+                clusterInertia: 0.01,
+                marketPull: 0.03,
+                clusterPermeability: 0.9,
+                peerAttraction: 0.03,
+                attractionRange: 7,
+                clusterThreshold: 2,
+                trtForce: 0.01,
+                praForce: 0.03
+            },
+            hybrid: {
+                centralConvergence: 0.03,
+                clusterConvergence: 0.02,
+                clusterInertia: 0.015,
+                marketPull: 0.02,
+                clusterPermeability: 0.8,
+                peerAttraction: 0.01,
+                attractionRange: 5,
+                clusterThreshold: 3,
+                trtForce: 0.015,
+                praForce: 0.02
+            },
+            emergent: {
+                centralConvergence: 0.02,
+                clusterConvergence: 0.03,
+                clusterInertia: 0.005,
+                marketPull: 0.04,
+                clusterPermeability: 0.95,
+                peerAttraction: 0.02,
+                attractionRange: 8,
+                clusterThreshold: 3,
+                trtForce: 0.012,
+                praForce: 0.025
+            }
+        };
+
+        // Load preset configuration
+        function loadPreset(presetName, button) {
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            // Update parameters
+            Object.keys(preset).forEach(key => {
+                if (parameters.hasOwnProperty(key)) {
+                    parameters[key] = preset[key];
+                    const input = document.getElementById(key);
+                    if (input) {
+                        input.value = preset[key];
+                        const valueElement = document.getElementById(`${key}-value`);
+                        if (valueElement) {
+                            valueElement.textContent = typeof preset[key] === 'number' && 
+                                (key.includes('Force') || key.includes('Convergence') || key.includes('Attraction') || key.includes('Inertia') || key.includes('Pull') || key.includes('Permeability')) ? 
+                                preset[key].toFixed(3) : preset[key];
+                        }
+                    }
+                }
+            });
+            
+            // Update preset button states
+            document.querySelectorAll('.preset-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (button) {
+                button.classList.add('active');
+            }
+            
+            // Recreate visual elements if needed
+            createCone();
+            createSections();
+        }
+
+        // Parameter update handlers
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', function() {
+                const param = this.id;
+                const value = parseFloat(this.value);
+                parameters[param] = value;
+                
+                const valueElement = document.getElementById(`${param}-value`);
+                if (valueElement) {
+                    if (param.includes('Force') || param.includes('Convergence') || param.includes('Attraction') || 
+                        param.includes('Inertia') || param.includes('Pull') || param.includes('Permeability') || 
+                        param.includes('Persistence') || param.includes('Strength') || param.includes('Rate') || 
+                        param.includes('Effect')) {
+                        valueElement.textContent = value.toFixed(3);
+                    } else if (param.includes('Radius') && param !== 'attractionRange') {
+                        valueElement.textContent = value.toFixed(1);
+                    } else {
+                        valueElement.textContent = value;
+                    }
+                }
+                
+                // Update visual elements if needed
+                if (['coneTiltX', 'coneTiltZ', 'asymmetryX', 'asymmetryZ'].includes(param)) {
+                    createCone();
+                    createSections();
+                }
+                
+                if (param === 'successThreshold') {
+                    createSections();
+                }
+            });
+        });
+
+        // Checkbox handler for path memory
+        document.getElementById('pathMemoryEnabled').addEventListener('change', function() {
+            parameters.pathMemoryEnabled = this.checked;
+            document.getElementById('pathMemoryEnabled-value').textContent = this.checked ? '有効' : '無効';
+        });
+
+        // Select handlers
+        document.getElementById('queueingBehavior').addEventListener('change', function() {
+            parameters.queueingBehavior = this.value;
+            document.getElementById('queueingBehavior-value').textContent = this.value;
+        });
+
+        document.getElementById('industryProfile').addEventListener('change', function() {
+            parameters.industryProfile = this.value;
+            document.getElementById('industryProfile-value').textContent = this.value;
+            setIndustryParameters(this.value);
+        });
+
+        document.getElementById('analysisYears').addEventListener('input', function() {
+            document.getElementById('analysisYears-value').textContent = this.value;
+        });
+
+        // Toggle element visibility
+        function toggleElement(element) {
+            visibility[element] = !visibility[element];
+            const button = document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`);
+            button.classList.toggle('active');
+            
+            switch(element) {
+                case 'cone':
+                    coneGroup.visible = visibility.cone;
+                    break;
+                case 'sections':
+                    sectionsGroup.visible = visibility.sections;
+                    break;
+                case 'spiral':
+                    spiralGroup.visible = visibility.spiral;
+                    break;
+                case 'success':
+                    successGroup.visible = visibility.success;
+                    break;
+                case 'trails':
+                    trailsGroup.visible = visibility.trails;
+                    break;
+                case 'clusters':
+                    clustersGroup.visible = visibility.clusters;
+                    break;
+                case 'gravity':
+                    gravityGroup.visible = visibility.gravity;
+                    updateGravityFieldVisualization();
+                    break;
+                case 'pathMemory':
+                    pathMemoryGroup.visible = visibility.pathMemory;
+                    if (visibility.pathMemory) {
+                        pathMemory.updateVisual();
+                    }
+                    break;
+            }
+        }
+
+        // Panel controls
+        function togglePanel() {
+            const panel = document.getElementById('control-panel');
+            panel.classList.toggle('collapsed');
+            const button = panel.querySelector('.collapse-button');
+            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+        }
+
+        function toggleComparisonPanel() {
+            const panel = document.getElementById('comparison-panel');
+            panel.classList.toggle('collapsed');
+            const button = panel.querySelector('.comparison-collapse-btn');
+            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+        }
+
+        // Simulation controls
+        function startSimulation() {
+            simulationState.isRunning = true;
+            simulationState.isPaused = false;
+        }
+
+        function pauseSimulation() {
+            simulationState.isPaused = !simulationState.isPaused;
+        }
+
+        function resetSimulation() {
+            simulationState.isRunning = false;
+            simulationState.isPaused = false;
+            simulationState.elapsedTime = 0;
+            simulationState.lastSpawnTime = 0;
+            simulationState.totalSpawned = 0;
+            simulationState.successCount = 0;
+            simulationState.periodStats = {
+                fiveYear: { spawned: 0, success: 0 },
+                tenYear: { spawned: 0, success: 0 }
+            };
+            simulationState.clusters = [];
+            
+            // Clear all particles
+            particles.forEach(p => p.remove());
+            particles = [];
+            nextParticleId = 0;
+            
+            // Clear path memory
+            pathMemory.grid = pathMemory.grid.map(x => x.map(y => y.map(z => 0)));
+            pathMemory.maxValue = 0;
+            pathMemory.updateVisual();
+            
+            // Clear visual groups
+            while(successGroup.children.length > 0) {
+                successGroup.remove(successGroup.children[0]);
+            }
+            while(trailsGroup.children.length > 0) {
+                trailsGroup.remove(trailsGroup.children[0]);
+            }
+            while(clustersGroup.children.length > 0) {
+                clustersGroup.remove(clustersGroup.children[0]);
+            }
+            
+            // Reset initial particles
+            createInitialParticles();
+            
+            // Update display
+            updateStats();
+        }
+
+        // Update statistics display
+        function updateStats() {
+            document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1) + '年';
+            document.getElementById('success-count').textContent = simulationState.successCount;
+            document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
+            
+            const successRate = simulationState.totalSpawned > 0 ? 
+                (simulationState.successCount / simulationState.totalSpawned * 100).toFixed(1) : 0;
+            document.getElementById('success-rate').textContent = successRate + '%';
+            
+            const activeParticles = particles.filter(p => p.isActive);
+            document.getElementById('active-particles').textContent = activeParticles.length;
+            
+            // Calculate average TRT progress
+            if (activeParticles.length > 0) {
+                const avgTrt = activeParticles.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / activeParticles.length;
+                document.getElementById('avg-trt').textContent = avgTrt.toFixed(3);
+                
+                // Calculate PRA dispersion
+                const centerX = activeParticles.reduce((sum, p) => sum + p.position.x, 0) / activeParticles.length;
+                const centerZ = activeParticles.reduce((sum, p) => sum + p.position.z, 0) / activeParticles.length;
+                const dispersion = Math.sqrt(
+                    activeParticles.reduce((sum, p) => 
+                        sum + Math.pow(p.position.x - centerX, 2) + Math.pow(p.position.z - centerZ, 2), 0
+                    ) / activeParticles.length
+                );
+                document.getElementById('pra-dispersion').textContent = dispersion.toFixed(3);
+                
+                // Calculate diversity index (Shannon entropy based on particle types)
+                const typeCounts = { standard: 0, explorer: 0, exploiter: 0 };
+                activeParticles.forEach(p => {
+                    typeCounts[p.type]++;
+                });
+                let diversity = 0;
+                Object.values(typeCounts).forEach(count => {
+                    if (count > 0) {
+                        const p = count / activeParticles.length;
+                        diversity -= p * Math.log(p);
+                    }
+                });
+                document.getElementById('diversity-index').textContent = diversity.toFixed(3);
+            } else {
+                document.getElementById('avg-trt').textContent = '0.000';
+                document.getElementById('pra-dispersion').textContent = '0.000';
+                document.getElementById('diversity-index').textContent = '0.000';
+            }
+            
+            // Update cluster count
+            document.getElementById('cluster-count').textContent = simulationState.clusters.length;
+            
+            // Update gravity sources (central + clusters)
+            document.getElementById('gravity-sources').textContent = 1 + simulationState.clusters.length;
+            
+            // Calculate vertex congestion
+            const nearVertexThreshold = parameters.successThreshold - parameters.capacityRadius;
+            const nearVertexParticles = particles.filter(p => 
+                p.isActive && p.position.y >= nearVertexThreshold && !p.hasSucceeded
+            );
+            const congestionPercent = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
+            document.getElementById('vertex-congestion').textContent = congestionPercent.toFixed(0) + '%';
+            
+            // Count queued particles
+            const queuedCount = particles.filter(p => p.isActive && p.isQueued).length;
+            document.getElementById('queued-particles').textContent = queuedCount;
+            
+            // Update period stats if visible
+            if (simulationState.isRunning) {
+                // Track 5-year success
+                if (simulationState.elapsedTime <= 5) {
+                    simulationState.periodStats.fiveYear.success = simulationState.successCount;
+                }
+                // Track 10-year success
+                if (simulationState.elapsedTime <= 10) {
+                    simulationState.periodStats.tenYear.success = simulationState.successCount;
+                }
+                
+                // Update display
+                if (simulationState.elapsedTime >= 5) {
+                    const fiveYearRate = simulationState.periodStats.fiveYear.spawned > 0 ?
+                        (simulationState.periodStats.fiveYear.success / simulationState.periodStats.fiveYear.spawned * 100).toFixed(1) : 0;
+                    document.getElementById('five-year-stats').textContent = 
+                        `${simulationState.periodStats.fiveYear.success}/${simulationState.periodStats.fiveYear.spawned} (${fiveYearRate}%)`;
+                }
+                
+                if (simulationState.elapsedTime >= 10) {
+                    const tenYearRate = simulationState.periodStats.tenYear.spawned > 0 ?
+                        (simulationState.periodStats.tenYear.success / simulationState.periodStats.tenYear.spawned * 100).toFixed(1) : 0;
+                    document.getElementById('ten-year-stats').textContent = 
+                        `${simulationState.periodStats.tenYear.success}/${simulationState.periodStats.tenYear.spawned} (${tenYearRate}%)`;
+                    document.getElementById('period-stats').style.display = 'block';
+                }
+            }
+        }
+
+        // Camera controls
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let cameraTheta = 0;
+        let cameraPhi = Math.PI / 4;
+        let cameraDistance = 100;
+
+        renderer.domElement.addEventListener('mousedown', (event) => {
+            isMouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            if (!isMouseDown) return;
+            
+            const deltaX = event.clientX - mouseX;
+            const deltaY = event.clientY - mouseY;
+            
+            cameraTheta -= deltaX * 0.01;
+            cameraPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, cameraPhi - deltaY * 0.01));
+            
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+            
+            updateCamera();
+        });
+
+        renderer.domElement.addEventListener('wheel', (event) => {
+            cameraDistance = Math.max(50, Math.min(200, cameraDistance + event.deltaY * 0.1));
+            updateCamera();
+        });
+
+        function updateCamera() {
+            camera.position.x = cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta);
+            camera.position.y = cameraDistance * Math.cos(cameraPhi);
+            camera.position.z = cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta);
+            camera.lookAt(0, 20, 0);
+        }
+
+        // Animation loop
+        let lastTime = 0;
+        
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = Math.min((time - lastTime) / 1000, 0.1); // Cap delta time
+            lastTime = time;
+            
+            if (simulationState.isRunning && !simulationState.isPaused) {
+                // Update simulation time
+                simulationState.elapsedTime += deltaTime * parameters.timeScale;
+                
+                // Spawn new particles at intervals
+                if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
+                    spawnParticles(parameters.batchSize);
+                    simulationState.lastSpawnTime = simulationState.elapsedTime;
+                }
+                
+                // Update spatial grid
+                spatialGrid.clear();
+                particles.filter(p => p.isActive).forEach(p => spatialGrid.insert(p));
+                
+                // Update particles
+                particles.forEach(particle => {
+                    particle.update(deltaTime, particles, parameters);
+                });
+                
+                // Remove inactive particles
+                particles = particles.filter(p => p.isActive || p.hasSucceeded);
+                
+                // Update clusters
+                if (visibility.clusters) {
+                    updateClusters(particles);
+                    simulationState.clusters.forEach(cluster => cluster.update(particles));
+                }
+                
+                // Update path memory decay
+                if (parameters.pathMemoryEnabled) {
+                    pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
+                    if (visibility.pathMemory) {
+                        pathMemory.updateVisual();
+                    }
+                }
+                
+                // Update gravity field visualization
+                if (visibility.gravity) {
+                    updateGravityFieldVisualization();
+                }
+                
+                // Update trails
+                if (visibility.trails) {
+                    while(trailsGroup.children.length > 0) {
+                        trailsGroup.remove(trailsGroup.children[0]);
+                    }
+                    
+                    particles.forEach(particle => {
+                        if (particle.trail.length > 1) {
+                            const geometry = new THREE.BufferGeometry().setFromPoints(particle.trail);
+                            const material = new THREE.LineBasicMaterial({
+                                color: particle.getColorByHeight(),
+                                transparent: true,
+                                opacity: 0.5
+                            });
+                            const trail = new THREE.Line(geometry, material);
+                            trailsGroup.add(trail);
+                        }
+                    });
+                }
+                
+                // Update statistics
+                updateStats();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate(0);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
