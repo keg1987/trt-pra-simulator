@@ -220,14 +220,13 @@
         }
         .legend {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            top: 20px;
+            left: 20px;
             background: rgba(255, 255, 255, 0.98);
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
             z-index: 100;
-            max-width: 200px;
         }
         .legend-item {
             display: flex;
@@ -412,7 +411,7 @@
         }
         .cluster-visualization {
             position: absolute;
-            bottom: 280px;
+            bottom: 20px;
             right: 20px;
             background: rgba(255, 255, 255, 0.98);
             padding: 15px;
@@ -971,12 +970,7 @@
             pathMemoryEnabled: true,       // Enable path reinforcement
             pathMemoryStrength: 0.02,      // Strength of path attraction
             pathMemoryPersistence: 0.005,  // Memory persistence (0=no memory, 1=perfect memory)
-            pathMemoryResolution: 20,      // Grid resolution for path memory
-            // Industry and Resource Recycling - NEW
-            industryProfile: 'hybrid',     // 'biotech', 'software', 'consumer', 'hybrid'
-            resourceRecycleRate: 0.7,      // Probability of recycling failed resources
-            knowledgeTransferRate: 0.3,    // Knowledge transfer from failures
-            attritionRate: 0.02            // Natural resource attrition
+            pathMemoryResolution: 20       // Grid resolution for path memory
         };
 
         // Simulation state
@@ -1436,74 +1430,9 @@
             }
         };
 
-        // Get current industry profile - Define before ResourceParticle class
+        // Get current industry profile
         function getCurrentIndustryProfile() {
             return industryProfiles[parameters.industryProfile] || industryProfiles.hybrid;
-        }
-        
-        // Set industry-specific parameters when profile changes
-        function setIndustryParameters(profileName) {
-            const profile = industryProfiles[profileName];
-            if (!profile) return;
-            
-            // Update related parameters based on industry characteristics
-            if (profileName === 'biotech') {
-                // Ultra-low success, no congestion, high knowledge value
-                parameters.attritionRate = 0.05;
-                parameters.vertexCapacity = 15;  // No real bottleneck
-                parameters.resourceRecycleRate = 0.9;
-                parameters.knowledgeTransferRate = 0.5;
-                parameters.congestionEffect = 0.95;  // Almost no effect
-                parameters.marketPull = 0.01;  // Weak market pull
-            } else if (profileName === 'software') {
-                // High success, strong congestion, moderate recycling
-                parameters.attritionRate = 0.01;
-                parameters.vertexCapacity = 3;   // Strong bottleneck
-                parameters.resourceRecycleRate = 0.5;
-                parameters.knowledgeTransferRate = 0.2;
-                parameters.congestionEffect = 0.6;
-                parameters.marketPull = 0.04;  // Strong market pull
-            } else if (profileName === 'consumer') {
-                // Moderate everything
-                parameters.attritionRate = 0.02;
-                parameters.vertexCapacity = 5;
-                parameters.resourceRecycleRate = 0.6;
-                parameters.knowledgeTransferRate = 0.3;
-                parameters.congestionEffect = 0.7;
-                parameters.marketPull = 0.03;
-            } else { // hybrid
-                // Keep current parameter values
-                parameters.attritionRate = 0.02;
-                parameters.vertexCapacity = 5;
-                parameters.resourceRecycleRate = 0.7;
-                parameters.knowledgeTransferRate = 0.3;
-                parameters.congestionEffect = 0.75;
-                parameters.marketPull = 0.02;
-            }
-            
-            // Update UI to reflect changes
-            updateParameterDisplays();
-        }
-        
-        // Update parameter displays in UI
-        function updateParameterDisplays() {
-            // Update all parameter value displays
-            Object.keys(parameters).forEach(key => {
-                const element = document.getElementById(`${key}-value`);
-                const input = document.getElementById(key);
-                if (element && input) {
-                    input.value = parameters[key];
-                    if (typeof parameters[key] === 'number') {
-                        element.textContent = key.includes('Rate') || key.includes('Persistence') || 
-                                            key.includes('Effect') || key.includes('Force') || 
-                                            key.includes('Convergence') || key.includes('Pull') || 
-                                            key.includes('Attraction') || key.includes('Permeability') ? 
-                                            parameters[key].toFixed(3) : parameters[key];
-                    } else {
-                        element.textContent = parameters[key];
-                    }
-                }
-            });
         }
         class SpatialGrid {
             constructor(size, divisions) {
@@ -2104,45 +2033,18 @@
                 this.hasSucceeded = true;
                 simulationState.successCount++;
                 
-                // === KNOWLEDGE TRANSFER ON SUCCESS === //
-                const industryProfile = getCurrentIndustryProfile();
-                
-                // Transfer knowledge to nearby particles based on industry profile
-                if (parameters.knowledgeTransferRate > 0) {
-                    const nearbyParticles = spatialGrid.getNearbyParticles(
-                        this.position, 
-                        parameters.attractionRange * 2
-                    );
-                    
-                    nearbyParticles.forEach(other => {
-                        if (other.isActive && other.id !== this.id) {
-                            // Industry-specific knowledge boost
-                            const knowledgeBoost = industryProfile.recycleValue * parameters.knowledgeTransferRate;
-                            other.inheritedKnowledge += knowledgeBoost;
-                            
-                            // Apply immediate benefits
-                            other.trtAffinity *= (1 + knowledgeBoost * 0.1);
-                            
-                            // Visual feedback
-                            other.mesh.material.emissiveIntensity = Math.min(0.6, other.inheritedKnowledge * 0.2);
-                        }
-                    });
-                }
-                
                 // === RECORD SUCCESS PATH IN MEMORY === //
                 if (parameters.pathMemoryEnabled && pathMemory) {
-                    // Record the entire successful path with industry-specific strength
-                    const memoryStrength = industryProfile.recycleValue;
-                    
+                    // Record the entire successful path
                     if (this.trail.length > 0) {
                         this.trail.forEach((position, index) => {
                             // Stronger memory closer to success
                             const strength = (index / this.trail.length) * 0.5 + 0.5;
-                            pathMemory.addMemory(position, strength * memoryStrength);
+                            pathMemory.addMemory(position, strength);
                         });
                     }
                     // Add strong memory at success point
-                    pathMemory.addMemory(this.position, 2.0 * memoryStrength);
+                    pathMemory.addMemory(this.position, 2.0);
                 }
                 
                 // Create fountain effect with multiple particles
@@ -2249,45 +2151,44 @@
             }
             
             recycle(reason) {
-                // Industry-specific recycling behavior
-                const industryProfile = getCurrentIndustryProfile();
+                // Reset position to lower level
+                const recycleHeight = Math.random() * 10 + 5; // Between 5-15
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * coneRadius * 0.7;
                 
-                // Create new particle at recycling location
-                if (Math.random() < industryProfile.recycleValue) {
-                    // Spawn a new particle with inherited knowledge
-                    const newParticle = new ResourceParticle(nextParticleId++, simulationState.elapsedTime);
-                    newParticle.generation = this.generation + 1;
-                    newParticle.inheritedKnowledge = this.inheritedKnowledge + 0.3;
-                    
-                    // Position at mid-level with boost based on knowledge
-                    const recycleHeight = 10 + this.inheritedKnowledge * 5;
-                    const angle = Math.random() * Math.PI * 2;
-                    const radius = Math.random() * coneRadius * 0.6;
-                    
-                    newParticle.position.set(
-                        Math.cos(angle) * radius,
-                        Math.min(recycleHeight, 25),
-                        Math.sin(angle) * radius
-                    );
-                    
-                    // Enhanced attributes from recycling
-                    newParticle.trtAffinity *= (1 + industryProfile.recycleValue * 0.2);
-                    newParticle.maxAge *= 1.3;
-                    
-                    // Add to particle list
-                    particles.push(newParticle);
-                    
-                    // Visual effect for recycling
-                    this.createRecycleEffect();
-                }
+                this.position.set(
+                    Math.cos(angle) * radius,
+                    recycleHeight,
+                    Math.sin(angle) * radius
+                );
                 
-                // Transfer remaining value to nearby particles
-                this.transferKnowledge();
+                // Reset velocity with learned boost
+                this.velocity.set(
+                    (Math.random() - 0.5) * 0.03,
+                    Math.random() * 0.02 + 0.015,
+                    (Math.random() - 0.5) * 0.03
+                );
                 
-                // Remove this particle after recycling
-                setTimeout(() => {
-                    this.remove();
-                }, 300);
+                // Increment generation and apply learning
+                this.generation++;
+                this.inheritedKnowledge += 0.2;
+                
+                // Apply learning benefits
+                this.trtAffinity *= 1.1;
+                this.maxAge *= 1.2;  // Longer lifespan from experience
+                
+                // Reset age but keep experience
+                this.age = 0;
+                this.isActive = true;
+                this.hasSucceeded = false;
+                
+                // Visual feedback - change color slightly
+                this.mesh.material.opacity = 0.9;
+                const hue = this.generation * 0.1;
+                this.mesh.material.color.offsetHSL(hue, 0, 0);
+                
+                // Add recycling effect
+                this.createRecycleEffect();
             }
             
             transferKnowledge() {
@@ -2611,7 +2512,7 @@
             const scenario = {
                 id: scenarioId,
                 name: `シナリオ ${comparisonData.scenarios.length + 1}`,
-                params: JSON.parse(JSON.stringify(parameters)), // Deep copy of all parameters
+                params: { ...parameters },
                 results: null
             };
             
@@ -2632,88 +2533,26 @@
                     const input = document.getElementById(key);
                     if (input) {
                         parameters[key] = scenario.params[key];
-                        
-                        // Handle different input types
-                        if (input.type === 'checkbox') {
-                            input.checked = scenario.params[key];
-                        } else if (input.type === 'select-one') {
-                            input.value = scenario.params[key];
-                        } else {
-                            input.value = scenario.params[key];
-                        }
-                        
-                        // Update display value
-                        const valueElement = document.getElementById(`${key}-value`);
-                        if (valueElement) {
-                            // Check if the parameter is a number or string
-                            if (typeof scenario.params[key] === 'number') {
-                                if (key.includes('Size') || key.includes('Particles') || key === 'attractionRange' || 
-                                    key === 'clusterThreshold' || key === 'vertexCapacity' || key === 'batchSize' ||
-                                    key === 'pathMemoryResolution') {
-                                    valueElement.textContent = scenario.params[key];
-                                } else if (key.includes('Rate') || key.includes('Persistence') || 
-                                         key.includes('Effect') || key.includes('Force') || 
-                                         key.includes('Convergence') || key.includes('Pull') || 
-                                         key.includes('Attraction') || key.includes('Permeability') ||
-                                         key.includes('Inertia') || key.includes('Strength')) {
-                                    valueElement.textContent = scenario.params[key].toFixed(3);
-                                } else if (key.includes('Radius') && key !== 'attractionRange') {
-                                    valueElement.textContent = scenario.params[key].toFixed(1);
-                                } else if (key === 'timeScale' || key === 'spawnInterval') {
-                                    valueElement.textContent = scenario.params[key].toFixed(1);
-                                } else {
-                                    valueElement.textContent = scenario.params[key];
-                                }
-                            } else if (typeof scenario.params[key] === 'boolean') {
-                                valueElement.textContent = scenario.params[key] ? '有効' : '無効';
-                            } else {
-                                // For string parameters like queueingBehavior, industryProfile
-                                valueElement.textContent = scenario.params[key];
-                            }
-                        }
+                        input.value = scenario.params[key];
+                        document.getElementById(`${key}-value`).textContent = 
+                            key.includes('Size') || key.includes('Particles') || key === 'attractionRange' || key === 'clusterThreshold' ? 
+                            scenario.params[key] : scenario.params[key].toFixed(3);
                     }
                 });
-                
-                // Apply industry-specific parameters if industry profile was loaded
-                if (scenario.params.industryProfile) {
-                    setIndustryParameters(scenario.params.industryProfile);
-                }
-                
-                // Update visual elements if needed
-                createCone();
-                createSections();
                 
                 // Highlight active scenario
                 document.querySelectorAll('.scenario-card').forEach(card => {
                     card.classList.remove('active');
                 });
-                const activeCard = document.querySelector(`[data-scenario-id="${id}"]`);
-                if (activeCard) {
-                    activeCard.classList.add('active');
-                }
+                document.querySelector(`[data-scenario-id="${id}"]`).classList.add('active');
             }
         }
         
         function saveScenario(id) {
             const scenario = comparisonData.scenarios.find(s => s.id === id);
             if (scenario) {
-                // Create a complete copy of current parameters
-                scenario.params = {};
-                Object.keys(parameters).forEach(key => {
-                    scenario.params[key] = parameters[key];
-                });
-                
-                // Update the scenario info display
+                scenario.params = { ...parameters };
                 renderScenarios();
-                
-                // Show visual feedback
-                const card = document.querySelector(`[data-scenario-id="${id}"]`);
-                if (card) {
-                    card.style.backgroundColor = '#d1fae5';
-                    setTimeout(() => {
-                        card.style.backgroundColor = '';
-                    }, 500);
-                }
             }
         }
         
@@ -2794,86 +2633,233 @@
             resultsDiv.innerHTML = `
                 <div class="info-box">
                     <strong>比較分析機能は現在開発中です</strong><br>
-                    予定機能：複数シナリオの並行実行と結果の統計的比較
+                    予定機能：複数シナリオの並行実行と結果の統計的比較<br>
+                    現在は単独シミュレーションで多重重力源モデルをご利用ください。
                 </div>
             `;
+            
+            // Re-enable button after 3 seconds
+            setTimeout(() => {
+                runButton.disabled = false;
+                runButton.textContent = '比較分析実行';
+            }, 3000);
         }
 
-        // Preset configurations
-        const presets = {
-            centralized: {
-                centralConvergence: 0.06,
-                clusterConvergence: 0.01,
-                clusterInertia: 0.03,
-                marketPull: 0.01,
-                clusterPermeability: 0.5,
-                peerAttraction: 0.005,
-                attractionRange: 3,
-                clusterThreshold: 5,
-                trtForce: 0.02,
-                praForce: 0.01
-            },
-            distributed: {
-                centralConvergence: 0.01,
-                clusterConvergence: 0.04,
-                clusterInertia: 0.01,
-                marketPull: 0.03,
-                clusterPermeability: 0.9,
-                peerAttraction: 0.03,
-                attractionRange: 7,
-                clusterThreshold: 2,
-                trtForce: 0.01,
-                praForce: 0.03
-            },
-            hybrid: {
-                centralConvergence: 0.03,
-                clusterConvergence: 0.02,
-                clusterInertia: 0.015,
-                marketPull: 0.02,
-                clusterPermeability: 0.8,
-                peerAttraction: 0.01,
-                attractionRange: 5,
-                clusterThreshold: 3,
-                trtForce: 0.015,
-                praForce: 0.02
-            },
-            emergent: {
-                centralConvergence: 0.02,
-                clusterConvergence: 0.03,
-                clusterInertia: 0.005,
-                marketPull: 0.04,
-                clusterPermeability: 0.95,
-                peerAttraction: 0.02,
-                attractionRange: 8,
-                clusterThreshold: 3,
-                trtForce: 0.012,
-                praForce: 0.025
-            }
-        };
+        // Parameter controls
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', function() {
+                const param = this.id;
+                const value = parseFloat(this.value);
+                parameters[param] = value;
+                
+                document.getElementById(`${param}-value`).textContent = 
+                    param.includes('Size') || param.includes('Particles') || param === 'analysisYears' || 
+                    param === 'attractionRange' || param === 'clusterThreshold' || param === 'vertexCapacity' || 
+                    param === 'capacityRadius' || param === 'coneTiltX' || param === 'coneTiltZ' ? 
+                    value : value.toFixed(3);
+                
+                if (param === 'initialParticles' && !simulationState.isRunning) {
+                    createInitialParticles();
+                }
+                
+                if (param === 'successThreshold') {
+                    createSections();
+                }
+                
+                if (param === 'coneTiltX' || param === 'coneTiltZ' || param === 'asymmetryX' || param === 'asymmetryZ') {
+                    createCone();
+                }
+                
+                if (param === 'pathMemoryPersistence') {
+                    document.getElementById('pathMemoryPersistence-value').textContent = value.toFixed(3);
+                }
+            });
+        });
 
-        // Load preset configuration
-        function loadPreset(presetName, button) {
-            const preset = presets[presetName];
-            if (!preset) return;
+        // Checkbox for path memory
+        document.getElementById('pathMemoryEnabled').addEventListener('change', function() {
+            parameters.pathMemoryEnabled = this.checked;
+            document.getElementById('pathMemoryEnabled-value').textContent = this.checked ? '有効' : '無効';
+        });
+
+        // Select dropdown for queueing behavior
+        document.getElementById('queueingBehavior').addEventListener('change', function() {
+            parameters.queueingBehavior = this.value;
+            document.getElementById('queueingBehavior-value').textContent = this.value;
+        });
+
+        // Select dropdown for industry profile
+        document.getElementById('industryProfile').addEventListener('change', function() {
+            parameters.industryProfile = this.value;
+            document.getElementById('industryProfile-value').textContent = this.value;
             
-            // Update parameters
-            Object.keys(preset).forEach(key => {
-                if (parameters.hasOwnProperty(key)) {
-                    parameters[key] = preset[key];
-                    const input = document.getElementById(key);
-                    if (input) {
-                        input.value = preset[key];
-                        const valueElement = document.getElementById(`${key}-value`);
-                        if (valueElement) {
-                            valueElement.textContent = typeof preset[key] === 'number' && 
-                                (key.includes('Force') || key.includes('Convergence') || key.includes('Attraction') || key.includes('Inertia') || key.includes('Pull') || key.includes('Permeability')) ? 
-                                preset[key].toFixed(3) : preset[key];
+            // Update UI to show industry characteristics
+            const profile = industryProfiles[this.value];
+            if (profile) {
+                const infoBox = document.createElement('div');
+                infoBox.className = 'info-box';
+                infoBox.innerHTML = `<strong>${this.value}特性:</strong> ${profile.description}`;
+                this.parentElement.appendChild(infoBox);
+                setTimeout(() => infoBox.remove(), 3000);
+            }
+        });
+
+        // Panel collapse
+        function togglePanel() {
+            const panel = document.getElementById('control-panel');
+            const button = document.querySelector('.collapse-button');
+            panel.classList.toggle('collapsed');
+            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+        }
+
+        // Toggle functions
+        function toggleElement(element) {
+            visibility[element] = !visibility[element];
+            
+            switch(element) {
+                case 'cone':
+                    coneGroup.visible = visibility[element];
+                    break;
+                case 'sections':
+                    sectionsGroup.visible = visibility[element];
+                    break;
+                case 'spiral':
+                    spiralGroup.visible = visibility[element];
+                    break;
+                case 'success':
+                    successGroup.visible = visibility[element];
+                    break;
+                case 'trails':
+                    trailsGroup.visible = visibility[element];
+                    break;
+                case 'clusters':
+                    clustersGroup.visible = visibility[element];
+                    break;
+                case 'gravity':
+                    gravityGroup.visible = visibility[element];
+                    if (visibility[element]) {
+                        updateGravityFieldVisualization();
+                    }
+                    break;
+                case 'pathMemory':
+                    pathMemoryGroup.visible = visibility[element];
+                    break;
+            }
+            
+            const button = document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`);
+            button.classList.toggle('active', visibility[element]);
+        }
+
+        // Preset functions - Updated for v4.0
+        function loadPreset(preset, button) {
+            const presets = {
+                centralized: {
+                    trtForce: 0.015,
+                    trtAcceleration: 1.0,
+                    tippingPoint: 0.7,
+                    praForce: 0.015,
+                    praDiversity: 0.8,
+                    centralConvergence: 0.05,
+                    clusterConvergence: 0.01,
+                    peerAttraction: 0.005,
+                    attractionRange: 3,
+                    clusterThreshold: 4,
+                    heterogeneity: 0.3,
+                    lifespanVariance: 0.2,
+                    // Path Memory Parameters - NEW
+                    pathMemoryEnabled: true,       // Enable path reinforcement
+                    pathMemoryStrength: 0.02,      // Strength of path attraction
+                    pathMemoryPersistence: 0.005,  // Memory persistence (0=no memory, higher=longer memory)
+                    queueingBehavior: 'priority'
+                },
+                distributed: {
+                    trtForce: 0.012,
+                    trtAcceleration: 0.9,
+                    tippingPoint: 0.75,
+                    praForce: 0.025,
+                    praDiversity: 1.2,
+                    centralConvergence: 0.015,
+                    clusterConvergence: 0.04,
+                    peerAttraction: 0.02,
+                    attractionRange: 7,
+                    clusterThreshold: 3,
+                    heterogeneity: 0.7,
+                    lifespanVariance: 0.4,
+                    // Vertex Capacity - Distributed: Flexible capacity
+                    vertexCapacity: 8,
+                    capacityRadius: 3,
+                    congestionEffect: 0.9,
+                    queueingBehavior: 'random'
+                },
+                hybrid: {
+                    trtForce: 0.015,
+                    trtAcceleration: 1.0,
+                    tippingPoint: 0.7,
+                    praForce: 0.02,
+                    praDiversity: 1.0,
+                    centralConvergence: 0.03,
+                    clusterConvergence: 0.02,
+                    peerAttraction: 0.01,
+                    attractionRange: 5,
+                    clusterThreshold: 3,
+                    heterogeneity: 0.5,
+                    lifespanVariance: 0.3,
+                    // Vertex Capacity - Hybrid: Balanced approach
+                    vertexCapacity: 5,
+                    capacityRadius: 2,
+                    congestionEffect: 0.8,
+                    queueingBehavior: 'priority'
+                },
+                emergent: {
+                    trtForce: 0.010,
+                    trtAcceleration: 0.8,
+                    tippingPoint: 0.8,
+                    praForce: 0.03,
+                    praDiversity: 1.5,
+                    centralConvergence: 0.01,
+                    clusterConvergence: 0.05,
+                    peerAttraction: 0.025,
+                    attractionRange: 8,
+                    clusterThreshold: 2,
+                    heterogeneity: 0.9,
+                    lifespanVariance: 0.5,
+                    // Vertex Capacity - Emergent: Dynamic capacity
+                    vertexCapacity: 6,
+                    capacityRadius: 2.5,
+                    congestionEffect: 0.85,
+                    queueingBehavior: 'pushback'
+                }
+            };
+            
+            const selectedPreset = presets[preset];
+            Object.keys(selectedPreset).forEach(key => {
+                parameters[key] = selectedPreset[key];
+                const input = document.getElementById(key);
+                if (input) {
+                    input.value = selectedPreset[key];
+                    const valueElement = document.getElementById(`${key}-value`);
+                    if (valueElement) {
+                        // Check data type and format accordingly
+                        if (typeof selectedPreset[key] === 'string') {
+                            valueElement.textContent = selectedPreset[key];
+                        } else if (typeof selectedPreset[key] === 'boolean') {
+                            valueElement.textContent = selectedPreset[key] ? '有効' : '無効';
+                        } else if (typeof selectedPreset[key] === 'number') {
+                            // Integer values (no decimal places needed)
+                            if (key === 'attractionRange' || key === 'clusterThreshold' || 
+                                key === 'vertexCapacity' || key === 'capacityRadius' ||
+                                key === 'coneTiltX' || key === 'coneTiltZ') {
+                                valueElement.textContent = selectedPreset[key];
+                            } else {
+                                // Float values (show 3 decimal places)
+                                valueElement.textContent = selectedPreset[key].toFixed(3);
+                            }
                         }
                     }
                 }
             });
             
-            // Update preset button states
+            // Update button states
             document.querySelectorAll('.preset-button').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -2881,129 +2867,23 @@
                 button.classList.add('active');
             }
             
-            // Recreate visual elements if needed
-            createCone();
-            createSections();
-        }
-
-        // Parameter update handlers
-        document.querySelectorAll('input[type="range"]').forEach(input => {
-            input.addEventListener('input', function() {
-                const param = this.id;
-                const value = parseFloat(this.value);
-                parameters[param] = value;
-                
-                const valueElement = document.getElementById(`${param}-value`);
-                if (valueElement) {
-                    if (param.includes('Force') || param.includes('Convergence') || param.includes('Attraction') || 
-                        param.includes('Inertia') || param.includes('Pull') || param.includes('Permeability') || 
-                        param.includes('Persistence') || param.includes('Strength') || param.includes('Rate') || 
-                        param.includes('Effect')) {
-                        valueElement.textContent = value.toFixed(3);
-                    } else if (param.includes('Radius') && param !== 'attractionRange') {
-                        valueElement.textContent = value.toFixed(1);
-                    } else {
-                        valueElement.textContent = value;
-                    }
-                }
-                
-                // Update visual elements if needed
-                if (['coneTiltX', 'coneTiltZ', 'asymmetryX', 'asymmetryZ'].includes(param)) {
-                    createCone();
-                    createSections();
-                }
-                
-                if (param === 'successThreshold') {
-                    createSections();
-                }
-            });
-        });
-
-        // Checkbox handler for path memory
-        document.getElementById('pathMemoryEnabled').addEventListener('change', function() {
-            parameters.pathMemoryEnabled = this.checked;
-            document.getElementById('pathMemoryEnabled-value').textContent = this.checked ? '有効' : '無効';
-        });
-
-        // Select handlers
-        document.getElementById('queueingBehavior').addEventListener('change', function() {
-            parameters.queueingBehavior = this.value;
-            document.getElementById('queueingBehavior-value').textContent = this.value;
-        });
-
-        document.getElementById('industryProfile').addEventListener('change', function() {
-            parameters.industryProfile = this.value;
-            document.getElementById('industryProfile-value').textContent = this.value;
-            setIndustryParameters(this.value);
-        });
-
-        document.getElementById('analysisYears').addEventListener('input', function() {
-            document.getElementById('analysisYears-value').textContent = this.value;
-        });
-
-        // Toggle element visibility
-        function toggleElement(element) {
-            visibility[element] = !visibility[element];
-            const button = document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`);
-            button.classList.toggle('active');
-            
-            switch(element) {
-                case 'cone':
-                    coneGroup.visible = visibility.cone;
-                    break;
-                case 'sections':
-                    sectionsGroup.visible = visibility.sections;
-                    break;
-                case 'spiral':
-                    spiralGroup.visible = visibility.spiral;
-                    break;
-                case 'success':
-                    successGroup.visible = visibility.success;
-                    break;
-                case 'trails':
-                    trailsGroup.visible = visibility.trails;
-                    break;
-                case 'clusters':
-                    clustersGroup.visible = visibility.clusters;
-                    break;
-                case 'gravity':
-                    gravityGroup.visible = visibility.gravity;
-                    updateGravityFieldVisualization();
-                    break;
-                case 'pathMemory':
-                    pathMemoryGroup.visible = visibility.pathMemory;
-                    if (visibility.pathMemory) {
-                        pathMemory.updateVisual();
-                    }
-                    break;
+            // Update cone if asymmetry parameters exist
+            if (parameters.asymmetryX !== undefined || parameters.asymmetryZ !== undefined) {
+                createCone();
             }
-        }
-
-        // Panel controls
-        function togglePanel() {
-            const panel = document.getElementById('control-panel');
-            panel.classList.toggle('collapsed');
-            const button = panel.querySelector('.collapse-button');
-            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
-        }
-
-        function toggleComparisonPanel() {
-            const panel = document.getElementById('comparison-panel');
-            panel.classList.toggle('collapsed');
-            const button = panel.querySelector('.comparison-collapse-btn');
-            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
         }
 
         // Simulation controls
         function startSimulation() {
             simulationState.isRunning = true;
             simulationState.isPaused = false;
+            document.getElementById('period-stats').style.display = 'block';
         }
-
+        
         function pauseSimulation() {
             simulationState.isPaused = !simulationState.isPaused;
         }
-
+        
         function resetSimulation() {
             simulationState.isRunning = false;
             simulationState.isPaused = false;
@@ -3015,255 +2895,291 @@
                 fiveYear: { spawned: 0, success: 0 },
                 tenYear: { spawned: 0, success: 0 }
             };
+            
+            // Clear clusters
+            simulationState.clusters.forEach(cluster => cluster.remove());
             simulationState.clusters = [];
             
-            // Clear all particles
             particles.forEach(p => p.remove());
             particles = [];
             nextParticleId = 0;
             
-            // Clear path memory
-            pathMemory.grid = pathMemory.grid.map(x => x.map(y => y.map(z => 0)));
-            pathMemory.maxValue = 0;
-            pathMemory.updateVisual();
-            
-            // Clear visual groups
             while(successGroup.children.length > 0) {
                 successGroup.remove(successGroup.children[0]);
             }
+            
             while(trailsGroup.children.length > 0) {
                 trailsGroup.remove(trailsGroup.children[0]);
             }
-            while(clustersGroup.children.length > 0) {
-                clustersGroup.remove(clustersGroup.children[0]);
-            }
             
-            // Reset initial particles
             createInitialParticles();
-            
-            // Update display
+            document.getElementById('period-stats').style.display = 'none';
             updateStats();
         }
 
-        // Update statistics display
+        // Statistics calculation - Updated for v4.0
         function updateStats() {
-            document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1) + '年';
-            document.getElementById('success-count').textContent = simulationState.successCount;
-            document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
-            
-            const successRate = simulationState.totalSpawned > 0 ? 
-                (simulationState.successCount / simulationState.totalSpawned * 100).toFixed(1) : 0;
-            document.getElementById('success-rate').textContent = successRate + '%';
-            
+            // Active particles
             const activeParticles = particles.filter(p => p.isActive);
             document.getElementById('active-particles').textContent = activeParticles.length;
             
-            // Calculate average TRT progress
+            // Total spawned
+            document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
+            
+            // Success count and rate
+            document.getElementById('success-count').textContent = simulationState.successCount;
+            const successRate = simulationState.totalSpawned > 0 ? 
+                (simulationState.successCount / simulationState.totalSpawned * 100).toFixed(1) : '0.0';
+            document.getElementById('success-rate').textContent = successRate + '%';
+            
+            // Simulation time
+            document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1) + '年';
+            
+            // Cluster count
+            document.getElementById('cluster-count').textContent = simulationState.clusters.length;
+            
+            // Gravity sources (central + clusters)
+            document.getElementById('gravity-sources').textContent = 1 + simulationState.clusters.length;
+            
+            // === VERTEX CAPACITY STATISTICS === //
+            const nearVertexThreshold = parameters.successThreshold - parameters.capacityRadius;
+            const nearVertexParticles = activeParticles.filter(p => 
+                p.position.y >= nearVertexThreshold && !p.hasSucceeded
+            );
+            const queuedParticles = nearVertexParticles.filter(p => p.isQueued);
+            
+            // Vertex congestion percentage
+            const congestionRate = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
+            document.getElementById('vertex-congestion').textContent = congestionRate.toFixed(0) + '%';
+            
+            // Queued particles count
+            document.getElementById('queued-particles').textContent = queuedParticles.length;
+            
+            // Calculate diversity index
             if (activeParticles.length > 0) {
-                const avgTrt = activeParticles.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / activeParticles.length;
-                document.getElementById('avg-trt').textContent = avgTrt.toFixed(3);
-                
-                // Calculate PRA dispersion
-                const centerX = activeParticles.reduce((sum, p) => sum + p.position.x, 0) / activeParticles.length;
-                const centerZ = activeParticles.reduce((sum, p) => sum + p.position.z, 0) / activeParticles.length;
-                const dispersion = Math.sqrt(
-                    activeParticles.reduce((sum, p) => 
-                        sum + Math.pow(p.position.x - centerX, 2) + Math.pow(p.position.z - centerZ, 2), 0
-                    ) / activeParticles.length
-                );
-                document.getElementById('pra-dispersion').textContent = dispersion.toFixed(3);
-                
-                // Calculate diversity index (Shannon entropy based on particle types)
                 const typeCounts = { standard: 0, explorer: 0, exploiter: 0 };
                 activeParticles.forEach(p => {
                     typeCounts[p.type]++;
                 });
-                let diversity = 0;
-                Object.values(typeCounts).forEach(count => {
+                
+                const total = activeParticles.length;
+                const shannon = Object.values(typeCounts).reduce((sum, count) => {
                     if (count > 0) {
-                        const p = count / activeParticles.length;
-                        diversity -= p * Math.log(p);
+                        const p = count / total;
+                        return sum - p * Math.log(p);
                     }
+                    return sum;
+                }, 0);
+                
+                document.getElementById('diversity-index').textContent = shannon.toFixed(3);
+                
+                // Average TRT progress
+                const avgHeight = activeParticles.reduce((sum, p) => sum + p.position.y, 0) / activeParticles.length;
+                const trtProgress = avgHeight / coneHeight;
+                document.getElementById('avg-trt').textContent = trtProgress.toFixed(3);
+                
+                // PRA dispersion
+                const positions = activeParticles.map(p => ({ x: p.position.x, z: p.position.z, y: p.position.y }));
+                const centerX = positions.reduce((sum, p) => sum + p.x, 0) / positions.length;
+                const centerZ = positions.reduce((sum, p) => sum + p.z, 0) / positions.length;
+                
+                let totalDispersion = 0;
+                positions.forEach(p => {
+                    const heightRatio = p.y / coneHeight;
+                    const maxRadius = coneRadius * (1 - heightRatio);
+                    const currentRadius = Math.sqrt((p.x - centerX) ** 2 + (p.z - centerZ) ** 2);
+                    totalDispersion += currentRadius / (maxRadius + 0.01);
                 });
-                document.getElementById('diversity-index').textContent = diversity.toFixed(3);
+                const praDispersion = totalDispersion / activeParticles.length;
+                document.getElementById('pra-dispersion').textContent = praDispersion.toFixed(3);
             } else {
                 document.getElementById('avg-trt').textContent = '0.000';
                 document.getElementById('pra-dispersion').textContent = '0.000';
                 document.getElementById('diversity-index').textContent = '0.000';
             }
             
-            // Update cluster count
-            document.getElementById('cluster-count').textContent = simulationState.clusters.length;
+            // Period stats
+            if (simulationState.elapsedTime >= 5) {
+                const fiveYearRate = simulationState.periodStats.fiveYear.spawned > 0 ?
+                    (simulationState.periodStats.fiveYear.success / simulationState.periodStats.fiveYear.spawned * 100).toFixed(1) : '0.0';
+                document.getElementById('five-year-stats').textContent = 
+                    `${simulationState.periodStats.fiveYear.success}/${simulationState.periodStats.fiveYear.spawned} (${fiveYearRate}%)`;
+            }
             
-            // Update gravity sources (central + clusters)
-            document.getElementById('gravity-sources').textContent = 1 + simulationState.clusters.length;
-            
-            // Calculate vertex congestion
-            const nearVertexThreshold = parameters.successThreshold - parameters.capacityRadius;
-            const nearVertexParticles = particles.filter(p => 
-                p.isActive && p.position.y >= nearVertexThreshold && !p.hasSucceeded
-            );
-            const congestionPercent = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
-            document.getElementById('vertex-congestion').textContent = congestionPercent.toFixed(0) + '%';
-            
-            // Count queued particles
-            const queuedCount = particles.filter(p => p.isActive && p.isQueued).length;
-            document.getElementById('queued-particles').textContent = queuedCount;
-            
-            // Update period stats if visible
-            if (simulationState.isRunning) {
-                // Track 5-year success
-                if (simulationState.elapsedTime <= 5) {
-                    simulationState.periodStats.fiveYear.success = simulationState.successCount;
-                }
-                // Track 10-year success
-                if (simulationState.elapsedTime <= 10) {
-                    simulationState.periodStats.tenYear.success = simulationState.successCount;
-                }
-                
-                // Update display
-                if (simulationState.elapsedTime >= 5) {
-                    const fiveYearRate = simulationState.periodStats.fiveYear.spawned > 0 ?
-                        (simulationState.periodStats.fiveYear.success / simulationState.periodStats.fiveYear.spawned * 100).toFixed(1) : 0;
-                    document.getElementById('five-year-stats').textContent = 
-                        `${simulationState.periodStats.fiveYear.success}/${simulationState.periodStats.fiveYear.spawned} (${fiveYearRate}%)`;
-                }
-                
-                if (simulationState.elapsedTime >= 10) {
-                    const tenYearRate = simulationState.periodStats.tenYear.spawned > 0 ?
-                        (simulationState.periodStats.tenYear.success / simulationState.periodStats.tenYear.spawned * 100).toFixed(1) : 0;
-                    document.getElementById('ten-year-stats').textContent = 
-                        `${simulationState.periodStats.tenYear.success}/${simulationState.periodStats.tenYear.spawned} (${tenYearRate}%)`;
-                    document.getElementById('period-stats').style.display = 'block';
-                }
+            if (simulationState.elapsedTime >= 10) {
+                const tenYearRate = simulationState.periodStats.tenYear.spawned > 0 ?
+                    (simulationState.periodStats.tenYear.success / simulationState.periodStats.tenYear.spawned * 100).toFixed(1) : '0.0';
+                document.getElementById('ten-year-stats').textContent = 
+                    `${simulationState.periodStats.tenYear.success}/${simulationState.periodStats.tenYear.spawned} (${tenYearRate}%)`;
             }
         }
 
-        // Camera controls
-        let isMouseDown = false;
-        let mouseX = 0;
-        let mouseY = 0;
-        let cameraTheta = 0;
-        let cameraPhi = Math.PI / 4;
-        let cameraDistance = 100;
-
-        renderer.domElement.addEventListener('mousedown', (event) => {
-            isMouseDown = true;
-            mouseX = event.clientX;
-            mouseY = event.clientY;
+        // Mouse controls
+        let isDragging = false;
+        let previousMouseX = 0, previousMouseY = 0;
+        
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                isDragging = true;
+                previousMouseX = e.clientX;
+                previousMouseY = e.clientY;
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMouseX;
+                const deltaY = e.clientY - previousMouseY;
+                
+                const angle = Math.atan2(camera.position.z, camera.position.x);
+                const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+                
+                const newAngle = angle + deltaX * 0.01;
+                camera.position.x = Math.cos(newAngle) * radius;
+                camera.position.z = Math.sin(newAngle) * radius;
+                
+                camera.position.y += deltaY * 0.2;
+                camera.position.y = Math.max(10, Math.min(80, camera.position.y));
+                
+                previousMouseX = e.clientX;
+                previousMouseY = e.clientY;
+            }
         });
 
-        window.addEventListener('mouseup', () => {
-            isMouseDown = false;
+        // Mouse wheel for zoom
+        document.addEventListener('wheel', (e) => {
+            // Check if the mouse is over any control panel or UI element
+            const isOverUI = e.target.closest('#control-panel') || 
+                           e.target.closest('.stats-panel') || 
+                           e.target.closest('.legend') ||
+                           e.target.closest('.cluster-visualization') ||
+                           e.target.closest('.comparison-panel') ||
+                           e.target.tagName === 'INPUT' ||
+                           e.target.tagName === 'SELECT' ||
+                           e.target.tagName === 'BUTTON';
+            
+            // Only zoom if not over UI elements
+            if (!isOverUI) {
+                e.preventDefault(); // Prevent page scroll
+                
+                const zoomSpeed = 0.1;
+                const direction = e.deltaY > 0 ? 1 : -1;
+                
+                const distance = Math.sqrt(
+                    camera.position.x ** 2 + 
+                    camera.position.y ** 2 + 
+                    camera.position.z ** 2
+                );
+                
+                const newDistance = distance * (1 + direction * zoomSpeed);
+                const scale = newDistance / distance;
+                
+                camera.position.x *= scale;
+                camera.position.y *= scale;
+                camera.position.z *= scale;
+            }
         });
-
-        window.addEventListener('mousemove', (event) => {
-            if (!isMouseDown) return;
-            
-            const deltaX = event.clientX - mouseX;
-            const deltaY = event.clientY - mouseY;
-            
-            cameraTheta -= deltaX * 0.01;
-            cameraPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, cameraPhi - deltaY * 0.01));
-            
-            mouseX = event.clientX;
-            mouseY = event.clientY;
-            
-            updateCamera();
-        });
-
-        renderer.domElement.addEventListener('wheel', (event) => {
-            cameraDistance = Math.max(50, Math.min(200, cameraDistance + event.deltaY * 0.1));
-            updateCamera();
-        });
-
-        function updateCamera() {
-            camera.position.x = cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta);
-            camera.position.y = cameraDistance * Math.cos(cameraPhi);
-            camera.position.z = cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta);
-            camera.lookAt(0, 20, 0);
-        }
 
         // Animation loop
-        let lastTime = 0;
+        const clock = new THREE.Clock();
+        let clusterUpdateCounter = 0;
+        let pathMemoryUpdateCounter = 0;
         
-        function animate(time) {
+        function animate() {
             requestAnimationFrame(animate);
             
-            const deltaTime = Math.min((time - lastTime) / 1000, 0.1); // Cap delta time
-            lastTime = time;
+            const deltaTime = clock.getDelta();
             
+            // Update simulation time
             if (simulationState.isRunning && !simulationState.isPaused) {
-                // Update simulation time
                 simulationState.elapsedTime += deltaTime * parameters.timeScale;
                 
-                // Spawn new particles at intervals
+                // Check for spawning new particles
                 if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
                     spawnParticles(parameters.batchSize);
                     simulationState.lastSpawnTime = simulationState.elapsedTime;
                 }
                 
-                // Update spatial grid
-                spatialGrid.clear();
-                particles.filter(p => p.isActive).forEach(p => spatialGrid.insert(p));
+                // Track period success
+                particles.forEach(p => {
+                    if (p.hasSucceeded && !p.periodTracked) {
+                        if (p.spawnTime <= 5) {
+                            simulationState.periodStats.fiveYear.success++;
+                        }
+                        if (p.spawnTime <= 10) {
+                            simulationState.periodStats.tenYear.success++;
+                        }
+                        p.periodTracked = true;
+                    }
+                });
+            }
+            
+            // Update particles
+            const activeParticles = particles.filter(p => p.isActive);
+            
+            // Rebuild spatial grid each frame
+            spatialGrid.clear();
+            activeParticles.forEach(p => spatialGrid.insert(p));
+            
+            activeParticles.forEach(particle => {
+                particle.update(deltaTime * 10, activeParticles, parameters, spatialGrid);
+            });
+            
+            // Update clusters periodically (not every frame for performance)
+            clusterUpdateCounter++;
+            if (clusterUpdateCounter % 30 === 0) {  // Update every 30 frames
+                updateClusters(activeParticles);
                 
-                // Update particles
-                particles.forEach(particle => {
-                    particle.update(deltaTime, particles, parameters);
+                // Update existing clusters
+                simulationState.clusters.forEach(cluster => {
+                    cluster.update(activeParticles);
                 });
                 
-                // Remove inactive particles
-                particles = particles.filter(p => p.isActive || p.hasSucceeded);
-                
-                // Update clusters
-                if (visibility.clusters) {
-                    updateClusters(particles);
-                    simulationState.clusters.forEach(cluster => cluster.update(particles));
-                }
-                
-                // Update path memory decay
-                if (parameters.pathMemoryEnabled) {
-                    pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
-                    if (visibility.pathMemory) {
-                        pathMemory.updateVisual();
-                    }
-                }
-                
-                // Update gravity field visualization
+                // Update gravity field visualization if enabled
                 if (visibility.gravity) {
                     updateGravityFieldVisualization();
                 }
-                
-                // Update trails
-                if (visibility.trails) {
-                    while(trailsGroup.children.length > 0) {
-                        trailsGroup.remove(trailsGroup.children[0]);
-                    }
-                    
-                    particles.forEach(particle => {
-                        if (particle.trail.length > 1) {
-                            const geometry = new THREE.BufferGeometry().setFromPoints(particle.trail);
-                            const material = new THREE.LineBasicMaterial({
-                                color: particle.getColorByHeight(),
-                                transparent: true,
-                                opacity: 0.5
-                            });
-                            const trail = new THREE.Line(geometry, material);
-                            trailsGroup.add(trail);
-                        }
-                    });
-                }
-                
-                // Update statistics
-                updateStats();
             }
+            
+            // Update path memory visualization and decay
+            pathMemoryUpdateCounter++;
+            if (pathMemoryUpdateCounter % 60 === 0 && parameters.pathMemoryEnabled) {  // Update every 60 frames
+                // Apply decay - higher persistence = slower decay (more intuitive)
+                // persistence = 0 → decay rate = 0.99 (fast decay)
+                // persistence = 0.02 → decay rate = 0.9999 (very slow decay)
+                const decayRate = 1 - Math.exp(-parameters.pathMemoryPersistence * 100);
+                pathMemory.decay(1 - decayRate);
+                
+                // Update visual representation if visible
+                if (visibility.pathMemory) {
+                    pathMemory.updateVisual();
+                }
+            }
+            
+            // Clean up inactive particles
+            particles = particles.filter(p => p.isActive || p.hasSucceeded);
+            
+            // Update stats
+            updateStats();
+            
+            // Rotate scene elements slowly
+            coneGroup.rotation.y += 0.0005 * parameters.simulationSpeed;
+            spiralGroup.rotation.y += 0.0003 * parameters.simulationSpeed;
+            
+            // Camera look at center
+            camera.lookAt(0, 20, 0);
             
             renderer.render(scene, camera);
         }
-        
-        animate(0);
 
-        // Handle window resize
+        // Start animation
+        animate();
+
+        // Window resize handler
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
