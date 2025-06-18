@@ -3,81 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRT・PRA理論 インタラクティブ・シミュレータ v4.4 - 完全版</title>
+    <title>TRT・PRA理論 インタラクティブ・シミュレータ v4.5 - 完全修正版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            background: #f0f0f0;
-            overflow: hidden;
-            color: #333;
-        }
-        #canvas-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        #control-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            width: 320px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-            z-index: 100;
-        }
+        body { margin: 0; font-family: 'Arial', sans-serif; background: #f0f0f0; overflow: hidden; color: #333; }
+        #canvas-container { position: relative; width: 100vw; height: 100vh; }
+        #control-panel { position: absolute; bottom: 20px; left: 20px; background: rgba(255, 255, 255, 0.98); padding: 20px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); width: 320px; max-height: calc(100vh - 40px); overflow-y: auto; z-index: 100; }
         h1 { font-size: 18px; margin: 0; color: #1f2937; }
-        h2 { font-size: 14px; margin: 15px 0 10px 0; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;}
+        h2 { font-size: 14px; margin: 15px 0 10px 0; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .parameter-group { background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e5e7eb; }
         .parameter { margin-bottom: 12px; }
-        .parameter label { display: block; font-size: 12px; color: #4b5563; margin-bottom: 4px; font-weight: 600; }
-        .parameter input[type="range"] { width: 100%; }
-        .parameter-value { font-size: 11px; color: #6b7280; margin-left: 8px; }
+        .parameter label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #4b5563; font-weight: 600; margin-bottom: 4px; }
+        .parameter input[type="range"] { width: 100%; -webkit-appearance: none; height: 5px; background: #e5e7eb; border-radius: 3px; outline: none;}
+        .parameter input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; }
+        .parameter-value { font-size: 11px; color: #6b7280; text-align: right; }
     </style>
 </head>
 <body>
     <div id="canvas-container">
         <div id="control-panel">
-            <div class="panel-header">
-                <h1>TRT・PRA 戦略シミュレータ v4.4</h1>
-            </div>
+            <h1>TRT・PRA 戦略シミュレータ v4.5</h1>
             <div class="panel-content">
-                <!-- (他のUIグループは省略) -->
-
+                <div class="parameter-group">
+                    <h2>シミュレーション制御</h2>
+                    <!-- ... (制御ボタンなど) ... -->
+                </div>
                 <div class="parameter-group">
                     <h2>資源特性【拡張】</h2>
                     <div class="parameter">
-                        <label>資源異質性<span class="parameter-value" id="heterogeneity-value">0.5</span></label>
+                        <label><span>資源異質性</span><span class="parameter-value" id="heterogeneity-value">0.5</span></label>
                         <input type="range" id="heterogeneity" min="0" max="1.0" value="0.5" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>資源寿命変動<span class="parameter-value" id="lifespanVariance-value">0.3</span></label>
+                        <label><span>資源寿命変動</span><span class="parameter-value" id="lifespanVariance-value">0.3</span></label>
                         <input type="range" id="lifespanVariance" min="0" max="1.0" value="0.3" step="0.1">
                     </div>
                     
-                    <!-- ▼▼▼ 修正済みのUI要素 ▼▼▼ -->
+                    <!-- ▼▼▼ ここが修正・追加されたUI要素です ▼▼▼ -->
                     <div class="parameter">
-                        <label>【新規】活用特化型の発生割合<span class="parameter-value" id="exploiterRatio-value">0.3</span></label>
+                        <label><span>【新規】活用特化型の発生割合</span><span class="parameter-value" id="exploiterRatio-value">0.30</span></label>
                         <input type="range" id="exploiterRatio" min="0" max="1.0" value="0.3" step="0.05">
                     </div>
                     <div class="parameter">
-                        <label>【新規】探索特化型の発生割合<span class="parameter-value" id="explorerRatio-value">0.3</span></label>
+                        <label><span>【新規】探索特化型の発生割合</span><span class="parameter-value" id="explorerRatio-value">0.30</span></label>
                         <input type="range" id="explorerRatio" min="0" max="1.0" value="0.3" step="0.05">
                     </div>
                     <div class="parameter">
-                        <label>【新規】戦略的初期配置<span class="parameter-value" id="strategicSpawningEnabled-value">有効</span></label>
-                        <input type="checkbox" id="strategicSpawningEnabled" checked style="width: auto; height: 16px;">
+                        <label><span>【新規】戦略的初期配置</span><input type="checkbox" id="strategicSpawningEnabled" checked></label>
                     </div>
                     <!-- ▲▲▲ ここまで ▲▲▲ -->
                 </div>
-
-                 <!-- (TRT、PRA、多重重力源などの他のパラメータグループ) -->
+                <!-- ... (TRT, PRA, 多重重力源など他のパラメータグループ) ... -->
             </div>
         </div>
     </div>
@@ -92,7 +69,7 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
-        // ... (lights, ground, etc.)
+        // ... (lights, ground)
 
         // --- Parameters & State ---
         const parameters = {
@@ -101,24 +78,20 @@
             exploiterRatio: 0.3,
             explorerRatio: 0.3,
             strategicSpawningEnabled: true,
-            // ... 他の全パラメータ
+            // ... (他の全パラメータ)
         };
         const simulationState = { clusters: [] }; // 初期化
         const coneRadius = 20;
 
-        const ParticleType = {
-            STANDARD: 'standard',
-            EXPLORER: 'explorer',
-            EXPLOITER: 'exploiter'
-        };
+        const ParticleType = { STANDARD: 'standard', EXPLORER: 'explorer', EXPLOITER: 'exploiter' };
 
-        // --- Core Classes ---
+        // --- Core Classes (ResourceParticle) ---
         class ResourceParticle {
             constructor() {
                 // ... (以前の修正を反映したコンストラクタ)
                 this._determineType();
                 this._determineInitialPosition();
-                // ...
+                // ... (mesh作成など)
             }
             _determineType() {
                 const typeRandom = Math.random();
@@ -127,54 +100,50 @@
                 else this.type = ParticleType.STANDARD;
             }
             _determineInitialPosition() {
-                let angle, radius;
                 this.position = new THREE.Vector3(0, 0.5, 0);
                 if (parameters.strategicSpawningEnabled) {
-                    // タイプに応じたロジック
+                    // ... (タイプに応じた戦略的配置ロジック)
                 } else {
-                    // ランダム配置
+                    // ... (ランダム配置ロジック)
                 }
             }
-            // ... (その他のメソッド)
+            // ... (updateなどの他のメソッド)
         }
 
         // --- UI Event Handlers ---
         function setupUI() {
-            document.querySelectorAll('input[type="range"]').forEach(input => {
-                input.addEventListener('input', (e) => {
-                    const param = e.target.id;
-                    const value = parseFloat(e.target.value);
-                    parameters[param] = value;
-                    const valueLabel = document.getElementById(`${param}-value`);
-                    if (valueLabel) valueLabel.textContent = value.toFixed(2);
-                });
-            });
+            // 全てのinput要素にイベントリスナーを設定
+            document.querySelectorAll('#control-panel input').forEach(input => {
+                const param = input.id;
+                if (!parameters.hasOwnProperty(param)) return;
 
-            document.getElementById('strategicSpawningEnabled').addEventListener('change', (e) => {
-                parameters.strategicSpawningEnabled = e.target.checked;
-                const valueLabel = document.getElementById('strategicSpawningEnabled-value');
-                if (valueLabel) valueLabel.textContent = e.target.checked ? '有効' : '無効';
-            });
-            
-            // 初期値をUIに反映
-            Object.keys(parameters).forEach(param => {
-                const input = document.getElementById(param);
-                if (!input) return;
-                
+                // 初期値をUIに反映
                 if (input.type === 'checkbox') {
                     input.checked = parameters[param];
                 } else {
                     input.value = parameters[param];
+                    const valueLabel = document.getElementById(`${param}-value`);
+                    if (valueLabel) valueLabel.textContent = parseFloat(input.value).toFixed(2);
                 }
-                const event = new Event('input');
-                input.dispatchEvent(event);
+
+                // イベントリスナーを設定
+                input.addEventListener('input', (e) => {
+                    if (e.target.type === 'checkbox') {
+                        parameters[param] = e.target.checked;
+                    } else {
+                        const value = parseFloat(e.target.value);
+                        parameters[param] = value;
+                        const valueLabel = document.getElementById(`${param}-value`);
+                        if (valueLabel) valueLabel.textContent = value.toFixed(2);
+                    }
+                });
             });
         }
 
         // --- Main Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
-            // ... (シミュレーションロジック)
+            // ... (シミュレーションのメインロジック)
             renderer.render(scene, camera);
         }
 
