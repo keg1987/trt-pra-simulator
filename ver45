@@ -3,640 +3,174 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRAシミュレータ v5.2 - レスポンシブデザイン対応版</title>
+  <title>TRT・PRAシミュレータ v5.3</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    body { 
-      margin: 0; 
-      font-family: Arial, sans-serif; 
-      background: #f0f0f0; 
-      /* overflow: hidden; を削除してスクロールを許可 */
+    body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; }
+    #main-layout {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      width: 100vw;
+      box-sizing: border-box;
+      overflow: hidden;
     }
-    
-    #canvas-container { 
-      position: relative; 
-      width: 100vw; 
-      height: 100vh; 
+    #canvas-container {
+      flex: 1 1 60vw;
+      min-width: 0;
+      min-height: 0;
+      position: relative;
     }
-    
-    /* === コントロールパネルのスタイル === */
-    #control-panel {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      width: 320px;
-      max-width: calc(100vw - 40px); /* 画面幅より大きくならないように */
-      max-height: calc(100vh - 40px); /* 画面の高さより大きくならないように */
-      background: rgba(255,255,255,0.98);
-      padding: 20px;
-      border-radius: 12px;
+    #side-panels {
+      flex: 0 0 350px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+      max-width: 100vw;
+      box-sizing: border-box;
       overflow-y: auto;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      z-index: 100;
+      background: #f8fafb;
+      border-left: 1px solid #e5e7eb;
+      padding: 10px 0 10px 10px;
     }
-    
-    /* === 統計パネルのスタイル === */
-    .stats-panel {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 280px;
-      max-width: calc(100vw - 40px);
-      background: rgba(255,255,255,0.98);
-      padding: 20px;
+    #control-panel, .stats-panel, .legend {
+      background: #fff;
       border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      padding: 18px;
+      margin-bottom: 0;
+      max-width: 340px;
+      width: 100%;
+      box-sizing: border-box;
     }
-    
-    /* === 凡例パネルのスタイル === */
-    .legend {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      max-width: 200px;
-      background: rgba(255,255,255,0.98);
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      z-index: 100;
-    }
-    
-    /* === 共通のパネルスタイル === */
     h1 { font-size: 18px; margin: 0 0 10px; color: #1f2937; }
     h2 { font-size: 14px; margin: 15px 0 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; color: #374151; }
-    
-    .parameter-group { 
-      margin-bottom: 12px; 
-      padding: 12px; 
-      background: #f9fafb; 
-      border: 1px solid #e5e7eb; 
-      border-radius: 6px; 
-    }
-    
+    .parameter-group { margin-bottom: 12px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; }
     .parameter { margin-bottom: 12px; }
-    
-    .parameter label {
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center;
-      font-size: 12px; 
-      color: #4b5563; 
-      font-weight: 600; 
-      margin-bottom: 4px;
-    }
-    
-    .parameter input[type=range] {
-      width: 100%; 
-      -webkit-appearance: none; 
-      appearance: none; 
-      height: 5px; 
-      background: #e5e7eb; 
-      border-radius: 3px; 
-      outline: none;
-    }
-    
-    .parameter input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; 
-      appearance: none; 
-      width: 16px; 
-      height: 16px; 
-      border-radius: 50%; 
-      background: #3b82f6; 
-      cursor: pointer;
-    }
-    
-    .parameter-value { 
-      font-size: 11px; 
-      color: #6b7280; 
-      min-width: 40px; 
-      text-align: right; 
-    }
-    
-    button {
-      margin-right: 5px; 
-      padding: 8px 12px; 
-      border: none; 
-      background: #3b82f6; 
-      color: #fff; 
-      border-radius: 6px; 
-      cursor: pointer;
-    }
-    
+    .parameter label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #4b5563; font-weight: 600; margin-bottom: 4px; }
+    .parameter input[type=range] { width: 100%; }
+    .parameter-value { font-size: 11px; color: #6b7280; min-width: 40px; text-align: right; }
+    button { margin-right: 5px; padding: 8px 12px; border: none; background: #3b82f6; color: #fff; border-radius: 6px; cursor: pointer; }
     button:hover { background: #2563eb; }
-    
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin: 6px 0;
-      font-size: 11px;
-    }
-    
-    .legend-color, .legend-shape {
-      width: 18px;
-      height: 18px;
-      margin-right: 8px;
-    }
-    
-    .stat-item {
-      margin: 8px 0;
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .legend-item { display: flex; align-items: center; margin: 6px 0; font-size: 11px; }
+    .legend-shape, .legend-color { width: 18px; height: 18px; margin-right: 8px; }
+    .stat-item { margin: 8px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* ▼▼▼ レスポンシブデザイン対応 ▼▼▼ */
-    
-    /* タブレットサイズ（1024px以下）の場合 */
+    /* ツールチップ */
+    .tooltip {
+      position: relative; display: inline-block; cursor: pointer;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 260px;
+      background-color: #333;
+      color: #fff;
+      text-align: left;
+      border-radius: 6px;
+      padding: 10px;
+      position: absolute;
+      z-index: 999;
+      bottom: 125%; left: 50%; transform: translateX(-50%);
+      opacity: 0; transition: opacity 0.3s;
+      font-size: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+    /* レスポンシブデザイン */
     @media (max-width: 1024px) {
-      body {
-        display: flex;
-        flex-direction: column;
-        height: auto;
-        overflow-y: auto;
-      }
-      
-      #canvas-container {
-        order: 1;
-        height: 50vh; /* canvasの高さを画面の半分に */
-      }
-      
-      #control-panel, .stats-panel, .legend {
-        position: relative;
-        width: auto;
-        margin: 10px;
-        left: auto; 
-        right: auto; 
-        top: auto; 
-        bottom: auto;
-        max-height: 45vh;
-        max-width: calc(100vw - 20px);
-      }
-      
-      #control-panel { order: 2; }
-      .stats-panel { order: 3; }
-      .legend { order: 4; }
+      #main-layout { flex-direction: column; height: auto; }
+      #canvas-container { order: 1; height: 45vh; min-height: 200px; }
+      #side-panels { order: 2; flex-direction: row; flex-wrap: wrap; padding-left: 0; padding-top: 10px; }
+      #control-panel, .stats-panel, .legend { max-width: 98vw; min-width: 220px; margin: 5px; }
     }
-    
-    /* スマートフォンサイズ（768px以下）の場合 */
     @media (max-width: 768px) {
-      #canvas-container {
-        height: 40vh; /* より小さく */
-      }
-      
-      #control-panel, .stats-panel, .legend {
-        margin: 5px;
-        padding: 15px;
-        max-height: 35vh;
-      }
-      
-      h1 { font-size: 16px; }
-      h2 { font-size: 13px; }
-      
-      .parameter label {
-        font-size: 11px;
-      }
-      
-      button {
-        padding: 6px 10px;
-        font-size: 12px;
-      }
+      #main-layout { flex-direction: column; }
+      #canvas-container { height: 35vh; }
+      #side-panels { flex-direction: column; }
+      #control-panel, .stats-panel, .legend { max-width: 99vw; min-width: 120px; }
     }
-    
-    /* 極小画面（480px以下）の場合 */
     @media (max-width: 480px) {
-      #canvas-container {
-        height: 35vh;
-      }
-      
-      #control-panel, .stats-panel, .legend {
-        margin: 3px;
-        padding: 12px;
-        max-height: 30vh;
-      }
-      
-      .parameter-group {
-        padding: 8px;
-        margin-bottom: 8px;
-      }
-      
-      .parameter {
-        margin-bottom: 8px;
-      }
+      #canvas-container { height: 28vh; }
+      #side-panels { padding: 2px; }
+      #control-panel, .stats-panel, .legend { padding: 7px; }
     }
   </style>
 </head>
 <body>
-  <div id="canvas-container"></div>
-  
-  <div id="control-panel">
-    <h1>シミュレータ v5.2</h1>
-    
-    <div class="parameter-group">
-      <h2>制御</h2>
-      <button id="start-button">開始</button>
-      <button id="pause-button">一時停止</button>
-      <button id="reset-button">リセット</button>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>発生・時間</h2>
-      <div class="parameter">
-        <label><span>時間スケール</span><span class="parameter-value" id="timeScale-value"></span></label>
-        <input type="range" id="timeScale" min="0.01" max="1.0" step="0.01">
+  <div id="main-layout">
+    <div id="canvas-container"></div>
+    <div id="side-panels">
+      <div id="control-panel">
+        <h1>シミュレータ v5.3</h1>
+        <div class="parameter-group">
+          <h2>組織モデル
+            <span class="tooltip">❓
+              <span class="tooltiptext">
+                <b>中央集権型</b>：意思決定が組織の上層部に集中し、トップダウンで統制される構造。効率性と統一性に優れるが、現場の柔軟性やイノベーションが抑制されやすい。<br><br>
+                <b>分散自律型</b>：権限や意思決定が各現場やチームに分散。現場主導のイノベーションや環境適応力が高いが、全体の統一や調整が課題となる。<br><br>
+                <b>ハイブリッド型</b>：中央集権と分散自律の両方の利点を取り入れた構造。全体方針は中央が定めつつ、現場にも一定の裁量を与えることで効率性と柔軟性の両立を目指す。
+              </span>
+            </span>
+          </h2>
+          <div class="parameter">
+            <label>
+              <span>中央集権型
+                <span class="tooltip">🛈
+                  <span class="tooltiptext">
+                    意思決定権限が中央（本社や上層部）に集中。<br>
+                    <b>特徴：</b>効率・統一性に優れるが、現場の自律性や創発性が抑制されやすい。
+                  </span>
+                </span>
+              </span>
+            </label>
+          </div>
+          <div class="parameter">
+            <label>
+              <span>分散自律型
+                <span class="tooltip">🛈
+                  <span class="tooltiptext">
+                    権限・意思決定が現場やチームに分散。<br>
+                    <b>特徴：</b>現場主導のイノベーションや環境適応力が高いが、全体の統一や調整が課題。
+                  </span>
+                </span>
+              </span>
+            </label>
+          </div>
+          <div class="parameter">
+            <label>
+              <span>ハイブリッド型
+                <span class="tooltip">🛈
+                  <span class="tooltiptext">
+                    中央集権と分散自律の両方の利点を組み合わせた構造。<br>
+                    <b>特徴：</b>全体方針は中央が定めつつ、現場にも裁量を与えることで効率性と柔軟性を両立。
+                  </span>
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+        <!-- ここに他のパラメータグループを続けて記載 -->
       </div>
-      <div class="parameter">
-        <label><span>発生間隔</span><span class="parameter-value" id="spawnInterval-value"></span></label>
-        <input type="range" id="spawnInterval" min="0.1" max="2.0" step="0.1">
+      <div class="stats-panel">
+        <h2>統計情報</h2>
+        <div class="stat-item"><span>シミュレーション時間:</span><span id="sim-time">0.0s</span></div>
+        <div class="stat-item"><span>総発生数:</span><span id="total-spawned">0</span></div>
+        <div class="stat-item"><span>現在のアクティブ数:</span><span id="active-count">0</span></div>
+        <div class="stat-item"><span>成功数:</span><span id="success-count">0</span></div>
+        <div class="stat-item"><span>成功率:</span><span id="success-rate">0%</span></div>
+        <div class="stat-item"><span>クラスター数:</span><span id="cluster-count">0</span></div>
       </div>
-      <div class="parameter">
-        <label><span>バッチサイズ</span><span class="parameter-value" id="batchSize-value"></span></label>
-        <input type="range" id="batchSize" min="1" max="10" step="1">
-      </div>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>資源特性【拡張】</h2>
-      <div class="parameter">
-        <label><span>資源異質性</span><span class="parameter-value" id="heterogeneity-value"></span></label>
-        <input type="range" id="heterogeneity" min="0" max="1.0" step="0.1">
-      </div>
-      <div class="parameter">
-        <label><span>寿命変動</span><span class="parameter-value" id="lifespanVariance-value"></span></label>
-        <input type="range" id="lifespanVariance" min="0" max="1.0" step="0.1">
-      </div>
-      <div class="parameter">
-        <label><span>活用特化型の発生割合</span><span class="parameter-value" id="exploiterRatio-value"></span></label>
-        <input type="range" id="exploiterRatio" min="0" max="1.0" step="0.05">
-      </div>
-      <div class="parameter">
-        <label><span>探索特化型の発生割合</span><span class="parameter-value" id="explorerRatio-value"></span></label>
-        <input type="range" id="explorerRatio" min="0" max="1.0" step="0.05">
-      </div>
-      <div class="parameter">
-        <label><span>戦略的初期配置</span><input type="checkbox" id="strategicSpawningEnabled"></label>
-      </div>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>TRT力（推進力）</h2>
-      <div class="parameter">
-        <label><span>TRT基本強度</span><span class="parameter-value" id="trtForce-value"></span></label>
-        <input type="range" id="trtForce" min="0" max="0.05" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>TRT加速度</span><span class="parameter-value" id="trtAcceleration-value"></span></label>
-        <input type="range" id="trtAcceleration" min="0.5" max="2.0" step="0.1">
-      </div>
-      <div class="parameter">
-        <label><span>転換点高度</span><span class="parameter-value" id="tippingPoint-value"></span></label>
-        <input type="range" id="tippingPoint" min="0.3" max="0.9" step="0.1">
-      </div>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>PRA力（多様性）</h2>
-      <div class="parameter">
-        <label><span>PRA基本強度</span><span class="parameter-value" id="praForce-value"></span></label>
-        <input type="range" id="praForce" min="0" max="0.05" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>PRA多様性</span><span class="parameter-value" id="praDiversity-value"></span></label>
-        <input type="range" id="praDiversity" min="0.5" max="2.0" step="0.1">
-      </div>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>多重重力</h2>
-      <div class="parameter">
-        <label><span>中央収束力</span><span class="parameter-value" id="centralConvergence-value"></span></label>
-        <input type="range" id="centralConvergence" min="0" max="0.1" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>クラスター収束力</span><span class="parameter-value" id="clusterConvergence-value"></span></label>
-        <input type="range" id="clusterConvergence" min="0" max="0.1" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>クラスター慣性</span><span class="parameter-value" id="clusterInertia-value"></span></label>
-        <input type="range" id="clusterInertia" min="0" max="0.1" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>市場引力</span><span class="parameter-value" id="marketPull-value"></span></label>
-        <input type="range" id="marketPull" min="0" max="0.1" step="0.001">
-      </div>
-      <div class="parameter">
-        <label><span>粒子引力</span><span class="parameter-value" id="peerAttraction-value"></span></label>
-        <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001">
-      </div>
-    </div>
-    
-    <div class="parameter-group">
-      <h2>環境</h2>
-      <div class="parameter">
-        <label><span>成功閾値</span><span class="parameter-value" id="successThreshold-value"></span></label>
-        <input type="range" id="successThreshold" min="20" max="50" step="1">
-      </div>
-      <div class="parameter">
-        <label><span>頂点容量</span><span class="parameter-value" id="vertexCapacity-value"></span></label>
-        <input type="range" id="vertexCapacity" min="1" max="20" step="1">
-      </div>
-      <div class="parameter">
-        <label><span>減耗率</span><span class="parameter-value" id="attritionRate-value"></span></label>
-        <input type="range" id="attritionRate" min="0" max="0.1" step="0.001">
+      <div class="legend">
+        <h2>凡例</h2>
+        <div class="legend-item"><div class="legend-shape" style="background: #3b82f6; border-radius: 50%;"></div><span>標準型</span></div>
+        <div class="legend-item"><div class="legend-shape" style="background: #ef4444;"></div><span>活用特化型</span></div>
+        <div class="legend-item"><div class="legend-shape" style="background: #10b981; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div><span>探索特化型</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #00ff00;"></div><span>成功</span></div>
       </div>
     </div>
   </div>
-
-  <div class="stats-panel">
-    <h2>統計情報</h2>
-    <div class="stat-item">
-      <span>シミュレーション時間:</span>
-      <span id="sim-time">0.0s</span>
-    </div>
-    <div class="stat-item">
-      <span>総発生数:</span>
-      <span id="total-spawned">0</span>
-    </div>
-    <div class="stat-item">
-      <span>現在のアクティブ数:</span>
-      <span id="active-count">0</span>
-    </div>
-    <div class="stat-item">
-      <span>成功数:</span>
-      <span id="success-count">0</span>
-    </div>
-    <div class="stat-item">
-      <span>成功率:</span>
-      <span id="success-rate">0%</span>
-    </div>
-    <div class="stat-item">
-      <span>クラスター数:</span>
-      <span id="cluster-count">0</span>
-    </div>
-  </div>
-
-  <div class="legend">
-    <h2>凡例</h2>
-    <div class="legend-item">
-      <div class="legend-shape" style="background: #3b82f6; border-radius: 50%;"></div>
-      <span>標準型</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-shape" style="background: #ef4444;"></div>
-      <span>活用特化型</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-shape" style="background: #10b981; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
-      <span>探索特化型</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background: #00ff00;"></div>
-      <span>成功</span>
-    </div>
-  </div>
-
-<script>
-  // --- 初期設定 ---
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf8f8f8);
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(50,40,60); camera.lookAt(0,20,0);
-  const renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  document.getElementById('canvas-container').appendChild(renderer.domElement);
-  
-  // レスポンシブ対応のためのリサイズイベント
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-  
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-  scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(50, 100, 50);
-  directionalLight.castShadow = true;
-  scene.add(directionalLight);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({ color: 0xe0e0e0, side: THREE.DoubleSide }));
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-  
-  // --- パラメータ & 状態 ---
-  const parameters = {
-    timeScale:0.1, spawnInterval:0.5, batchSize:3, initialParticles: 20,
-    heterogeneity:0.5, lifespanVariance:0.3,
-    exploiterRatio:0.3, explorerRatio:0.3, strategicSpawningEnabled:true,
-    trtForce:0.015, trtAcceleration:1.0, tippingPoint:0.7,
-    praForce:0.02, praDiversity:1.0,
-    centralConvergence:0.03, clusterConvergence:0.02, clusterInertia:0.015, 
-    marketPull:0.02, peerAttraction:0.01,
-    successThreshold:38, vertexCapacity:5, attritionRate:0.02,
-    attractionRange: 5, clusterThreshold: 3
-  };
-  let particles=[], nextId=0, simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0, clusters: []};
-  const coneHeight = 40;
-  const coneRadius = 20;
-
-  const ParticleType = { STANDARD: 'standard', EXPLORER: 'explorer', EXPLOITER: 'exploiter' };
-
-  // --- 粒子クラス ---
-  class ResourceParticle {
-    constructor() {
-      this.id = nextId++;
-      this.age=0;
-      this.isActive=true;
-      this.hasSucceeded = false;
-      this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
-      this._determineType();
-      this._setAttributes();
-      this._determineInitialPosition();
-      this._createMesh();
-      const baseLifespan = 100;
-      this.maxAge = baseLifespan * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
-    }
-    _determineType(){
-      const r=Math.random();
-      if(r<parameters.exploiterRatio) this.type='exploiter';
-      else if(r<parameters.exploiterRatio+parameters.explorerRatio) this.type='explorer';
-      else this.type='standard';
-    }
-    _setAttributes(){
-      const v=(Math.random()-0.5)*2*parameters.heterogeneity;
-      this.trtAffinity=1 + (this.type==='exploiter'?+v:-v);
-      this.praAffinity=1 + (this.type==='explorer'?+v:-v);
-    }
-    _determineInitialPosition(){
-      this.position=new THREE.Vector3(0, 0.5, 0);
-      let angle, radius;
-      if(parameters.strategicSpawningEnabled) {
-          switch(this.type) {
-              case 'exploiter':
-                  if(simState.clusters.length > 0 && Math.random() < 0.7) {
-                      const targetCluster = simState.clusters[Math.floor(Math.random() * simState.clusters.length)];
-                      angle = Math.random() * Math.PI * 2;
-                      radius = Math.random() * parameters.attractionRange * 0.8;
-                      this.position.x = targetCluster.center.x + Math.cos(angle) * radius;
-                      this.position.z = targetCluster.center.z + Math.sin(angle) * radius;
-                  } else {
-                      angle = Math.random() * Math.PI * 2;
-                      radius = Math.random() * coneRadius * 0.4;
-                      this.position.x = Math.cos(angle) * radius;
-                      this.position.z = Math.sin(angle) * radius;
-                  }
-                  break;
-              case 'explorer':
-                  angle = Math.random() * Math.PI * 2;
-                  radius = coneRadius * (0.6 + Math.random() * 0.4);
-                  this.position.x = Math.cos(angle) * radius;
-                  this.position.z = Math.sin(angle) * radius;
-                  break;
-              default:
-                  angle = Math.random() * Math.PI * 2;
-                  radius = Math.random() * coneRadius * 0.9;
-                  this.position.x = Math.cos(angle) * radius;
-                  this.position.z = Math.sin(angle) * radius;
-                  break;
-          }
-      } else {
-          angle = Math.random() * Math.PI * 2;
-          radius = Math.random() * coneRadius * 0.9;
-          this.position.x = Math.cos(angle) * radius;
-          this.position.z = Math.sin(angle) * radius;
-      }
-    }
-    _createMesh(){
-      const geometries = [new THREE.SphereGeometry(0.5, 16, 16), new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.ConeGeometry(0.5, 1, 16)];
-      let geometry;
-      switch(this.type) {
-          case 'exploiter': geometry = geometries[1]; break;
-          case 'explorer': geometry = geometries[2]; break;
-          default: geometry = geometries[0]; break;
-      }
-      const mat=new THREE.MeshPhongMaterial({color:0x3b82f6});
-      this.mesh=new THREE.Mesh(geometry,mat);
-      this.mesh.position.copy(this.position);
-      this.mesh.castShadow = true;
-      scene.add(this.mesh);
-    }
-    update(dt){
-      if(!this.isActive)return;
-      const heightRatio = this.position.y / coneHeight;
-      this.velocity.y += parameters.trtForce * (1 - heightRatio) * this.trtAffinity * dt;
-      this.velocity.x += (Math.random() - 0.5) * parameters.praForce * heightRatio * this.praAffinity * dt;
-      this.velocity.z += (Math.random() - 0.5) * parameters.praForce * heightRatio * this.praAffinity * dt;
-      const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
-      this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * dt));
-      this.position.add(this.velocity.clone().multiplyScalar(dt * 10));
-      this.velocity.multiplyScalar(0.98);
-      const maxRadius = Math.max(0, coneRadius * (1 - this.position.y / coneHeight));
-      const currentRadius = Math.sqrt(this.position.x**2 + this.position.z**2);
-      if (currentRadius > maxRadius) {
-          const ratio = maxRadius / currentRadius;
-          this.position.x *= ratio;
-          this.position.z *= ratio;
-      }
-      if (this.position.y < 0) this.position.y = 0;
-      this.age += dt;
-      if (this.age > this.maxAge) this.die();
-      if (this.position.y >= parameters.successThreshold) this.succeed();
-      this.mesh.position.copy(this.position);
-      this.mesh.material.color.setHSL(0.6, 1.0, 1.0 - heightRatio * 0.7);
-    }
-    succeed(){ 
-      this.isActive = false; 
-      this.mesh.material.color.set(0x00ff00); 
-      simState.successCount++;
-    }
-    die(){ this.isActive = false; scene.remove(this.mesh); }
-  }
-
-  // --- UI初期化 ---
-  function setupUI(){
-    document.querySelectorAll('#control-panel input').forEach(input=>{
-      const id=input.id; if(!(id in parameters))return;
-      const updateValue = () => {
-          if(input.type==='checkbox') {
-              parameters[id] = input.checked;
-          } else {
-              const value = parseFloat(input.value);
-              parameters[id] = value;
-              const lbl=document.getElementById(`${id}-value`);
-              if(lbl) {
-                  if (input.step.includes('.')) {
-                      lbl.textContent = value.toFixed(3);
-                  } else {
-                      lbl.textContent = value;
-                  }
-              }
-          }
-      };
-      if(input.type==='checkbox') {
-          input.checked=parameters[id];
-      } else {
-          input.value=parameters[id];
-      }
-      updateValue();
-      input.addEventListener('input', updateValue);
-    });
-    document.getElementById('start-button').onclick=()=>{simState.isRunning=true; simState.isPaused=false;};
-    document.getElementById('pause-button').onclick=()=>{simState.isPaused=!simState.isPaused;};
-    document.getElementById('reset-button').onclick=resetSim;
-  }
-
-  // --- 統計情報の更新 ---
-  function updateStats() {
-    document.getElementById('sim-time').textContent = simState.elapsed.toFixed(1) + 's';
-    document.getElementById('total-spawned').textContent = simState.totalSpawned || 0;
-    document.getElementById('active-count').textContent = particles.filter(p => p.isActive).length;
-    document.getElementById('success-count').textContent = simState.successCount || 0;
-    const successRate = simState.totalSpawned > 0 ? ((simState.successCount || 0) / simState.totalSpawned * 100) : 0;
-    document.getElementById('success-rate').textContent = successRate.toFixed(1) + '%';
-    document.getElementById('cluster-count').textContent = simState.clusters.length;
-  }
-
-  // --- シミュレーション制御 ---
-  function spawnParticles(n){
-    for(let i=0;i<n && particles.length<300;i++) {
-      particles.push(new ResourceParticle());
-      simState.totalSpawned = (simState.totalSpawned || 0) + 1;
-    }
-  }
-  function resetSim(){
-    particles.forEach(p=>scene.remove(p.mesh));
-    particles=[]; nextId=0; 
-    simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0, clusters:[], totalSpawned:0, successCount:0};
-    spawnParticles(parameters.initialParticles);
-    updateStats();
-  }
-
-  // --- アニメーションループ ---
-  let lastTime=0;
-  function animate(t){
-    requestAnimationFrame(animate);
-    const dt=(t-lastTime)*0.001 || 0;
-    lastTime=t;
-    if(simState.isRunning && !simState.isPaused){
-      const scaledDt = dt * parameters.timeScale;
-      simState.elapsed+=scaledDt;
-      if(simState.elapsed - simState.lastSpawn > parameters.spawnInterval){
-        spawnParticles(parameters.batchSize);
-        simState.lastSpawn = simState.elapsed;
-      }
-      particles.forEach(p=>p.update(scaledDt));
-      particles=particles.filter(p=>p.isActive);
-      updateStats();
-    }
-    renderer.render(scene,camera);
-  }
-
-  // --- 初期化呼び出し ---
-  setupUI();
-  resetSim();
-  animate(0);
-</script>
+  <!-- Three.jsやシミュレーション本体のスクリプトはここに続けてください -->
 </body>
 </html>
