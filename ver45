@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRAシミュレータ v4.7 - 完全修正版</title>
+  <title>TRT・PRAシミュレータ v4.8 - 完全修正版</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; overflow: hidden; }
@@ -37,7 +37,7 @@
 <body>
   <div id="canvas-container"></div>
   <div id="control-panel">
-    <h1>シミュレータ v4.7</h1>
+    <h1>シミュレータ v4.8</h1>
 
     <div class="parameter-group">
       <h2>制御</h2>
