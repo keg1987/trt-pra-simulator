@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRAシミュレータ v4.6 - 完全修正版</title>
+  <title>TRT・PRAシミュレータ v4.7 - 完全修正版</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; overflow: hidden; }
     #canvas-container { position: relative; width:100vw; height:100vh; }
     #control-panel {
-      position: absolute; bottom:20px; left:20px; width:320px; max-height:calc(100vh-40px);
+      position: absolute; bottom:20px; left:20px; width:320px; max-height:calc(100vh - 40px);
       background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; overflow-y:auto;
       box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index: 100;
     }
@@ -37,7 +37,7 @@
 <body>
   <div id="canvas-container"></div>
   <div id="control-panel">
-    <h1>シミュレータ v4.6</h1>
+    <h1>シミュレータ v4.7</h1>
 
     <div class="parameter-group">
       <h2>制御</h2>
@@ -118,10 +118,10 @@
   // --- 初期設定 ---
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf8f8f8);
-  const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(50,40,60); camera.lookAt(0,20,0);
   const renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(innerWidth,innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   document.getElementById('canvas-container').appendChild(renderer.domElement);
 
@@ -143,9 +143,9 @@
     heterogeneity:0.5, lifespanVariance:0.3,
     exploiterRatio:0.3, explorerRatio:0.3, strategicSpawningEnabled:true,
     trtForce:0.015, praForce:0.02,
-    centralConvergence:0.03, clusterConvergence:0.02, clusterInertia:0.015, peerAttraction:0.01,
+    centralConvergence:0.03, peerAttraction:0.01,
     successThreshold:38, vertexCapacity:5, attritionRate:0.02,
-    attractionRange: 5, clusterThreshold: 3 // クラスター関連のパラメータを追加
+    attractionRange: 5, clusterThreshold: 3
   };
   let particles=[], nextId=0, simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0, clusters: []};
   const coneHeight = 40;
@@ -281,12 +281,21 @@
               const value = parseFloat(input.value);
               parameters[id] = value;
               const lbl=document.getElementById(`${id}-value`);
-              if(lbl) lbl.textContent = value.toFixed(input.step.includes('.') ? 2 : 0);
+              if(lbl) {
+                  if (input.step.includes('.')) {
+                      lbl.textContent = value.toFixed(2);
+                  } else {
+                      lbl.textContent = value;
+                  }
+              }
           }
       };
       
-      if(input.type==='checkbox') input.checked=parameters[id];
-      else input.value=parameters[id];
+      if(input.type==='checkbox') {
+          input.checked=parameters[id];
+      } else {
+          input.value=parameters[id];
+      }
       updateValue();
 
       input.addEventListener('input', updateValue);
