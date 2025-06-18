@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRAシミュレータ v5.0 - 最終完全版</title>
+  <title>TRT・PRAシミュレータ v5.1 - 最終完全版</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; overflow: hidden; }
@@ -37,15 +37,13 @@
 <body>
   <div id="canvas-container"></div>
   <div id="control-panel">
-    <h1>シミュレータ v5.0</h1>
-
+    <h1>シミュレータ v5.1</h1>
     <div class="parameter-group">
       <h2>制御</h2>
       <button id="start-button">開始</button>
       <button id="pause-button">一時停止</button>
       <button id="reset-button">リセット</button>
     </div>
-
     <div class="parameter-group">
       <h2>発生・時間</h2>
       <div class="parameter">
@@ -61,7 +59,6 @@
         <input type="range" id="batchSize" min="1" max="10" step="1">
       </div>
     </div>
-
     <div class="parameter-group">
       <h2>資源特性【拡張】</h2>
       <div class="parameter">
@@ -84,7 +81,6 @@
         <label><span>戦略的初期配置</span><input type="checkbox" id="strategicSpawningEnabled"></label>
       </div>
     </div>
-
     <div class="parameter-group">
       <h2>多重重力</h2>
       <div class="parameter">
@@ -96,7 +92,6 @@
         <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001">
       </div>
     </div>
-
     <div class="parameter-group">
       <h2>環境</h2>
       <div class="parameter">
@@ -124,14 +119,12 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   document.getElementById('canvas-container').appendChild(renderer.domElement);
-
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambientLight);
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(50, 100, 50);
   directionalLight.castShadow = true;
   scene.add(directionalLight);
-
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({ color: 0xe0e0e0, side: THREE.DoubleSide }));
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -161,12 +154,10 @@
       this.isActive=true;
       this.hasSucceeded = false;
       this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
-
       this._determineType();
       this._setAttributes();
       this._determineInitialPosition();
       this._createMesh();
-
       const baseLifespan = 100;
       this.maxAge = baseLifespan * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
     }
@@ -184,7 +175,6 @@
     _determineInitialPosition(){
       this.position=new THREE.Vector3(0, 0.5, 0);
       let angle, radius;
-
       if(parameters.strategicSpawningEnabled) {
           switch(this.type) {
               case 'exploiter':
@@ -237,18 +227,14 @@
     }
     update(dt){
       if(!this.isActive)return;
-
       const heightRatio = this.position.y / coneHeight;
       this.velocity.y += parameters.trtForce * (1 - heightRatio) * this.trtAffinity * dt;
       this.velocity.x += (Math.random() - 0.5) * parameters.praForce * heightRatio * this.praAffinity * dt;
       this.velocity.z += (Math.random() - 0.5) * parameters.praForce * heightRatio * this.praAffinity * dt;
-
       const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
       this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * dt));
-      
       this.position.add(this.velocity.clone().multiplyScalar(dt * 10));
       this.velocity.multiplyScalar(0.98);
-
       const maxRadius = Math.max(0, coneRadius * (1 - this.position.y / coneHeight));
       const currentRadius = Math.sqrt(this.position.x**2 + this.position.z**2);
       if (currentRadius > maxRadius) {
@@ -257,11 +243,9 @@
           this.position.z *= ratio;
       }
       if (this.position.y < 0) this.position.y = 0;
-
       this.age += dt;
       if (this.age > this.maxAge) this.die();
       if (this.position.y >= parameters.successThreshold) this.succeed();
-
       this.mesh.position.copy(this.position);
       this.mesh.material.color.setHSL(0.6, 1.0, 1.0 - heightRatio * 0.7);
     }
@@ -273,7 +257,6 @@
   function setupUI(){
     document.querySelectorAll('#control-panel input').forEach(input=>{
       const id=input.id; if(!(id in parameters))return;
-      
       const updateValue = () => {
           if(input.type==='checkbox') {
               parameters[id] = input.checked;
@@ -290,14 +273,12 @@
               }
           }
       };
-      
       if(input.type==='checkbox') {
           input.checked=parameters[id];
       } else {
           input.value=parameters[id];
       }
       updateValue();
-
       input.addEventListener('input', updateValue);
     });
     document.getElementById('start-button').onclick=()=>{simState.isRunning=true; simState.isPaused=false;};
