@@ -1,434 +1,236 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRT・PRA理論 インタラクティブ・シミュレータ v4.5 - 完全版</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        body { margin: 0; font-family: 'Arial', sans-serif; background: #f0f0f0; overflow: hidden; color: #333; }
-        #canvas-container { position: relative; width: 100vw; height: 100vh; }
-        #control-panel { position: absolute; bottom: 20px; left: 20px; background: rgba(255, 255, 255, 0.98); padding: 20px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); width: 320px; max-height: calc(100vh - 40px); overflow-y: auto; z-index: 100; }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        h1 { font-size: 18px; margin: 0; color: #1f2937; }
-        h2 { font-size: 14px; margin: 15px 0 10px 0; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
-        .parameter-group { background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e5e7eb; }
-        .parameter { margin-bottom: 12px; }
-        .parameter label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #4b5563; font-weight: 600; margin-bottom: 4px; }
-        .parameter input[type="range"] { width: 100%; -webkit-appearance: none; height: 5px; background: #e5e7eb; border-radius: 3px; outline: none; }
-        .parameter input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; }
-        .parameter-value { font-size: 11px; color: #6b7280; text-align: right; }
-        button { padding: 8px 12px; border: none; background-color: #3b82f6; color: white; border-radius: 6px; cursor: pointer; margin-right: 5px; }
-        button:hover { background-color: #2563eb; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRT・PRAシミュレータ v4.5</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; overflow: hidden; }
+    #canvas-container { position: relative; width:100vw; height:100vh; }
+    #control-panel {
+      position: absolute; bottom:20px; left:20px; width:320px; max-height:calc(100vh-40px);
+      background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; overflow-y:auto;
+      box-shadow:0 6px 20px rgba(0,0,0,0.15);
+    }
+    h1 { font-size:18px; margin:0 0 10px; }
+    h2 { font-size:14px; margin:15px 0 10px; border-bottom:1px solid #e5e7eb; padding-bottom:5px; }
+    .parameter-group { margin-bottom:12px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; }
+    .parameter { margin-bottom:12px; }
+    .parameter label {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:12px; color:#4b5563; font-weight:600; margin-bottom:4px;
+    }
+    .parameter input[type=range] {
+      width:100%; height:5px; background:#e5e7eb; border-radius:3px; outline:none;
+    }
+    .parameter input[type=range]::-webkit-slider-thumb {
+      width:16px; height:16px; border-radius:50%; background:#3b82f6; cursor:pointer;
+    }
+    .parameter-value { font-size:11px; color:#6b7280; width:40px; text-align:right; }
+    button {
+      margin-right:5px; padding:8px 12px; border:none; background:#3b82f6; color:#fff; border-radius:6px; cursor:pointer;
+    }
+    button:hover { background:#2563eb; }
+  </style>
 </head>
 <body>
-    <div id="canvas-container"></div>
-    <div id="control-panel">
-        <div class="panel-header">
-            <h1>シミュレータ v4.5</h1>
-        </div>
-        <div class="panel-content">
-            <div class="parameter-group">
-                <h2>シミュレーション制御</h2>
-                <button id="start-button">開始</button>
-                <button id="pause-button">一時停止</button>
-                <button id="reset-button">リセット</button>
-            </div>
+  <div id="canvas-container"></div>
+  <div id="control-panel">
+    <h1>シミュレータ v4.5</h1>
 
-            <div class="parameter-group">
-                <h2>発生・時間</h2>
-                <div class="parameter">
-                    <label><span>時間スケール</span><span class="parameter-value" id="timeScale-value">0.1</span></label>
-                    <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01">
-                </div>
-                <div class="parameter">
-                    <label><span>発生間隔</span><span class="parameter-value" id="spawnInterval-value">0.5</span></label>
-                    <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1">
-                </div>
-                <div class="parameter">
-                    <label><span>バッチサイズ</span><span class="parameter-value" id="batchSize-value">3</span></label>
-                    <input type="range" id="batchSize" min="1" max="10" value="3" step="1">
-                </div>
-            </div>
-
-            <div class="parameter-group">
-                <h2>資源特性【拡張】</h2>
-                <div class="parameter">
-                    <label><span>資源異質性</span><span class="parameter-value" id="heterogeneity-value">0.5</span></label>
-                    <input type="range" id="heterogeneity" min="0" max="1.0" value="0.5" step="0.1">
-                </div>
-                <div class="parameter">
-                    <label><span>資源寿命変動</span><span class="parameter-value" id="lifespanVariance-value">0.3</span></label>
-                    <input type="range" id="lifespanVariance" min="0" max="1.0" value="0.3" step="0.1">
-                </div>
-                <div class="parameter">
-                    <label><span>活用特化型の発生割合</span><span class="parameter-value" id="exploiterRatio-value">0.30</span></label>
-                    <input type="range" id="exploiterRatio" min="0" max="1.0" value="0.3" step="0.05">
-                </div>
-                <div class="parameter">
-                    <label><span>探索特化型の発生割合</span><span class="parameter-value" id="explorerRatio-value">0.30</span></label>
-                    <input type="range" id="explorerRatio" min="0" max="1.0" value="0.3" step="0.05">
-                </div>
-                <div class="parameter">
-                    <label><span>戦略的初期配置</span><input type="checkbox" id="strategicSpawningEnabled" checked></label>
-                </div>
-            </div>
-
-            <div class="parameter-group">
-                <h2>多重重力源モデル</h2>
-                <div class="parameter">
-                    <label><span>中央収束力</span><span class="parameter-value" id="centralConvergence-value">0.03</span></label>
-                    <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.001">
-                </div>
-                <div class="parameter">
-                    <label><span>クラスター収束力</span><span class="parameter-value" id="clusterConvergence-value">0.02</span></label>
-                    <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.001">
-                </div>
-                <div class="parameter">
-                    <label><span>クラスター慣性</span><span class="parameter-value" id="clusterInertia-value">0.015</span></label>
-                    <input type="range" id="clusterInertia" min="0" max="0.1" value="0.015" step="0.001">
-                </div>
-                 <div class="parameter">
-                    <label><span>粒子間引力</span><span class="parameter-value" id="peerAttraction-value">0.01</span></label>
-                    <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.001">
-                </div>
-            </div>
-
-             <div class="parameter-group">
-                <h2>シミュレーション環境</h2>
-                <div class="parameter">
-                    <label><span>成功閾値</span><span class="parameter-value" id="successThreshold-value">38</span></label>
-                    <input type="range" id="successThreshold" min="20" max="50" value="38" step="1">
-                </div>
-                <div class="parameter">
-                    <label><span>頂点最大容量</span><span class="parameter-value" id="vertexCapacity-value">5</span></label>
-                    <input type="range" id="vertexCapacity" min="1" max="20" value="5" step="1">
-                </div>
-                 <div class="parameter">
-                    <label><span>減耗率</span><span class="parameter-value" id="attritionRate-value">0.02</span></label>
-                    <input type="range" id="attritionRate" min="0" max="0.1" value="0.02" step="0.001">
-                </div>
-            </div>
-        </div>
+    <div class="parameter-group">
+      <h2>制御</h2>
+      <button id="start-button">開始</button>
+      <button id="pause-button">一時停止</button>
+      <button id="reset-button">リセット</button>
     </div>
-    <script>
-        // --- Setup (Scene, Camera, Renderer, Lights, Ground) ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf8f8f8);
-        scene.fog = new THREE.Fog(0xf8f8f8, 100, 300);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(50, 40, 60);
-        camera.lookAt(0, 20, 0);
+    <div class="parameter-group">
+      <h2>発生・時間</h2>
+      <div class="parameter">
+        <label>時間スケール <span class="parameter-value" id="timeScale-value"></span></label>
+        <input type="range" id="timeScale" min="0.01" max="1.0" step="0.01">
+      </div>
+      <div class="parameter">
+        <label>発生間隔 <span class="parameter-value" id="spawnInterval-value"></span></label>
+        <input type="range" id="spawnInterval" min="0.1" max="2.0" step="0.1">
+      </div>
+      <div class="parameter">
+        <label>バッチサイズ <span class="parameter-value" id="batchSize-value"></span></label>
+        <input type="range" id="batchSize" min="1" max="10" step="1">
+      </div>
+    </div>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
+    <div class="parameter-group">
+      <h2>資源特性【拡張】</h2>
+      <div class="parameter">
+        <label>資源異質性 <span class="parameter-value" id="heterogeneity-value"></span></label>
+        <input type="range" id="heterogeneity" min="0" max="1.0" step="0.1">
+      </div>
+      <div class="parameter">
+        <label>寿命変動 <span class="parameter-value" id="lifespanVariance-value"></span></label>
+        <input type="range" id="lifespanVariance" min="0" max="1.0" step="0.1">
+      </div>
+      <div class="parameter">
+        <label>活用特化型の発生割合 <span class="parameter-value" id="exploiterRatio-value"></span></label>
+        <input type="range" id="exploiterRatio" min="0" max="1.0" step="0.05">
+      </div>
+      <div class="parameter">
+        <label>探索特化型の発生割合 <span class="parameter-value" id="explorerRatio-value"></span></label>
+        <input type="range" id="explorerRatio" min="0" max="1.0" step="0.05">
+      </div>
+      <div class="parameter">
+        <label>戦略的初期配置 <input type="checkbox" id="strategicSpawningEnabled"></label>
+      </div>
+    </div>
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(50, 100, 50);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
+    <div class="parameter-group">
+      <h2>多重重力</h2>
+      <div class="parameter">
+        <label>中央収束力 <span class="parameter-value" id="centralConvergence-value"></span></label>
+        <input type="range" id="centralConvergence" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
+        <label>クラスター収束力 <span class="parameter-value" id="clusterConvergence-value"></span></label>
+        <input type="range" id="clusterConvergence" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
+        <label>クラスター慣性 <span class="parameter-value" id="clusterInertia-value"></span></label>
+        <input type="range" id="clusterInertia" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
+        <label>粒子引力 <span class="parameter-value" id="peerAttraction-value"></span></label>
+        <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001">
+      </div>
+    </div>
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({ color: 0xe0e0e0, side: THREE.DoubleSide }));
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        // --- Parameters & State ---
-        const parameters = {
-            timeScale: 0.1,
-            spawnInterval: 0.5,
-            batchSize: 3,
-            initialParticles: 20,
-            heterogeneity: 0.5,
-            lifespanVariance: 0.3,
-            exploiterRatio: 0.3,
-            explorerRatio: 0.3,
-            strategicSpawningEnabled: true,
-            trtForce: 0.015,
-            trtAcceleration: 1.0,
-            tippingPoint: 0.7,
-            praForce: 0.02,
-            praDiversity: 1.0,
-            centralConvergence: 0.03,
-            clusterConvergence: 0.02,
-            clusterInertia: 0.015,
-            marketPull: 0.02,
-            clusterPermeability: 0.8,
-            peerAttraction: 0.01,
-            attractionRange: 5,
-            clusterThreshold: 3,
-            successThreshold: 38,
-            vertexCapacity: 5,
-            resourceRecycleRate: 0.7,
-            knowledgeTransferRate: 0.3,
-            attritionRate: 0.02,
-        };
-
-        const simulationState = {
-            isRunning: false,
-            isPaused: false,
-            elapsedTime: 0,
-            lastSpawnTime: 0,
-            totalSpawned: 0,
-            successCount: 0,
-            clusters: [],
-        };
-        
-        let particles = [];
-        let nextParticleId = 0;
-        const coneHeight = 40;
-        const coneRadius = 20;
-
-        const ParticleType = {
-            STANDARD: 'standard',
-            EXPLORER: 'explorer',
-            EXPLOITER: 'exploiter'
-        };
-        
-        // --- Core Class: ResourceParticle ---
-        class ResourceParticle {
-            constructor(id, spawnTime = 0) {
-                this.id = id;
-                this.spawnTime = spawnTime;
-                this.age = 0;
-                this.isActive = true;
-                this.hasSucceeded = false;
-                this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
-
-                this._determineType();
-                this._setAttributesByType();
-                this._determineInitialPosition();
-                this._createMesh();
-                
-                const baseLifespan = 100;
-                this.maxAge = baseLifespan * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
-            }
-
-            _determineType() {
-                const typeRandom = Math.random();
-                if (typeRandom < parameters.exploiterRatio) {
-                    this.type = ParticleType.EXPLOITER;
-                } else if (typeRandom < parameters.exploiterRatio + parameters.explorerRatio) {
-                    this.type = ParticleType.EXPLORER;
-                } else {
-                    this.type = ParticleType.STANDARD;
-                }
-            }
-            
-            _setAttributesByType() {
-                this.trtAffinity = 1.0;
-                this.praAffinity = 1.0;
-                const variance = (Math.random() - 0.5) * 2 * parameters.heterogeneity; // -heterogeneity to +heterogeneity
-                switch (this.type) {
-                    case ParticleType.EXPLOITER:
-                        this.trtAffinity += variance;
-                        this.praAffinity -= variance;
-                        break;
-                    case ParticleType.EXPLORER:
-                        this.trtAffinity -= variance;
-                        this.praAffinity += variance;
-                        break;
-                }
-            }
-
-            _determineInitialPosition() {
-                this.position = new THREE.Vector3(0, 0.5, 0); // Start at a base height
-                let angle, radius;
-
-                if (parameters.strategicSpawningEnabled) {
-                    switch (this.type) {
-                        case ParticleType.EXPLOITER:
-                            if (simulationState.clusters.length > 0 && Math.random() < 0.7) {
-                                const targetCluster = simulationState.clusters[Math.floor(Math.random() * simulationState.clusters.length)];
-                                angle = Math.random() * Math.PI * 2;
-                                radius = Math.random() * parameters.attractionRange * 0.8;
-                                this.position.x = targetCluster.center.x + Math.cos(angle) * radius;
-                                this.position.z = targetCluster.center.z + Math.sin(angle) * radius;
-                            } else {
-                                angle = Math.random() * Math.PI * 2;
-                                radius = Math.random() * coneRadius * 0.4; // Central area
-                                this.position.x = Math.cos(angle) * radius;
-                                this.position.z = Math.sin(angle) * radius;
-                            }
-                            break;
-                        case ParticleType.EXPLORER:
-                            angle = Math.random() * Math.PI * 2;
-                            radius = coneRadius * (0.6 + Math.random() * 0.4); // Periphery
-                            this.position.x = Math.cos(angle) * radius;
-                            this.position.z = Math.sin(angle) * radius;
-                            break;
-                        default:
-                            angle = Math.random() * Math.PI * 2;
-                            radius = Math.random() * coneRadius * 0.9;
-                            this.position.x = Math.cos(angle) * radius;
-                            this.position.z = Math.sin(angle) * radius;
-                            break;
-                    }
-                } else {
-                    angle = Math.random() * Math.PI * 2;
-                    radius = Math.random() * coneRadius * 0.9;
-                    this.position.x = Math.cos(angle) * radius;
-                    this.position.z = Math.sin(angle) * radius;
-                }
-            }
-            
-            _createMesh() {
-                const geometries = [new THREE.SphereGeometry(0.5, 16, 16), new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.ConeGeometry(0.5, 1, 16)];
-                let geometry;
-                switch(this.type) {
-                    case ParticleType.EXPLOITER: geometry = geometries[1]; break;
-                    case ParticleType.EXPLORER: geometry = geometries[2]; break;
-                    default: geometry = geometries[0]; break;
-                }
-                const material = new THREE.MeshPhongMaterial({ color: 0x3b82f6 });
-                this.mesh = new THREE.Mesh(geometry, material);
-                this.mesh.position.copy(this.position);
-                this.mesh.castShadow = true;
-                scene.add(this.mesh);
-            }
-
-            update(deltaTime) {
-                if (!this.isActive) return;
-                
-                // Forces
-                const heightRatio = this.position.y / coneHeight;
-                const trtForce = parameters.trtForce * (1 - heightRatio) * this.trtAffinity;
-                this.velocity.y += trtForce * deltaTime;
-                
-                const praForce = parameters.praForce * heightRatio * this.praAffinity;
-                this.velocity.x += (Math.random() - 0.5) * praForce * deltaTime;
-                this.velocity.z += (Math.random() - 0.5) * praForce * deltaTime;
-
-                const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
-                this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * deltaTime));
-
-                // Position and Damping
-                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * 10)); // Adjusted for visible speed
-                this.velocity.multiplyScalar(0.98);
-
-                // Boundary
-                const maxRadius = coneRadius * (1 - this.position.y / coneHeight);
-                const currentRadius = Math.sqrt(this.position.x**2 + this.position.z**2);
-                if (currentRadius > maxRadius) {
-                    const ratio = maxRadius / currentRadius;
-                    this.position.x *= ratio;
-                    this.position.z *= ratio;
-                }
-                if (this.position.y < 0) this.position.y = 0;
-
-                // Success & Failure
-                if (this.position.y >= parameters.successThreshold) this.succeed();
-                this.age += deltaTime;
-                if (this.age > this.maxAge) this.die();
-
-                this.mesh.position.copy(this.position);
-                this.mesh.material.color.setHSL(0.6, 1.0, 1.0 - heightRatio * 0.7);
-            }
-
-            succeed() {
-                this.isActive = false;
-                this.mesh.material.color.set(0x00ff00);
-                simulationState.successCount++;
-                // In a more complex version, this would trigger knowledge transfer.
-            }
-
-            die() {
-                this.isActive = false;
-                scene.remove(this.mesh);
-            }
-        }
-
-        // --- Simulation Logic ---
-        function spawnParticles(count) {
-            for (let i = 0; i < count; i++) {
-                if (particles.length > 300) return; // Max particles
-                const particle = new ResourceParticle(nextParticleId++, simulationState.elapsedTime);
-                particles.push(particle);
-                simulationState.totalSpawned++;
-            }
-        }
-
-        function resetSimulation() {
-            particles.forEach(p => scene.remove(p.mesh));
-            particles = [];
-            nextParticleId = 0;
-            simulationState.elapsedTime = 0;
-            simulationState.totalSpawned = 0;
-            simulationState.successCount = 0;
-            simulationState.lastSpawnTime = 0;
-            spawnParticles(parameters.initialParticles);
-        }
-
-        // --- UI & Controls ---
-        function setupUI() {
-            document.querySelectorAll('#control-panel input').forEach(input => {
-                const param = input.id;
-                if (!parameters.hasOwnProperty(param)) return;
-
-                if (input.type === 'checkbox') {
-                    input.checked = parameters[param];
-                } else if (input.type === 'range') {
-                    input.value = parameters[param];
-                    const valueLabel = document.getElementById(`${param}-value`);
-                    if (valueLabel) valueLabel.textContent = parseFloat(input.value).toFixed(2);
-                }
-
-                input.addEventListener('input', (e) => {
-                    const target = e.target;
-                    if (target.type === 'checkbox') {
-                        parameters[param] = target.checked;
-                    } else {
-                        const value = parseFloat(target.value);
-                        parameters[param] = value;
-                        const valueLabel = document.getElementById(`${param}-value`);
-                        if (valueLabel) valueLabel.textContent = value.toFixed(2);
-                    }
-                });
-            });
-            
-            document.getElementById('start-button').addEventListener('click', () => {
-                simulationState.isRunning = true;
-                simulationState.isPaused = false;
-            });
-            document.getElementById('pause-button').addEventListener('click', () => {
-                simulationState.isPaused = !simulationState.isPaused;
-            });
-            document.getElementById('reset-button').addEventListener('click', resetSimulation);
-        }
-
-        // --- Animation Loop ---
-        let lastTime = 0;
-        function animate(time) {
-            requestAnimationFrame(animate);
-            const deltaTime = (time - lastTime) * 0.001 * parameters.timeScale;
-            lastTime = time;
-
-            if (simulationState.isRunning && !simulationState.isPaused && deltaTime > 0) {
-                simulationState.elapsedTime += deltaTime;
-                if (simulationState.elapsedTime - simulationState.lastSpawnTime > parameters.spawnInterval) {
-                    spawnParticles(parameters.batchSize);
-                    simulationState.lastSpawnTime = simulationState.elapsedTime;
-                }
-
-                particles.forEach(p => p.update(deltaTime));
-                particles = particles.filter(p => p.isActive);
-            }
-            
-            renderer.render(scene, camera);
-        }
-
-        // --- Initial Call ---
-        setupUI();
-        resetSimulation(); // Start with initial particles
-        animate(0);
-
-    </script>
+    <div class="parameter-group">
+      <h2>環境</h2>
+      <div class="parameter">
+        <label>成功閾値 <span class="parameter-value" id="successThreshold-value"></span></label>
+        <input type="range" id="successThreshold" min="20" max="50" step="1">
+      </div>
+      <div class="parameter">
+        <label>頂点容量 <span class="parameter-value" id="vertexCapacity-value"></span></label>
+        <input type="range" id="vertexCapacity" min="1" max="20" step="1">
+      </div>
+      <div class="parameter">
+        <label>減耗率 <span class="parameter-value" id="attritionRate-value"></span></label>
+        <input type="range" id="attritionRate" min="0" max="0.1" step="0.001">
+      </div>
+    </div>
+  </div>
 </body>
 </html>
+<script>
+  // --- 初期設定 ---
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(50,40,60); camera.lookAt(0,20,0);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // 光源・地面など初期化...
+  
+  // --- パラメータ & 状態 ---
+  const parameters = {
+    timeScale:0.1, spawnInterval:0.5, batchSize:3,
+    heterogeneity:0.5, lifespanVariance:0.3,
+    exploiterRatio:0.3, explorerRatio:0.3, strategicSpawningEnabled:true,
+    trtForce:0.015, praForce:0.02,
+    centralConvergence:0.03, clusterConvergence:0.02, clusterInertia:0.015, peerAttraction:0.01,
+    successThreshold:38, vertexCapacity:5, attritionRate:0.02
+  };
+  let particles=[], nextId=0, simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0};
+
+  // --- 粒子クラス ---
+  class ResourceParticle {
+    constructor() {
+      this.id = nextId++; this.age=0; this.isActive=true;
+      this._determineType(); this._setAttributes();
+      this._determineInitialPosition(); this._createMesh();
+    }
+    _determineType(){
+      const r=Math.random();
+      if(r<parameters.exploiterRatio) this.type='exploiter';
+      else if(r<parameters.exploiterRatio+parameters.explorerRatio) this.type='explorer';
+      else this.type='standard';
+    }
+    _setAttributes(){
+      const v=(Math.random()-0.5)*2*parameters.heterogeneity;
+      this.trt=1 + (this.type==='exploiter'?+v:-v);
+      this.pra=1 + (this.type==='explorer'?+v:-v);
+    }
+    _determineInitialPosition(){
+      const angle=Math.random()*Math.PI*2;
+      const radius=Math.random()*20;
+      this.pos=new THREE.Vector3(
+        Math.cos(angle)*radius, 0.5, Math.sin(angle)*radius
+      );
+      // 戦略的初期配置ロジックをここに追加...
+    }
+    _createMesh(){
+      const geom=new THREE.SphereGeometry(0.5,8,8);
+      const mat=new THREE.MeshPhongMaterial({color:0x3b82f6});
+      this.mesh=new THREE.Mesh(geom,mat);
+      this.mesh.position.copy(this.pos);
+      scene.add(this.mesh);
+    }
+    update(dt){
+      if(!this.isActive)return;
+      // TRT/PRA 反力、中央収束、境界反射、成功/失敗判定を実装...
+      this.mesh.position.copy(this.pos);
+    }
+    succeed(){ this.isActive=false; }
+    die(){ this.isActive=false; scene.remove(this.mesh); }
+  }
+
+  // --- UI初期化 ---
+  function setupUI(){
+    document.querySelectorAll('#control-panel input').forEach(input=>{
+      const id=input.id; if(!(id in parameters))return;
+      if(input.type==='checkbox') input.checked=parameters[id];
+      else input.value=parameters[id];
+      input.oninput=e=>{
+        parameters[id] = e.target.type==='checkbox'?e.target.checked:parseFloat(e.target.value);
+        const lbl=document.getElementById(`${id}-value`);
+        if(lbl) lbl.textContent = parameters[id].toFixed(2);
+      };
+    });
+    document.getElementById('start-button').onclick=()=>simState.isRunning=true;
+    document.getElementById('pause-button').onclick=()=>simState.isPaused=!simState.isPaused;
+    document.getElementById('reset-button').onclick=resetSim;
+  }
+
+  // --- シミュレーション制御 ---
+  function spawnParticles(n){
+    for(let i=0;i<n;i++)particles.push(new ResourceParticle());
+  }
+  function resetSim(){
+    particles.forEach(p=>scene.remove(p.mesh));
+    particles=[]; nextId=0; simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0};
+    spawnParticles(20);
+  }
+
+  // --- アニメーションループ ---
+  let lastTime=0;
+  function animate(t){
+    requestAnimationFrame(animate);
+    const dt=(t-lastTime)*0.001*parameters.timeScale; lastTime=t;
+    if(simState.isRunning && !simState.isPaused){
+      simState.elapsed+=dt;
+      if(simState.elapsed - simState.lastSpawn > parameters.spawnInterval){
+        spawnParticles(parameters.batchSize);
+        simState.lastSpawn = simState.elapsed;
+      }
+      particles.forEach(p=>p.update(dt));
+      particles=particles.filter(p=>p.isActive);
+    }
+    renderer.render(scene,camera);
+  }
+
+  // --- 初期化呼び出し ---
+  setupUI(); resetSim(); animate(0);
+</script>
