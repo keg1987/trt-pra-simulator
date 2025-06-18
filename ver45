@@ -3,47 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRAシミュレータ v5.1 - 最終完全版</title>
+  <title>TRT・PRAシミュレータ v5.2 - レスポンシブデザイン対応版</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; overflow: hidden; }
-    #canvas-container { position: relative; width:100vw; height:100vh; }
+    body { 
+      margin: 0; 
+      font-family: Arial, sans-serif; 
+      background: #f0f0f0; 
+      /* overflow: hidden; を削除してスクロールを許可 */
+    }
+    
+    #canvas-container { 
+      position: relative; 
+      width: 100vw; 
+      height: 100vh; 
+    }
+    
+    /* === コントロールパネルのスタイル === */
     #control-panel {
-      position: absolute; bottom:20px; left:20px; width:320px; max-height:calc(100vh - 40px);
-      background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; overflow-y:auto;
-      box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index: 100;
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 320px;
+      max-width: calc(100vw - 40px); /* 画面幅より大きくならないように */
+      max-height: calc(100vh - 40px); /* 画面の高さより大きくならないように */
+      background: rgba(255,255,255,0.98);
+      padding: 20px;
+      border-radius: 12px;
+      overflow-y: auto;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      z-index: 100;
     }
-    h1 { font-size:18px; margin:0 0 10px; }
-    h2 { font-size:14px; margin:15px 0 10px; border-bottom:1px solid #e5e7eb; padding-bottom:5px; }
-    .parameter-group { margin-bottom:12px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; }
-    .parameter { margin-bottom:12px; }
+    
+    /* === 統計パネルのスタイル === */
+    .stats-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      max-width: calc(100vw - 40px);
+      background: rgba(255,255,255,0.98);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      z-index: 100;
+    }
+    
+    /* === 凡例パネルのスタイル === */
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      max-width: 200px;
+      background: rgba(255,255,255,0.98);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      z-index: 100;
+    }
+    
+    /* === 共通のパネルスタイル === */
+    h1 { font-size: 18px; margin: 0 0 10px; color: #1f2937; }
+    h2 { font-size: 14px; margin: 15px 0 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; color: #374151; }
+    
+    .parameter-group { 
+      margin-bottom: 12px; 
+      padding: 12px; 
+      background: #f9fafb; 
+      border: 1px solid #e5e7eb; 
+      border-radius: 6px; 
+    }
+    
+    .parameter { margin-bottom: 12px; }
+    
     .parameter label {
-      display:flex; justify-content:space-between; align-items:center;
-      font-size:12px; color:#4b5563; font-weight:600; margin-bottom:4px;
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      font-size: 12px; 
+      color: #4b5563; 
+      font-weight: 600; 
+      margin-bottom: 4px;
     }
+    
     .parameter input[type=range] {
-      width:100%; -webkit-appearance: none; appearance: none; height:5px; background:#e5e7eb; border-radius:3px; outline:none;
+      width: 100%; 
+      -webkit-appearance: none; 
+      appearance: none; 
+      height: 5px; 
+      background: #e5e7eb; 
+      border-radius: 3px; 
+      outline: none;
     }
+    
     .parameter input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none; width:16px; height:16px; border-radius:50%; background:#3b82f6; cursor:pointer;
+      -webkit-appearance: none; 
+      appearance: none; 
+      width: 16px; 
+      height: 16px; 
+      border-radius: 50%; 
+      background: #3b82f6; 
+      cursor: pointer;
     }
-    .parameter-value { font-size:11px; color:#6b7280; min-width:40px; text-align:right; }
+    
+    .parameter-value { 
+      font-size: 11px; 
+      color: #6b7280; 
+      min-width: 40px; 
+      text-align: right; 
+    }
+    
     button {
-      margin-right:5px; padding:8px 12px; border:none; background:#3b82f6; color:#fff; border-radius:6px; cursor:pointer;
+      margin-right: 5px; 
+      padding: 8px 12px; 
+      border: none; 
+      background: #3b82f6; 
+      color: #fff; 
+      border-radius: 6px; 
+      cursor: pointer;
     }
-    button:hover { background:#2563eb; }
+    
+    button:hover { background: #2563eb; }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 6px 0;
+      font-size: 11px;
+    }
+    
+    .legend-color, .legend-shape {
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+    }
+    
+    .stat-item {
+      margin: 8px 0;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ▼▼▼ レスポンシブデザイン対応 ▼▼▼ */
+    
+    /* タブレットサイズ（1024px以下）の場合 */
+    @media (max-width: 1024px) {
+      body {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+      }
+      
+      #canvas-container {
+        order: 1;
+        height: 50vh; /* canvasの高さを画面の半分に */
+      }
+      
+      #control-panel, .stats-panel, .legend {
+        position: relative;
+        width: auto;
+        margin: 10px;
+        left: auto; 
+        right: auto; 
+        top: auto; 
+        bottom: auto;
+        max-height: 45vh;
+        max-width: calc(100vw - 20px);
+      }
+      
+      #control-panel { order: 2; }
+      .stats-panel { order: 3; }
+      .legend { order: 4; }
+    }
+    
+    /* スマートフォンサイズ（768px以下）の場合 */
+    @media (max-width: 768px) {
+      #canvas-container {
+        height: 40vh; /* より小さく */
+      }
+      
+      #control-panel, .stats-panel, .legend {
+        margin: 5px;
+        padding: 15px;
+        max-height: 35vh;
+      }
+      
+      h1 { font-size: 16px; }
+      h2 { font-size: 13px; }
+      
+      .parameter label {
+        font-size: 11px;
+      }
+      
+      button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+    }
+    
+    /* 極小画面（480px以下）の場合 */
+    @media (max-width: 480px) {
+      #canvas-container {
+        height: 35vh;
+      }
+      
+      #control-panel, .stats-panel, .legend {
+        margin: 3px;
+        padding: 12px;
+        max-height: 30vh;
+      }
+      
+      .parameter-group {
+        padding: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .parameter {
+        margin-bottom: 8px;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="canvas-container"></div>
+  
   <div id="control-panel">
-    <h1>シミュレータ v5.1</h1>
+    <h1>シミュレータ v5.2</h1>
+    
     <div class="parameter-group">
       <h2>制御</h2>
       <button id="start-button">開始</button>
       <button id="pause-button">一時停止</button>
       <button id="reset-button">リセット</button>
     </div>
+    
     <div class="parameter-group">
       <h2>発生・時間</h2>
       <div class="parameter">
@@ -59,6 +255,7 @@
         <input type="range" id="batchSize" min="1" max="10" step="1">
       </div>
     </div>
+    
     <div class="parameter-group">
       <h2>資源特性【拡張】</h2>
       <div class="parameter">
@@ -81,6 +278,35 @@
         <label><span>戦略的初期配置</span><input type="checkbox" id="strategicSpawningEnabled"></label>
       </div>
     </div>
+    
+    <div class="parameter-group">
+      <h2>TRT力（推進力）</h2>
+      <div class="parameter">
+        <label><span>TRT基本強度</span><span class="parameter-value" id="trtForce-value"></span></label>
+        <input type="range" id="trtForce" min="0" max="0.05" step="0.001">
+      </div>
+      <div class="parameter">
+        <label><span>TRT加速度</span><span class="parameter-value" id="trtAcceleration-value"></span></label>
+        <input type="range" id="trtAcceleration" min="0.5" max="2.0" step="0.1">
+      </div>
+      <div class="parameter">
+        <label><span>転換点高度</span><span class="parameter-value" id="tippingPoint-value"></span></label>
+        <input type="range" id="tippingPoint" min="0.3" max="0.9" step="0.1">
+      </div>
+    </div>
+    
+    <div class="parameter-group">
+      <h2>PRA力（多様性）</h2>
+      <div class="parameter">
+        <label><span>PRA基本強度</span><span class="parameter-value" id="praForce-value"></span></label>
+        <input type="range" id="praForce" min="0" max="0.05" step="0.001">
+      </div>
+      <div class="parameter">
+        <label><span>PRA多様性</span><span class="parameter-value" id="praDiversity-value"></span></label>
+        <input type="range" id="praDiversity" min="0.5" max="2.0" step="0.1">
+      </div>
+    </div>
+    
     <div class="parameter-group">
       <h2>多重重力</h2>
       <div class="parameter">
@@ -88,10 +314,23 @@
         <input type="range" id="centralConvergence" min="0" max="0.1" step="0.001">
       </div>
       <div class="parameter">
+        <label><span>クラスター収束力</span><span class="parameter-value" id="clusterConvergence-value"></span></label>
+        <input type="range" id="clusterConvergence" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
+        <label><span>クラスター慣性</span><span class="parameter-value" id="clusterInertia-value"></span></label>
+        <input type="range" id="clusterInertia" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
+        <label><span>市場引力</span><span class="parameter-value" id="marketPull-value"></span></label>
+        <input type="range" id="marketPull" min="0" max="0.1" step="0.001">
+      </div>
+      <div class="parameter">
         <label><span>粒子引力</span><span class="parameter-value" id="peerAttraction-value"></span></label>
         <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001">
       </div>
     </div>
+    
     <div class="parameter-group">
       <h2>環境</h2>
       <div class="parameter">
@@ -109,6 +348,54 @@
     </div>
   </div>
 
+  <div class="stats-panel">
+    <h2>統計情報</h2>
+    <div class="stat-item">
+      <span>シミュレーション時間:</span>
+      <span id="sim-time">0.0s</span>
+    </div>
+    <div class="stat-item">
+      <span>総発生数:</span>
+      <span id="total-spawned">0</span>
+    </div>
+    <div class="stat-item">
+      <span>現在のアクティブ数:</span>
+      <span id="active-count">0</span>
+    </div>
+    <div class="stat-item">
+      <span>成功数:</span>
+      <span id="success-count">0</span>
+    </div>
+    <div class="stat-item">
+      <span>成功率:</span>
+      <span id="success-rate">0%</span>
+    </div>
+    <div class="stat-item">
+      <span>クラスター数:</span>
+      <span id="cluster-count">0</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h2>凡例</h2>
+    <div class="legend-item">
+      <div class="legend-shape" style="background: #3b82f6; border-radius: 50%;"></div>
+      <span>標準型</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-shape" style="background: #ef4444;"></div>
+      <span>活用特化型</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-shape" style="background: #10b981; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+      <span>探索特化型</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #00ff00;"></div>
+      <span>成功</span>
+    </div>
+  </div>
+
 <script>
   // --- 初期設定 ---
   const scene = new THREE.Scene();
@@ -119,6 +406,14 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   document.getElementById('canvas-container').appendChild(renderer.domElement);
+  
+  // レスポンシブ対応のためのリサイズイベント
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+  
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambientLight);
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -135,8 +430,10 @@
     timeScale:0.1, spawnInterval:0.5, batchSize:3, initialParticles: 20,
     heterogeneity:0.5, lifespanVariance:0.3,
     exploiterRatio:0.3, explorerRatio:0.3, strategicSpawningEnabled:true,
-    trtForce:0.015, praForce:0.02,
-    centralConvergence:0.03, peerAttraction:0.01,
+    trtForce:0.015, trtAcceleration:1.0, tippingPoint:0.7,
+    praForce:0.02, praDiversity:1.0,
+    centralConvergence:0.03, clusterConvergence:0.02, clusterInertia:0.015, 
+    marketPull:0.02, peerAttraction:0.01,
     successThreshold:38, vertexCapacity:5, attritionRate:0.02,
     attractionRange: 5, clusterThreshold: 3
   };
@@ -249,7 +546,11 @@
       this.mesh.position.copy(this.position);
       this.mesh.material.color.setHSL(0.6, 1.0, 1.0 - heightRatio * 0.7);
     }
-    succeed(){ this.isActive = false; this.mesh.material.color.set(0x00ff00); }
+    succeed(){ 
+      this.isActive = false; 
+      this.mesh.material.color.set(0x00ff00); 
+      simState.successCount++;
+    }
     die(){ this.isActive = false; scene.remove(this.mesh); }
   }
 
@@ -266,7 +567,7 @@
               const lbl=document.getElementById(`${id}-value`);
               if(lbl) {
                   if (input.step.includes('.')) {
-                      lbl.textContent = value.toFixed(2);
+                      lbl.textContent = value.toFixed(3);
                   } else {
                       lbl.textContent = value;
                   }
@@ -286,15 +587,30 @@
     document.getElementById('reset-button').onclick=resetSim;
   }
 
+  // --- 統計情報の更新 ---
+  function updateStats() {
+    document.getElementById('sim-time').textContent = simState.elapsed.toFixed(1) + 's';
+    document.getElementById('total-spawned').textContent = simState.totalSpawned || 0;
+    document.getElementById('active-count').textContent = particles.filter(p => p.isActive).length;
+    document.getElementById('success-count').textContent = simState.successCount || 0;
+    const successRate = simState.totalSpawned > 0 ? ((simState.successCount || 0) / simState.totalSpawned * 100) : 0;
+    document.getElementById('success-rate').textContent = successRate.toFixed(1) + '%';
+    document.getElementById('cluster-count').textContent = simState.clusters.length;
+  }
+
   // --- シミュレーション制御 ---
   function spawnParticles(n){
-    for(let i=0;i<n && particles.length<300;i++) particles.push(new ResourceParticle());
+    for(let i=0;i<n && particles.length<300;i++) {
+      particles.push(new ResourceParticle());
+      simState.totalSpawned = (simState.totalSpawned || 0) + 1;
+    }
   }
   function resetSim(){
     particles.forEach(p=>scene.remove(p.mesh));
     particles=[]; nextId=0; 
-    simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0, clusters:[]};
+    simState={isRunning:false,isPaused:false,elapsed:0,lastSpawn:0, clusters:[], totalSpawned:0, successCount:0};
     spawnParticles(parameters.initialParticles);
+    updateStats();
   }
 
   // --- アニメーションループ ---
@@ -312,6 +628,7 @@
       }
       particles.forEach(p=>p.update(scaledDt));
       particles=particles.filter(p=>p.isActive);
+      updateStats();
     }
     renderer.render(scene,camera);
   }
