@@ -290,7 +290,6 @@
             font-weight: bold;
             color: #92400e;
         }
-        /* Comparison Mode Styles */
         .comparison-panel {
             position: absolute;
             top: 200px;
@@ -433,7 +432,6 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        /* Tooltip styles */
         .tooltip-container {
             position: relative;
             display: inline-block;
@@ -519,7 +517,6 @@
                 <span>活用特化型</span>
             </div>
         </div>
-
         <div class="stats-panel">
             <h2 style="margin-top: 0; font-size: 16px;">リアルタイム指標</h2>
             
@@ -657,7 +654,6 @@
                         <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05">
                     </div>
                 </div>
-
                 <div class="parameter-group">
                     <h2>PRA（並列的資源配分）
                         <span class="tooltip-container">
@@ -769,7 +765,6 @@
                         <input type="range" id="attritionRate" min="0" max="0.1" value="0.02" step="0.01">
                     </div>
                 </div>
-
                 <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
                     <h2>頂点容量制限</h2>
                     <div class="parameter">
@@ -848,15 +843,12 @@
             </div>
         </div>
 
-        <!-- Cluster Visualization Panel -->
         <div class="cluster-visualization" id="cluster-vis" style="display: none;">
             <h2 style="margin-top: 0; font-size: 14px;">活性クラスター</h2>
             <div id="cluster-list">
-                <!-- Clusters will be dynamically added here -->
             </div>
         </div>
 
-        <!-- Comparison Panel -->
         <div id="comparison-panel" class="comparison-panel">
             <div class="comparison-header">
                 <h2 style="margin: 0; font-size: 16px;">シナリオ比較分析</h2>
@@ -865,7 +857,6 @@
             
             <div id="comparison-content">
                 <div id="scenario-list">
-                    <!-- Scenarios will be dynamically added here -->
                 </div>
                 
                 <button class="control-button" onclick="addScenario()" style="width: 100%; margin: 10px 0;">
@@ -914,7 +905,6 @@
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
-
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(50, 100, 50);
         directionalLight.castShadow = true;
@@ -932,7 +922,7 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Parameters object - Updated for v4.0
+        // Parameters object
         const parameters = {
             initialParticles: 20,
             simulationSpeed: 1.0,
@@ -941,36 +931,36 @@
             tippingPoint: 0.7,
             praForce: 0.02,
             praDiversity: 1.0,
-            // Multi-gravity source parameters - Updated for v4.0
-            centralConvergence: 0.03,      // Central strategic control
-            clusterConvergence: 0.02,      // Within-cluster cohesion
-            clusterInertia: 0.015,         // NEW: Cluster inertia effect (higher = more resistance to leaving)
-            marketPull: 0.02,              // NEW: Direct market attraction force
-            clusterPermeability: 0.8,      // NEW: Cluster boundary permeability (0=closed, 1=open)
-            peerAttraction: 0.01,          // Peer-to-peer attraction
-            attractionRange: 5,            // Attraction effect radius
-            clusterThreshold: 3,           // Minimum particles to form cluster
+            centralConvergence: 0.03,
+            clusterConvergence: 0.02,
+            clusterInertia: 0.015,
+            marketPull: 0.02,
+            clusterPermeability: 0.8,
+            peerAttraction: 0.01,
+            attractionRange: 5,
+            clusterThreshold: 3,
             successThreshold: 38,
             timeScale: 0.1,
             spawnInterval: 0.5,
             batchSize: 3,
             heterogeneity: 0.5,
             lifespanVariance: 0.3,
-            // Vertex Capacity Parameters - Re-implemented
-            vertexCapacity: 5,             // Maximum resources near vertex
-            capacityRadius: 2,             // Radius from vertex where capacity limit applies
-            congestionEffect: 0.8,         // Velocity reduction factor when congested
-            queueingBehavior: 'priority',  // 'priority', 'random', 'pushback'
-            // Environmental Bias Parameters - NEW
-            coneTiltX: 0,                  // Cone tilt in X direction (-30 to 30 degrees)
-            coneTiltZ: 0,                  // Cone tilt in Z direction (-30 to 30 degrees)
-            asymmetryX: 1.0,               // Cross-section asymmetry X axis (0.5 to 2.0)
-            asymmetryZ: 1.0,               // Cross-section asymmetry Z axis (0.5 to 2.0)
-            // Path Memory Parameters - NEW
-            pathMemoryEnabled: true,       // Enable path reinforcement
-            pathMemoryStrength: 0.02,      // Strength of path attraction
-            pathMemoryPersistence: 0.005,  // Memory persistence (0=no memory, 1=perfect memory)
-            pathMemoryResolution: 20       // Grid resolution for path memory
+            vertexCapacity: 5,
+            capacityRadius: 2,
+            congestionEffect: 0.8,
+            queueingBehavior: 'priority',
+            coneTiltX: 0,
+            coneTiltZ: 0,
+            asymmetryX: 1.0,
+            asymmetryZ: 1.0,
+            pathMemoryEnabled: true,
+            pathMemoryStrength: 0.02,
+            pathMemoryPersistence: 0.005,
+            pathMemoryResolution: 20,
+            resourceRecycleRate: 0.7,
+            knowledgeTransferRate: 0.3,
+            attritionRate: 0.02,
+            industryProfile: 'hybrid'
         };
 
         // Simulation state
@@ -985,9 +975,9 @@
                 fiveYear: { spawned: 0, success: 0 },
                 tenYear: { spawned: 0, success: 0 }
             },
-            mode: 'single', // 'single' or 'comparison'
-            clusters: [],   // NEW: Active clusters
-            gravitySources: [] // NEW: Multiple gravity sources
+            mode: 'single',
+            clusters: [],
+            gravitySources: []
         };
 
         // Comparison mode data
@@ -1003,9 +993,9 @@
             spiral: true,
             success: true,
             trails: false,
-            clusters: true,    // NEW
-            gravity: false,    // NEW
-            pathMemory: false  // NEW
+            clusters: true,
+            gravity: false,
+            pathMemory: false
         };
 
         // Main groups
@@ -1015,19 +1005,11 @@
         const particlesGroup = new THREE.Group();
         const successGroup = new THREE.Group();
         const trailsGroup = new THREE.Group();
-        const clustersGroup = new THREE.Group();  // NEW
-        const gravityGroup = new THREE.Group();   // NEW
-        const pathMemoryGroup = new THREE.Group(); // NEW
+        const clustersGroup = new THREE.Group();
+        const gravityGroup = new THREE.Group();
+        const pathMemoryGroup = new THREE.Group();
         
-        scene.add(coneGroup);
-        scene.add(sectionsGroup);
-        scene.add(spiralGroup);
-        scene.add(particlesGroup);
-        scene.add(successGroup);
-        scene.add(trailsGroup);
-        scene.add(clustersGroup);
-        scene.add(gravityGroup);
-        scene.add(pathMemoryGroup);
+        scene.add(coneGroup, sectionsGroup, spiralGroup, particlesGroup, successGroup, trailsGroup, clustersGroup, gravityGroup, pathMemoryGroup);
 
         // Cone parameters
         const coneHeight = 40;
@@ -1039,81 +1021,46 @@
             EXPLORER: 'explorer',
             EXPLOITER: 'exploiter'
         };
-
-        // Path Memory System Class
         class PathMemory {
             constructor(resolution = 20) {
                 this.resolution = resolution;
-                this.grid = [];
+                this.grid = Array.from({ length: resolution }, () => 
+                           Array.from({ length: resolution }, () => 
+                           Array(resolution).fill(0)));
                 this.maxValue = 0;
-                
-                // Initialize 3D grid
-                for (let x = 0; x < resolution; x++) {
-                    this.grid[x] = [];
-                    for (let y = 0; y < resolution; y++) {
-                        this.grid[x][y] = [];
-                        for (let z = 0; z < resolution; z++) {
-                            this.grid[x][y][z] = 0;
-                        }
-                    }
-                }
-                
-                // Visual representation
-                this.createVisual();
             }
-            
-            createVisual() {
-                // Create visual elements for path memory
-                this.visualElements = [];
-            }
-            
-            // Convert world position to grid coordinates
             worldToGrid(position) {
                 const x = Math.floor((position.x / coneRadius + 1) * 0.5 * this.resolution);
                 const y = Math.floor(position.y / coneHeight * this.resolution);
                 const z = Math.floor((position.z / coneRadius + 1) * 0.5 * this.resolution);
-                
                 return {
                     x: Math.max(0, Math.min(this.resolution - 1, x)),
                     y: Math.max(0, Math.min(this.resolution - 1, y)),
                     z: Math.max(0, Math.min(this.resolution - 1, z))
                 };
             }
-            
-            // Add memory at position (success paths)
             addMemory(position, strength = 1.0) {
                 const coords = this.worldToGrid(position);
-                
-                // Add memory with Gaussian falloff
                 for (let dx = -2; dx <= 2; dx++) {
                     for (let dy = -2; dy <= 2; dy++) {
                         for (let dz = -2; dz <= 2; dz++) {
                             const x = coords.x + dx;
                             const y = coords.y + dy;
                             const z = coords.z + dz;
-                            
-                            if (x >= 0 && x < this.resolution &&
-                                y >= 0 && y < this.resolution &&
-                                z >= 0 && z < this.resolution) {
-                                
+                            if (x >= 0 && x < this.resolution && y >= 0 && y < this.resolution && z >= 0 && z < this.resolution) {
                                 const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
                                 const falloff = Math.exp(-distance * 0.5);
                                 this.grid[x][y][z] += strength * falloff;
-                                
                                 this.maxValue = Math.max(this.maxValue, this.grid[x][y][z]);
                             }
                         }
                     }
                 }
             }
-            
-            // Get memory strength at position
             getMemoryAt(position) {
                 const coords = this.worldToGrid(position);
                 return this.grid[coords.x][coords.y][coords.z] / (this.maxValue + 0.01);
             }
-            
-            // Apply decay to all memories
             decay(factor) {
                 for (let x = 0; x < this.resolution; x++) {
                     for (let y = 0; y < this.resolution; y++) {
@@ -1124,44 +1071,9 @@
                 }
                 this.maxValue *= factor;
             }
-            
-            // Update visual representation
-            updateVisual() {
-                // Clear old visuals
-                pathMemoryGroup.children.forEach(child => {
-                    pathMemoryGroup.remove(child);
-                });
-                
-                // Create new visuals for high-memory areas
-                for (let x = 0; x < this.resolution; x += 2) {
-                    for (let y = 0; y < this.resolution; y += 2) {
-                        for (let z = 0; z < this.resolution; z += 2) {
-                            const value = this.grid[x][y][z];
-                            if (value > this.maxValue * 0.3) {
-                                const worldX = (x / this.resolution * 2 - 1) * coneRadius;
-                                const worldY = y / this.resolution * coneHeight;
-                                const worldZ = (z / this.resolution * 2 - 1) * coneRadius;
-                                
-                                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                                const material = new THREE.MeshBasicMaterial({
-                                    color: 0x00ff00,
-                                    transparent: true,
-                                    opacity: value / this.maxValue * 0.3
-                                });
-                                const cube = new THREE.Mesh(geometry, material);
-                                cube.position.set(worldX, worldY, worldZ);
-                                pathMemoryGroup.add(cube);
-                            }
-                        }
-                    }
-                }
-            }
         }
         
-        // Initialize path memory system
         const pathMemory = new PathMemory(parameters.pathMemoryResolution);
-
-        // Cluster class for v4.0
         class Cluster {
             constructor(id, center, members) {
                 this.id = id;
@@ -1170,267 +1082,122 @@
                 this.color = new THREE.Color(Math.random(), Math.random(), Math.random());
                 this.strength = 1.0;
                 this.age = 0;
-                
-                // Visual representation
                 this.createVisual();
             }
-            
             createVisual() {
-                // Sphere to represent cluster center
                 const geometry = new THREE.SphereGeometry(1, 16, 16);
-                const material = new THREE.MeshBasicMaterial({
-                    color: this.color,
-                    transparent: true,
-                    opacity: 0.3
-                });
+                const material = new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.3 });
                 this.mesh = new THREE.Mesh(geometry, material);
                 this.mesh.position.copy(this.center);
                 clustersGroup.add(this.mesh);
                 
-                // Ring to show influence area
-                const ringGeometry = new THREE.RingGeometry(
-                    parameters.attractionRange - 0.5,
-                    parameters.attractionRange,
-                    32
-                );
-                const ringMaterial = new THREE.MeshBasicMaterial({
-                    color: this.color,
-                    transparent: true,
-                    opacity: 0.2,
-                    side: THREE.DoubleSide
-                });
+                const ringGeometry = new THREE.RingGeometry(parameters.attractionRange - 0.5, parameters.attractionRange, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
                 this.ring = new THREE.Mesh(ringGeometry, ringMaterial);
                 this.ring.rotation.x = -Math.PI / 2;
                 this.ring.position.copy(this.center);
                 clustersGroup.add(this.ring);
             }
-            
             update(particles) {
-                // Update center based on member positions
                 if (this.members.size > 0) {
                     const memberParticles = particles.filter(p => this.members.has(p.id));
                     if (memberParticles.length > 0) {
                         this.center.set(0, 0, 0);
-                        memberParticles.forEach(p => {
-                            this.center.add(p.position);
-                        });
+                        memberParticles.forEach(p => { this.center.add(p.position); });
                         this.center.divideScalar(memberParticles.length);
-                        
-                        // Update visual position
                         this.mesh.position.copy(this.center);
                         this.ring.position.copy(this.center);
-                        
-                        // Update strength based on member count
                         this.strength = Math.min(2.0, 0.5 + this.members.size * 0.1);
                         this.mesh.scale.setScalar(this.strength);
                     }
                 }
-                
                 this.age++;
             }
-            
             remove() {
                 clustersGroup.remove(this.mesh);
                 clustersGroup.remove(this.ring);
             }
         }
 
-        // Create cone with tilt and asymmetry
         function createCone() {
-            while(coneGroup.children.length > 0) {
-                coneGroup.remove(coneGroup.children[0]);
-            }
-
-            // Apply transformations for tilt and asymmetry
+            while(coneGroup.children.length > 0) coneGroup.remove(coneGroup.children[0]);
             coneGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
             coneGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
-
-            // Create asymmetric cone using scaling
             const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
-            
-            // Apply asymmetry by scaling vertices
             const positions = coneGeometry.attributes.position;
             for (let i = 0; i < positions.count; i++) {
-                const x = positions.getX(i);
-                const y = positions.getY(i);
-                const z = positions.getZ(i);
-                
-                // Apply asymmetry scaling
-                positions.setX(i, x * parameters.asymmetryX);
-                positions.setZ(i, z * parameters.asymmetryZ);
+                positions.setX(i, positions.getX(i) * parameters.asymmetryX);
+                positions.setZ(i, positions.getZ(i) * parameters.asymmetryZ);
             }
             positions.needsUpdate = true;
             coneGeometry.computeVertexNormals();
-
-            const coneMaterial = new THREE.MeshPhongMaterial({
-                color: 0x3b82f6,
-                transparent: true,
-                opacity: 0.15,
-                side: THREE.DoubleSide
-            });
+            const coneMaterial = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             cone.position.y = coneHeight / 2;
             coneGroup.add(cone);
-
-            // Create wireframe with same transformations
             const wireframeGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 16, 8, true);
-            
-            // Apply asymmetry to wireframe
             const wirePositions = wireframeGeometry.attributes.position;
             for (let i = 0; i < wirePositions.count; i++) {
-                const x = wirePositions.getX(i);
-                const z = wirePositions.getZ(i);
-                wirePositions.setX(i, x * parameters.asymmetryX);
-                wirePositions.setZ(i, z * parameters.asymmetryZ);
+                wirePositions.setX(i, wirePositions.getX(i) * parameters.asymmetryX);
+                wirePositions.setZ(i, wirePositions.getZ(i) * parameters.asymmetryZ);
             }
             wirePositions.needsUpdate = true;
-
-            const wireframeMaterial = new THREE.MeshBasicMaterial({
-                color: 0x2563eb,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.3
-            });
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x2563eb, wireframe: true, transparent: true, opacity: 0.3 });
             const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
             wireframe.position.y = coneHeight / 2;
             coneGroup.add(wireframe);
         }
 
-        // Create sections with asymmetry consideration
         function createSections() {
-            while(sectionsGroup.children.length > 0) {
-                sectionsGroup.remove(sectionsGroup.children[0]);
-            }
-
-            // Apply same transformations as cone
+            while(sectionsGroup.children.length > 0) sectionsGroup.remove(sectionsGroup.children[0]);
             sectionsGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
             sectionsGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
-
             const heights = [5, 15, 25, 35];
             const colors = [0x8b5cf6, 0xef4444, 0xf97316, 0x10b981];
-            
             heights.forEach((height, index) => {
                 const radius = coneRadius * (1 - height / coneHeight);
-                
-                // Create elliptical ring for asymmetric sections
-                const curve = new THREE.EllipseCurve(
-                    0, 0,
-                    radius * parameters.asymmetryX,
-                    radius * parameters.asymmetryZ,
-                    0, 2 * Math.PI,
-                    false,
-                    0
-                );
-                
+                const curve = new THREE.EllipseCurve(0, 0, radius * parameters.asymmetryX, radius * parameters.asymmetryZ, 0, 2 * Math.PI, false, 0);
                 const points = curve.getPoints(50);
                 const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                const material = new THREE.LineBasicMaterial({
-                    color: colors[index],
-                    transparent: true,
-                    opacity: 0.5
-                });
+                const material = new THREE.LineBasicMaterial({ color: colors[index], transparent: true, opacity: 0.5 });
                 const ellipse = new THREE.Line(geometry, material);
                 ellipse.rotation.x = -Math.PI / 2;
                 ellipse.position.y = height;
                 sectionsGroup.add(ellipse);
             });
-
-            // Success threshold line
             const successHeight = parameters.successThreshold;
             const successRadius = coneRadius * (1 - successHeight / coneHeight);
-            const successCurve = new THREE.EllipseCurve(
-                0, 0,
-                successRadius * parameters.asymmetryX,
-                successRadius * parameters.asymmetryZ,
-                0, 2 * Math.PI,
-                false,
-                0
-            );
-            
+            const successCurve = new THREE.EllipseCurve(0, 0, successRadius * parameters.asymmetryX, successRadius * parameters.asymmetryZ, 0, 2 * Math.PI, false, 0);
             const successPoints = successCurve.getPoints(50);
             const successGeometry = new THREE.BufferGeometry().setFromPoints(successPoints);
-            const successMaterial = new THREE.LineBasicMaterial({
-                color: 0xfbbf24,
-                transparent: true,
-                opacity: 0.8,
-                linewidth: 3
-            });
+            const successMaterial = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.8, linewidth: 3 });
             const successLine = new THREE.Line(successGeometry, successMaterial);
             successLine.rotation.x = -Math.PI / 2;
             successLine.position.y = successHeight;
             sectionsGroup.add(successLine);
         }
 
-        // Create spiral
         function createSpiral() {
-            while(spiralGroup.children.length > 0) {
-                spiralGroup.remove(spiralGroup.children[0]);
-            }
-
+            while(spiralGroup.children.length > 0) spiralGroup.remove(spiralGroup.children[0]);
             const points = [];
-            const segments = 300;
-            
-            for (let i = 0; i <= segments; i++) {
-                const t = i / segments;
+            for (let i = 0; i <= 300; i++) {
+                const t = i / 300;
                 const height = t * coneHeight;
                 const maxRadius = coneRadius * (1 - t) * 0.9;
                 const angle = t * Math.PI * 8;
-                
-                points.push(new THREE.Vector3(
-                    Math.cos(angle) * maxRadius,
-                    height,
-                    Math.sin(angle) * maxRadius
-                ));
+                points.push(new THREE.Vector3(Math.cos(angle) * maxRadius, height, Math.sin(angle) * maxRadius));
             }
-            
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({
-                color: 0x6366f1,
-                transparent: true,
-                opacity: 0.8,
-                linewidth: 3
-            });
-            const spiral = new THREE.Line(geometry, material);
-            spiralGroup.add(spiral);
+            const material = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.8, linewidth: 3 });
+            spiralGroup.add(new THREE.Line(geometry, material));
         }
 
-        // Industry profiles with realistic success characteristics
         const industryProfiles = {
-            biotech: {
-                baseSuccessRate: 0.02,      // 2% - Very low
-                congestionEffect: 0.95,     // Almost no congestion effect
-                attritionRate: 0.05,        // High natural failure
-                recycleValue: 0.9,          // High knowledge value from failures
-                capacityConstraint: false,   // No bottleneck at regulatory stage
-                description: "超低成功率・規制ゲート・高知識価値"
-            },
-            software: {
-                baseSuccessRate: 0.3,       // 30% - High
-                congestionEffect: 0.6,      // Strong congestion effect
-                attritionRate: 0.01,        // Low natural failure
-                recycleValue: 0.5,          // Moderate reuse value
-                capacityConstraint: true,    // Marketing/sales bottleneck
-                description: "高成功率・市場渋滞・迅速な再利用"
-            },
-            consumer: {
-                baseSuccessRate: 0.2,       // 20% - Moderate
-                congestionEffect: 0.7,      // Moderate congestion
-                attritionRate: 0.02,        // Moderate failure
-                recycleValue: 0.6,          // Good reuse potential
-                capacityConstraint: true,    // Shelf space limits
-                description: "中成功率・棚競争・ブランド転用可"
-            },
-            hybrid: {
-                baseSuccessRate: 0.15,      // Balanced
-                congestionEffect: 0.75,     // Balanced
-                attritionRate: 0.02,        // Balanced
-                recycleValue: 0.7,          // Balanced
-                capacityConstraint: true,    // Some constraints
-                description: "バランス型・多様な制約"
-            }
+            biotech: { baseSuccessRate: 0.02, congestionEffect: 0.95, attritionRate: 0.05, recycleValue: 0.9, capacityConstraint: false, description: "超低成功率・規制ゲート・高知識価値" },
+            software: { baseSuccessRate: 0.3, congestionEffect: 0.6, attritionRate: 0.01, recycleValue: 0.5, capacityConstraint: true, description: "高成功率・市場渋滞・迅速な再利用" },
+            consumer: { baseSuccessRate: 0.2, congestionEffect: 0.7, attritionRate: 0.02, recycleValue: 0.6, capacityConstraint: true, description: "中成功率・棚競争・ブランド転用可" },
+            hybrid: { baseSuccessRate: 0.15, congestionEffect: 0.75, attritionRate: 0.02, recycleValue: 0.7, capacityConstraint: true, description: "バランス型・多様な制約" }
         };
-
-        // Get current industry profile
         function getCurrentIndustryProfile() {
             return industryProfiles[parameters.industryProfile] || industryProfiles.hybrid;
         }
@@ -1442,217 +1209,131 @@
                 this.cellSize = size / divisions;
                 this.grid = {};
             }
-            
             getKey(x, y, z) {
-                const ix = Math.floor((x + this.size/2) / this.cellSize);
-                const iy = Math.floor(y / this.cellSize);
-                const iz = Math.floor((z + this.size/2) / this.cellSize);
-                return `${ix},${iy},${iz}`;
+                return `${Math.floor((x + this.size/2) / this.cellSize)},${Math.floor(y / this.cellSize)},${Math.floor((z + this.size/2) / this.cellSize)}`;
             }
-            
-            clear() {
-                this.grid = {};
-            }
-            
+            clear() { this.grid = {}; }
             insert(particle) {
                 const key = this.getKey(particle.position.x, particle.position.y, particle.position.z);
-                if (!this.grid[key]) {
-                    this.grid[key] = [];
-                }
+                if (!this.grid[key]) this.grid[key] = [];
                 this.grid[key].push(particle);
             }
-            
             getNearbyParticles(position, radius) {
                 const nearby = [];
                 const cellRadius = Math.ceil(radius / this.cellSize);
-                
                 const centerX = Math.floor((position.x + this.size/2) / this.cellSize);
                 const centerY = Math.floor(position.y / this.cellSize);
                 const centerZ = Math.floor((position.z + this.size/2) / this.cellSize);
-                
                 for (let dx = -cellRadius; dx <= cellRadius; dx++) {
                     for (let dy = -cellRadius; dy <= cellRadius; dy++) {
                         for (let dz = -cellRadius; dz <= cellRadius; dz++) {
                             const key = `${centerX + dx},${centerY + dy},${centerZ + dz}`;
                             if (this.grid[key]) {
-                                this.grid[key].forEach(particle => {
-                                    if (position.distanceTo(particle.position) <= radius) {
-                                        nearby.push(particle);
-                                    }
+                                this.grid[key].forEach(p => {
+                                    if (position.distanceTo(p.position) <= radius) nearby.push(p);
                                 });
                             }
                         }
                     }
                 }
-                
                 return nearby;
             }
         }
-        
-        // Initialize spatial grid
         const spatialGrid = new SpatialGrid(coneRadius * 2, 10);
-
-        // Find clusters using DBSCAN-like algorithm with spatial optimization
         function findClusters(particles) {
             const clusters = [];
             const visited = new Set();
-            const noise = new Set();
-            
-            // Rebuild spatial grid for efficient neighbor search
             spatialGrid.clear();
             particles.forEach(p => spatialGrid.insert(p));
-            
-            particles.forEach(particle => {
-                if (visited.has(particle.id)) return;
-                visited.add(particle.id);
-                
-                // Use spatial grid for efficient neighbor search
-                const neighbors = spatialGrid.getNearbyParticles(particle.position, parameters.attractionRange)
-                    .filter(other => other.id !== particle.id);
-                
-                if (neighbors.length < parameters.clusterThreshold - 1) {
-                    noise.add(particle.id);
-                } else {
-                    const cluster = new Set([particle.id]);
+            particles.forEach(p => {
+                if (visited.has(p.id)) return;
+                visited.add(p.id);
+                const neighbors = spatialGrid.getNearbyParticles(p.position, parameters.attractionRange).filter(o => o.id !== p.id);
+                if (neighbors.length >= parameters.clusterThreshold - 1) {
+                    const cluster = new Set([p.id]);
                     const stack = [...neighbors];
-                    
                     while (stack.length > 0) {
                         const current = stack.pop();
                         if (visited.has(current.id)) continue;
                         visited.add(current.id);
                         cluster.add(current.id);
-                        
-                        // Use spatial grid for neighbor search
-                        const currentNeighbors = spatialGrid.getNearbyParticles(current.position, parameters.attractionRange)
-                            .filter(other => other.id !== current.id);
-                        
+                        const currentNeighbors = spatialGrid.getNearbyParticles(current.position, parameters.attractionRange).filter(o => o.id !== current.id);
                         if (currentNeighbors.length >= parameters.clusterThreshold - 1) {
-                            currentNeighbors.forEach(n => {
-                                if (!visited.has(n.id)) stack.push(n);
-                            });
+                            currentNeighbors.forEach(n => { if (!visited.has(n.id)) stack.push(n); });
                         }
                     }
-                    
                     if (cluster.size >= parameters.clusterThreshold) {
-                        // Calculate cluster center
-                        const center = new THREE.Vector3(0, 0, 0);
+                        const center = new THREE.Vector3(0,0,0);
                         const clusterParticles = particles.filter(p => cluster.has(p.id));
                         clusterParticles.forEach(p => center.add(p.position));
                         center.divideScalar(clusterParticles.length);
-                        
-                        clusters.push({
-                            members: Array.from(cluster),
-                            center: center
-                        });
+                        clusters.push({ members: Array.from(cluster), center: center });
                     }
                 }
             });
-            
             return clusters;
         }
 
-        // Update cluster visualization
         function updateClusters(particles) {
             const newClusters = findClusters(particles.filter(p => p.isActive));
-            
-            // Remove old clusters
-            simulationState.clusters.forEach(cluster => cluster.remove());
+            simulationState.clusters.forEach(c => c.remove());
             simulationState.clusters = [];
-            
-            // Create new clusters
             newClusters.forEach((clusterData, index) => {
-                const cluster = new Cluster(
-                    `cluster_${Date.now()}_${index}`,
-                    clusterData.center,
-                    clusterData.members
-                );
+                const cluster = new Cluster(`c_${Date.now()}_${index}`, clusterData.center, clusterData.members);
                 simulationState.clusters.push(cluster);
             });
-            
-            // Update cluster panel
             updateClusterPanel();
         }
 
         function updateClusterPanel() {
-            const clusterList = document.getElementById('cluster-list');
-            clusterList.innerHTML = '';
-            
-            simulationState.clusters.forEach((cluster, index) => {
+            const list = document.getElementById('cluster-list');
+            list.innerHTML = '';
+            simulationState.clusters.forEach((c, i) => {
                 const item = document.createElement('div');
                 item.className = 'cluster-item';
                 item.innerHTML = `
                     <div style="display: flex; align-items: center;">
-                        <div class="cluster-color" style="background: #${cluster.color.getHexString()};"></div>
-                        <span>クラスター ${index + 1}</span>
+                        <div class="cluster-color" style="background: #${c.color.getHexString()};"></div>
+                        <span>クラスター ${i + 1}</span>
                     </div>
-                    <span>${cluster.members.size} 資源</span>
-                `;
-                clusterList.appendChild(item);
+                    <span>${c.members.size} 資源</span>`;
+                list.appendChild(item);
             });
-            
-            // Show/hide panel based on cluster count
-            document.getElementById('cluster-vis').style.display = 
-                simulationState.clusters.length > 0 ? 'block' : 'none';
+            document.getElementById('cluster-vis').style.display = simulationState.clusters.length > 0 ? 'block' : 'none';
         }
 
-        // Resource particle class with heterogeneity - Updated for v4.0
         class ResourceParticle {
             constructor(id, spawnTime = 0) {
                 this.id = id;
                 this.spawnTime = spawnTime;
                 this.age = 0;
-                this.clusterId = null;  // NEW
-                this.generation = 0;    // NEW: Track recycling generations
-                this.inheritedKnowledge = 0;  // NEW: Accumulated knowledge from failures
+                this.clusterId = null;
+                this.generation = 0;
+                this.inheritedKnowledge = 0;
                 
-                // Determine particle type based on heterogeneity
                 const typeRandom = Math.random();
                 if (parameters.heterogeneity > 0) {
-                    if (typeRandom < parameters.heterogeneity * 0.3) {
-                        this.type = ParticleType.EXPLORER;
-                    } else if (typeRandom < parameters.heterogeneity * 0.6) {
-                        this.type = ParticleType.EXPLOITER;
-                    } else {
-                        this.type = ParticleType.STANDARD;
-                    }
+                    if (typeRandom < parameters.heterogeneity * 0.3) this.type = ParticleType.EXPLORER;
+                    else if (typeRandom < parameters.heterogeneity * 0.6) this.type = ParticleType.EXPLOITER;
+                    else this.type = ParticleType.STANDARD;
                 } else {
                     this.type = ParticleType.STANDARD;
                 }
                 
-                // Set particle attributes based on type
                 this.setAttributesByType();
                 
-                // Initial position
                 const angle = Math.random() * Math.PI * 2;
                 const radius = Math.random() * coneRadius * 0.8;
+                this.position = new THREE.Vector3(Math.cos(angle) * radius, 0.5, Math.sin(angle) * radius);
+                this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
                 
-                this.position = new THREE.Vector3(
-                    Math.cos(angle) * radius,
-                    0.5,
-                    Math.sin(angle) * radius
-                );
-                
-                this.velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.05,
-                    Math.random() * 0.02 + 0.01,
-                    (Math.random() - 0.5) * 0.05
-                );
-                
-                // Create visual representation
                 this.createMesh();
-                
-                // Trail for path tracking
                 this.trail = [];
                 this.maxTrailLength = 50;
-                
                 this.isActive = true;
                 this.hasSucceeded = false;
+                this.maxAge = 100 * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
                 
-                // Lifespan with variance
-                const baseLifespan = 100;
-                this.maxAge = baseLifespan * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
-                
-                // Apply inherited knowledge boost
                 if (this.inheritedKnowledge > 0) {
                     this.velocity.y *= (1 + this.inheritedKnowledge * 0.1);
                     this.trtAffinity *= (1 + this.inheritedKnowledge * 0.05);
@@ -1662,48 +1343,27 @@
             setAttributesByType() {
                 switch(this.type) {
                     case ParticleType.EXPLORER:
-                        this.trtAffinity = 0.7;
-                        this.praAffinity = 1.3;
-                        this.size = 0.35;
+                        this.trtAffinity = 0.7; this.praAffinity = 1.3; this.size = 0.35;
                         break;
                     case ParticleType.EXPLOITER:
-                        this.trtAffinity = 1.3;
-                        this.praAffinity = 0.7;
-                        this.size = 0.4;
+                        this.trtAffinity = 1.3; this.praAffinity = 0.7; this.size = 0.4;
                         break;
                     default: // STANDARD
-                        this.trtAffinity = 1.0;
-                        this.praAffinity = 1.0;
-                        this.size = 0.3;
+                        this.trtAffinity = 1.0; this.praAffinity = 1.0; this.size = 0.3;
                 }
             }
             
             createMesh() {
                 let geometry;
                 switch(this.type) {
-                    case ParticleType.EXPLORER:
-                        geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4);
-                        geometry.rotateZ(Math.PI);
-                        break;
-                    case ParticleType.EXPLOITER:
-                        geometry = new THREE.BoxGeometry(this.size * 1.5, this.size * 1.5, this.size * 1.5);
-                        break;
-                    default:
-                        geometry = new THREE.SphereGeometry(this.size, 16, 16);
+                    case ParticleType.EXPLORER: geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4); geometry.rotateZ(Math.PI); break;
+                    case ParticleType.EXPLOITER: geometry = new THREE.BoxGeometry(this.size * 1.5, this.size * 1.5, this.size * 1.5); break;
+                    default: geometry = new THREE.SphereGeometry(this.size, 16, 16);
                 }
-                
-                const material = new THREE.MeshPhongMaterial({
-                    color: this.getColorByHeight(),
-                    transparent: true,
-                    opacity: 0.9,
-                    emissive: this.getColorByHeight(),
-                    emissiveIntensity: 0.3
-                });
-                
+                const material = new THREE.MeshPhongMaterial({ color: this.getColorByHeight(), transparent: true, opacity: 0.9, emissive: this.getColorByHeight(), emissiveIntensity: 0.3 });
                 this.mesh = new THREE.Mesh(geometry, material);
                 this.mesh.position.copy(this.position);
                 this.mesh.castShadow = true;
-                
                 particlesGroup.add(this.mesh);
             }
             
@@ -1719,677 +1379,153 @@
                 if (!this.isActive) return;
                 
                 this.age += deltaTime * params.timeScale;
-                
-                // Check for age-based death or natural attrition
                 const industryProfile = getCurrentIndustryProfile();
-                if (this.age > this.maxAge && this.position.y < params.successThreshold * 0.8) {
-                    this.die('natural');
-                    return;
-                }
-                
-                // Industry-specific natural attrition
-                if (Math.random() < industryProfile.attritionRate * deltaTime) {
+                if ((this.age > this.maxAge && this.position.y < params.successThreshold * 0.8) || (Math.random() < industryProfile.attritionRate * deltaTime)) {
                     this.die('attrition');
                     return;
                 }
                 
                 const heightRatio = this.position.y / coneHeight;
-                
-                // === VERTEX CAPACITY CHECK === //
-                // Check if particle is near vertex and apply congestion effects
                 const nearVertexThreshold = params.successThreshold - params.capacityRadius;
                 if (this.position.y >= nearVertexThreshold && !this.hasSucceeded) {
-                    const nearVertexParticles = particles.filter(p => 
-                        p.isActive && 
-                        p.position.y >= nearVertexThreshold &&
-                        !p.hasSucceeded
-                    );
-                    
+                    const nearVertexParticles = particles.filter(p => p.isActive && p.position.y >= nearVertexThreshold && !p.hasSucceeded);
                     if (nearVertexParticles.length > params.vertexCapacity) {
-                        // Apply congestion effect
                         this.velocity.y *= params.congestionEffect;
-                        
-                        // Apply queueing behavior
-                        switch (params.queueingBehavior) {
-                            case 'pushback':
-                                // Push particles back down
-                                if (this.position.y >= params.successThreshold - 0.5) {
-                                    this.velocity.y -= 0.02;
-                                }
-                                break;
-                            case 'random':
-                                // Random lateral movement when congested
-                                this.velocity.x += (Math.random() - 0.5) * 0.03;
-                                this.velocity.z += (Math.random() - 0.5) * 0.03;
-                                break;
-                            case 'priority':
-                                // Slower particles yield to faster ones
-                                const avgVelocity = nearVertexParticles.reduce((sum, p) => sum + p.velocity.y, 0) / nearVertexParticles.length;
-                                if (this.velocity.y < avgVelocity) {
-                                    this.velocity.y *= 0.9;
-                                }
-                                break;
-                        }
-                        
-                        // Mark as queued
                         this.isQueued = true;
                     } else {
                         this.isQueued = false;
                     }
                 }
                 
-                // TRT force with type affinity
                 const trtStrength = params.trtForce * (1 - heightRatio) * params.trtAcceleration * this.trtAffinity;
-                if (heightRatio < params.tippingPoint) {
-                    this.velocity.y += trtStrength * deltaTime;
-                } else {
-                    this.velocity.y += trtStrength * deltaTime * 1.5;
-                }
+                this.velocity.y += (heightRatio < params.tippingPoint) ? trtStrength * deltaTime : trtStrength * deltaTime * 1.5;
                 
-                // PRA force with type affinity
                 const praStrength = params.praForce * (1 - heightRatio) * params.praDiversity * this.praAffinity;
                 this.velocity.x += (Math.random() - 0.5) * praStrength * deltaTime;
                 this.velocity.z += (Math.random() - 0.5) * praStrength * deltaTime;
                 
-                // === MULTI-GRAVITY SOURCE IMPLEMENTATION === //
-                
-                // 1. Central convergence force (traditional)
                 const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
                 this.velocity.x += toCenter.x * params.centralConvergence * heightRatio * deltaTime;
                 this.velocity.z += toCenter.z * params.centralConvergence * heightRatio * deltaTime;
                 
-                // 2. Cluster convergence force with inertia effect
                 const myCluster = simulationState.clusters.find(c => c.members.has(this.id));
                 if (myCluster) {
-                    // Calculate cluster density (members per unit volume)
-                    const clusterDensity = myCluster.members.size / (Math.PI * params.attractionRange * params.attractionRange);
-                    
-                    // Base cluster attraction
-                    const toClusterCenter = new THREE.Vector3()
-                        .subVectors(myCluster.center, this.position)
-                        .setY(0)  // Only horizontal attraction
-                        .normalize();
+                    const toClusterCenter = new THREE.Vector3().subVectors(myCluster.center, this.position).setY(0).normalize();
                     const clusterForce = params.clusterConvergence * myCluster.strength;
-                    
-                    // Apply cluster inertia effect - reduces upward movement in dense clusters
-                    if (clusterDensity > 0.5) {
-                        const inertiaFactor = 1 - (params.clusterInertia * Math.min(clusterDensity, 1));
-                        this.velocity.y *= inertiaFactor;
-                        
-                        // Add compensating market pull to prevent complete stagnation
-                        const marketPullForce = params.marketPull * (1 - inertiaFactor);
-                        this.velocity.y += marketPullForce * deltaTime;
-                    }
-                    
-                    // Apply cluster permeability - chance to escape cluster
-                    const escapeChance = Math.random();
-                    if (escapeChance > params.clusterPermeability) {
-                        // Temporarily reduce cluster attraction
-                        this.velocity.x += toClusterCenter.x * clusterForce * deltaTime * 0.5;
-                        this.velocity.z += toClusterCenter.z * clusterForce * deltaTime * 0.5;
-                    } else {
-                        // Normal cluster attraction
-                        this.velocity.x += toClusterCenter.x * clusterForce * deltaTime;
-                        this.velocity.z += toClusterCenter.z * clusterForce * deltaTime;
-                    }
-                    
-                    // Visual feedback - tint particle with cluster color
-                    const baseColor = this.getColorByHeight();
-                    const clusterColor = myCluster.color.getHex();
-                    const blendedColor = new THREE.Color(baseColor).lerp(myCluster.color, 0.3);
-                    this.mesh.material.color.copy(blendedColor);
+                    this.velocity.x += toClusterCenter.x * clusterForce * deltaTime;
+                    this.velocity.z += toClusterCenter.z * clusterForce * deltaTime;
                 }
                 
-                // 3. Peer attraction force with spatial optimization
                 const nearbyParticles = spatialGrid.getNearbyParticles(this.position, params.attractionRange);
                 nearbyParticles.forEach(other => {
                     if (other.id === this.id || !other.isActive) return;
-                    
                     const distance = this.position.distanceTo(other.position);
                     if (distance > 0.5) {
-                        // Apply inverse square law for more realistic physics
-                        const attractionMagnitude = params.peerAttraction / (distance * distance);
-                        const attractionForce = new THREE.Vector3()
-                            .subVectors(other.position, this.position)
-                            .normalize()
-                            .multiplyScalar(attractionMagnitude);
-                        
+                        const attractionForce = new THREE.Vector3().subVectors(other.position, this.position).normalize().multiplyScalar(params.peerAttraction / (distance * distance));
                         this.velocity.add(attractionForce.multiplyScalar(deltaTime));
                     }
                 });
                 
-                // === PATH MEMORY EFFECT === //
-                // Apply attraction to successful paths if enabled
-                if (params.pathMemoryEnabled && pathMemory) {
-                    const memoryStrength = pathMemory.getMemoryAt(this.position);
-                    if (memoryStrength > 0) {
-                        // Calculate gradient of memory field
-                        const gradientStep = 0.5;
-                        const memoryGradient = new THREE.Vector3();
-                        
-                        // Sample memory field around current position
-                        const memoryRight = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x + gradientStep, this.position.y, this.position.z)
-                        );
-                        const memoryLeft = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x - gradientStep, this.position.y, this.position.z)
-                        );
-                        const memoryUp = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x, this.position.y + gradientStep, this.position.z)
-                        );
-                        const memoryDown = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x, this.position.y - gradientStep, this.position.z)
-                        );
-                        const memoryForward = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x, this.position.y, this.position.z + gradientStep)
-                        );
-                        const memoryBack = pathMemory.getMemoryAt(
-                            new THREE.Vector3(this.position.x, this.position.y, this.position.z - gradientStep)
-                        );
-                        
-                        // Calculate gradient direction
-                        memoryGradient.x = (memoryRight - memoryLeft) / (2 * gradientStep);
-                        memoryGradient.y = (memoryUp - memoryDown) / (2 * gradientStep);
-                        memoryGradient.z = (memoryForward - memoryBack) / (2 * gradientStep);
-                        
-                        // Apply gradient-based force
-                        const gradientForce = memoryGradient.multiplyScalar(params.pathMemoryStrength * deltaTime * 0.7);
-                        
-                        // Additionally, find the strongest memory point in a wider radius
-                        // This helps escape local optima
-                        let strongestMemory = memoryStrength;
-                        let strongestPoint = this.position.clone();
-                        const searchRadius = 5;
-                        const searchSteps = 8;
-                        
-                        for (let i = 0; i < searchSteps; i++) {
-                            const angle = (i / searchSteps) * Math.PI * 2;
-                            const searchX = this.position.x + Math.cos(angle) * searchRadius;
-                            const searchZ = this.position.z + Math.sin(angle) * searchRadius;
-                            const searchPoint = new THREE.Vector3(searchX, this.position.y + 2, searchZ);
-                            const searchMemory = pathMemory.getMemoryAt(searchPoint);
-                            
-                            if (searchMemory > strongestMemory * 1.5) {
-                                strongestMemory = searchMemory;
-                                strongestPoint = searchPoint;
-                            }
-                        }
-                        
-                        // If found a significantly stronger memory point, add attraction to it
-                        if (strongestMemory > memoryStrength * 1.5) {
-                            const toStrongest = new THREE.Vector3()
-                                .subVectors(strongestPoint, this.position)
-                                .normalize()
-                                .multiplyScalar(params.pathMemoryStrength * deltaTime * 0.3);
-                            this.velocity.add(toStrongest);
-                        }
-                        
-                        // Apply the gradient force
-                        this.velocity.add(gradientForce);
-                    }
+                if (params.pathMemoryEnabled && pathMemory.getMemoryAt(this.position) > 0) {
+                     const gradientStep = 0.5;
+                     const memoryGradient = new THREE.Vector3(
+                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x + gradientStep, this.position.y, this.position.z)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x - gradientStep, this.position.y, this.position.z))) / (2 * gradientStep),
+                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y + gradientStep, this.position.z)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y - gradientStep, this.position.z))) / (2 * gradientStep),
+                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y, this.position.z + gradientStep)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y, this.position.z - gradientStep))) / (2 * gradientStep)
+                     );
+                     this.velocity.add(memoryGradient.multiplyScalar(params.pathMemoryStrength * deltaTime));
                 }
                 
-                // Update position
                 this.position.add(this.velocity.clone().multiplyScalar(deltaTime * params.simulationSpeed));
+                if (visibility.trails) this.trail.push(this.position.clone());
                 
-                // Add to trail
-                if (visibility.trails && this.trail.length < this.maxTrailLength) {
-                    this.trail.push(this.position.clone());
-                }
-                
-                // === ASYMMETRIC BOUNDARY CONSTRAINTS === //
-                // Account for cone tilt and asymmetry in boundary checking
-                const tiltMatrix = new THREE.Matrix4();
-                // --- 修正箇所：構文エラーを修正 ---
-                tiltMatrix.makeRotationFromEuler(new THREE.Euler(
-                    -params.coneTiltX * Math.PI / 180,
-                    0,
-                    -params.coneTiltZ * Math.PI / 180
-                ));
-                
-                // Transform position to cone's local space
+                const tiltMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-params.coneTiltX * Math.PI / 180, 0, -params.coneTiltZ * Math.PI / 180));
                 const localPos = this.position.clone().applyMatrix4(tiltMatrix);
-                
-                // Apply asymmetry to radius calculation
                 let effectiveX = localPos.x / params.asymmetryX;
                 let effectiveZ = localPos.z / params.asymmetryZ;
                 let currentRadius = Math.sqrt(effectiveX ** 2 + effectiveZ ** 2);
-                
                 const maxRadiusAtCurrentHeight = coneRadius * (1 - localPos.y / coneHeight);
-                
                 if (currentRadius > maxRadiusAtCurrentHeight) {
-                    // Scale back to boundary with safety margin
                     const scale = maxRadiusAtCurrentHeight / currentRadius * 0.95;
-                    effectiveX *= scale;
-                    effectiveZ *= scale;
-                    
-                    // Apply asymmetry back
-                    localPos.x = effectiveX * params.asymmetryX;
-                    localPos.z = effectiveZ * params.asymmetryZ;
-                    
-                    // Transform back to world space
-                    const invertTilt = tiltMatrix.clone().invert();
-                    this.position.copy(localPos.applyMatrix4(invertTilt));
-                    
-                    // Adjust velocity for bounce
+                    localPos.x = effectiveX * scale * params.asymmetryX;
+                    localPos.z = effectiveZ * scale * params.asymmetryZ;
+                    this.position.copy(localPos.applyMatrix4(tiltMatrix.clone().invert()));
                     const normal = new THREE.Vector3(effectiveX, 0, effectiveZ).normalize();
-                    const dot = this.velocity.dot(normal);
-                    this.velocity.sub(normal.multiplyScalar(2 * dot));
-                    this.velocity.multiplyScalar(0.5);
+                    this.velocity.sub(normal.multiplyScalar(2 * this.velocity.dot(normal))).multiplyScalar(0.5);
                 }
                 
-                // Safety check: ensure particle is always within bounds
-                const finalLocalPos = this.position.clone().applyMatrix4(tiltMatrix);
-                const finalEffectiveX = finalLocalPos.x / params.asymmetryX;
-                const finalEffectiveZ = finalLocalPos.z / params.asymmetryZ;
-                const finalRadius = Math.sqrt(finalEffectiveX ** 2 + finalEffectiveZ ** 2);
-                const finalMaxRadius = coneRadius * (1 - finalLocalPos.y / coneHeight);
-                
-                if (finalRadius > finalMaxRadius * 0.99) {
-                    // Force particle back inside with small margin
-                    const forcedScale = finalMaxRadius * 0.98 / finalRadius;
-                    finalLocalPos.x *= forcedScale;
-                    finalLocalPos.z *= forcedScale;
-                    const invertTilt = tiltMatrix.clone().invert();
-                    this.position.copy(finalLocalPos.applyMatrix4(invertTilt));
-                }
-                
-                // Check for success (only if within capacity limit and passes industry success rate)
                 if (this.position.y >= params.successThreshold && !this.hasSucceeded) {
-                    // Check current vertex occupancy
-                    const vertexOccupants = particles.filter(p => 
-                        p.hasSucceeded || 
-                        (p.isActive && p.position.y >= params.successThreshold)
-                    );
-                    
-                    // Industry-specific success probability
-                    const successProbability = industryProfile.baseSuccessRate + 
-                                             (this.inheritedKnowledge * 0.05) + // Knowledge bonus
-                                             (this.generation * 0.02); // Experience bonus
-                    
+                    const vertexOccupants = particles.filter(p => p.hasSucceeded || (p.isActive && p.position.y >= params.successThreshold));
+                    const successProbability = industryProfile.baseSuccessRate + (this.inheritedKnowledge * 0.05) + (this.generation * 0.02);
                     if (vertexOccupants.length < params.vertexCapacity && Math.random() < successProbability) {
                         this.succeed();
                     } else if (industryProfile.capacityConstraint && vertexOccupants.length >= params.vertexCapacity) {
-                        // Apply congestion pushback for capacity-constrained industries
                         this.die('congestion');
                     }
                 }
                 
-                // Update visual
                 this.mesh.position.copy(this.position);
-                if (!myCluster) {
-                    this.mesh.material.color.setHex(this.getColorByHeight());
-                }
+                this.mesh.material.color.setHex(myCluster ? new THREE.Color(this.getColorByHeight()).lerp(myCluster.color, 0.3).getHex() : this.getColorByHeight());
                 this.mesh.material.emissive.setHex(this.getColorByHeight());
-                
-                // Update opacity based on age and queuing status
-                const ageRatio = this.age / this.maxAge;
-                const baseOpacity = 0.9 * (1 - ageRatio * 0.3);
-                this.mesh.material.opacity = this.isQueued ? baseOpacity * 0.6 : baseOpacity;
-                
-                // Velocity damping
+                this.mesh.material.opacity = (this.isQueued ? 0.6 : 1) * 0.9 * (1 - (this.age / this.maxAge) * 0.3);
                 this.velocity.multiplyScalar(0.98);
             }
             
             succeed() {
                 this.hasSucceeded = true;
                 simulationState.successCount++;
-                
-                // === RECORD SUCCESS PATH IN MEMORY === //
-                if (parameters.pathMemoryEnabled && pathMemory) {
-                    // Record the entire successful path
-                    if (this.trail.length > 0) {
-                        this.trail.forEach((position, index) => {
-                            // Stronger memory closer to success
-                            const strength = (index / this.trail.length) * 0.5 + 0.5;
-                            pathMemory.addMemory(position, strength);
-                        });
-                    }
-                    // Add strong memory at success point
+                if (parameters.pathMemoryEnabled) {
+                    this.trail.forEach((pos, i) => pathMemory.addMemory(pos, (i / this.trail.length) * 0.5 + 0.5));
                     pathMemory.addMemory(this.position, 2.0);
                 }
-                
-                // --- 修正箇所：花火のエフェクトを削除 ---
-                /*
-                // Create fountain effect with multiple particles
-                const particleCount = 20;
-                const fountainParticles = [];
-                
-                for (let i = 0; i < particleCount; i++) {
-                    const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
-                    const speed = 0.3 + Math.random() * 0.2;
-                    
-                    const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
-                    const particleMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x10b981,
-                        transparent: true,
-                        opacity: 0.9,
-                        emissive: 0x10b981,
-                        emissiveIntensity: 0.6
-                    });
-                    const particleMesh = new THREE.Mesh(particleGeometry, particleMaterial);
-                    particleMesh.position.copy(this.position);
-                    
-                    particleMesh.velocity = new THREE.Vector3(
-                        Math.cos(angle) * speed * 0.5,
-                        speed * 2,
-                        Math.sin(angle) * speed * 0.5
-                    );
-                    
-                    successGroup.add(particleMesh);
-                    fountainParticles.push({
-                        mesh: particleMesh,
-                        material: particleMaterial,
-                        life: 1.0
-                    });
-                }
-                
-                // Create central bloom effect
-                const bloomGeometry = new THREE.RingGeometry(0.5, 2, 32);
-                const bloomMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x3b82f6,
-                    transparent: true,
-                    opacity: 0.8,
-                    side: THREE.DoubleSide
-                });
-                const bloomMesh = new THREE.Mesh(bloomGeometry, bloomMaterial);
-                bloomMesh.position.copy(this.position);
-                bloomMesh.rotation.x = -Math.PI / 2;
-                successGroup.add(bloomMesh);
-                
-                // Animate fountain particles
-                const animateFountain = () => {
-                    let allDead = true;
-                    
-                    fountainParticles.forEach(particle => {
-                        if (particle.life > 0) {
-                            allDead = false;
-                            particle.mesh.position.add(particle.mesh.velocity.clone().multiplyScalar(0.1));
-                            particle.mesh.velocity.y -= 0.02;
-                            particle.life -= 0.02;
-                            particle.material.opacity = particle.life * 0.9;
-                            particle.mesh.scale.setScalar(particle.life);
-                        }
-                    });
-                    
-                    bloomMesh.scale.multiplyScalar(1.08);
-                    bloomMaterial.opacity *= 0.92;
-                    
-                    if (!allDead || bloomMaterial.opacity > 0.01) {
-                        requestAnimationFrame(animateFountain);
-                    } else {
-                        fountainParticles.forEach(p => successGroup.remove(p.mesh));
-                        successGroup.remove(bloomMesh);
-                    }
-                };
-                animateFountain();
-                
-                setTimeout(() => {
-                    this.remove();
-                }, 500);
-                */
-               
-                // --- 修正箇所：パーティクルを即座に削除 ---
                 this.remove();
             }
             
             die(reason = 'natural') {
-                // Mark as inactive immediately to prevent multiple death calls
                 if (!this.isActive) return;
                 this.isActive = false;
-                
-                const industryProfile = getCurrentIndustryProfile();
-                const shouldRecycle = Math.random() < parameters.resourceRecycleRate * industryProfile.recycleValue;
-                
-                if (reason === 'congestion' || reason === 'pushback') {
-                    // Higher recycle rate for congestion-related failures
-                    if (shouldRecycle || Math.random() < 0.8) {
-                        this.recycle(reason);
-                        return;
-                    }
-                }
-                
-                // Knowledge transfer to nearby particles before dying
-                if (parameters.knowledgeTransferRate > 0) {
-                    this.transferKnowledge();
-                }
-                
-                // === MISFIRE EFFECT - Like a failed firework === //
+                if (parameters.knowledgeTransferRate > 0) this.transferKnowledge();
                 this.createMisfireEffect();
             }
             
-            recycle(reason) {
-                // Reset position to lower level
-                const recycleHeight = Math.random() * 10 + 5; // Between 5-15
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * coneRadius * 0.7;
-                
-                this.position.set(
-                    Math.cos(angle) * radius,
-                    recycleHeight,
-                    Math.sin(angle) * radius
-                );
-                
-                // Reset velocity with learned boost
-                this.velocity.set(
-                    (Math.random() - 0.5) * 0.03,
-                    Math.random() * 0.02 + 0.015,
-                    (Math.random() - 0.5) * 0.03
-                );
-                
-                // Increment generation and apply learning
+            recycle() {
+                this.position.set(Math.cos(Math.random() * 2 * Math.PI) * coneRadius * 0.7, Math.random() * 10 + 5, Math.sin(Math.random() * 2 * Math.PI) * coneRadius * 0.7);
+                this.velocity.set((Math.random() - 0.5) * 0.03, Math.random() * 0.02 + 0.015, (Math.random() - 0.5) * 0.03);
                 this.generation++;
                 this.inheritedKnowledge += 0.2;
-                
-                // Apply learning benefits
                 this.trtAffinity *= 1.1;
-                this.maxAge *= 1.2;  // Longer lifespan from experience
-                
-                // Reset age but keep experience
+                this.maxAge *= 1.2;
                 this.age = 0;
                 this.isActive = true;
                 this.hasSucceeded = false;
-                
-                // Visual feedback - change color slightly
-                this.mesh.material.opacity = 0.9;
-                const hue = this.generation * 0.1;
-                this.mesh.material.color.offsetHSL(hue, 0, 0);
-                
-                // Add recycling effect
-                this.createRecycleEffect();
             }
             
             transferKnowledge() {
-                const nearbyParticles = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange * 2);
-                const knowledgePerParticle = this.inheritedKnowledge / Math.max(1, nearbyParticles.length);
-                
-                nearbyParticles.forEach(other => {
+                const nearby = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange * 2);
+                const knowledgePerParticle = this.inheritedKnowledge / Math.max(1, nearby.length);
+                nearby.forEach(other => {
                     if (other.isActive && other.id !== this.id) {
                         other.inheritedKnowledge += knowledgePerParticle * parameters.knowledgeTransferRate;
-                        // Visual feedback for knowledge transfer
-                        other.mesh.material.emissiveIntensity = Math.min(0.5, other.inheritedKnowledge * 0.1);
                     }
                 });
-            }
-            
-            createRecycleEffect() {
-                // Green spiral effect for recycling
-                const spiralGeometry = new THREE.TorusGeometry(1, 0.1, 8, 16);
-                const spiralMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x10b981,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                const spiral = new THREE.Mesh(spiralGeometry, spiralMaterial);
-                spiral.position.copy(this.position);
-                particlesGroup.add(spiral);
-                
-                // Animate the spiral
-                const animateSpiral = () => {
-                    spiral.rotation.y += 0.1;
-                    spiral.scale.multiplyScalar(1.05);
-                    spiralMaterial.opacity *= 0.95;
-                    
-                    if (spiralMaterial.opacity > 0.01) {
-                        requestAnimationFrame(animateSpiral);
-                    } else {
-                        particlesGroup.remove(spiral);
-                    }
-                };
-                animateSpiral();
             }
             
             createMisfireEffect() {
-                // Previous misfire effect implementation
-                // 1. Final inertial flight - lose propulsion but maintain some upward momentum
                 this.velocity.y *= 0.3;
                 this.velocity.x *= 0.5;
                 this.velocity.z *= 0.5;
-                
-                // Continue physics simulation for a brief moment
-                const finalFlightDuration = 300; // 0.3 seconds
-                const startTime = Date.now();
-                
-                const animateFinalFlight = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = elapsed / finalFlightDuration;
-                    
-                    if (progress < 1) {
-                        // Apply gravity-like deceleration
+                const animateFlight = () => {
+                    if (this.mesh.material.opacity > 0.1) {
                         this.velocity.y -= 0.002;
                         this.position.add(this.velocity.clone().multiplyScalar(0.1));
                         this.mesh.position.copy(this.position);
-                        
-                        // Gradually dim the particle
-                        this.mesh.material.opacity = this.mesh.material.opacity * 0.98;
-                        
-                        requestAnimationFrame(animateFinalFlight);
+                        this.mesh.material.opacity *= 0.98;
+                        requestAnimationFrame(animateFlight);
                     } else {
-                        // 2. Dull flash at the peak of final flight
-                        this.createMisfireFlash();
-                    }
-                };
-                
-                animateFinalFlight();
-            }
-            
-            createMisfireFlash() {
-                // Create a dull, muted explosion effect
-                const flashColor = 0xff6b6b; // Dull red-orange
-                const fragmentCount = 8; // Fewer fragments than success
-                const fragments = [];
-                
-                // Central flash
-                const flashGeometry = new THREE.SphereGeometry(1, 16, 16);
-                const flashMaterial = new THREE.MeshBasicMaterial({
-                    color: flashColor,
-                    transparent: true,
-                    opacity: 0.6
-                });
-                const flashMesh = new THREE.Mesh(flashGeometry, flashMaterial);
-                flashMesh.position.copy(this.position);
-                particlesGroup.add(flashMesh);
-                
-                // Create fragments
-                for (let i = 0; i < fragmentCount; i++) {
-                    const angle = (Math.PI * 2 * i) / fragmentCount;
-                    const fragmentGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-                    const fragmentMaterial = new THREE.MeshPhongMaterial({
-                        color: flashColor,
-                        transparent: true,
-                        opacity: 0.7,
-                        emissive: flashColor,
-                        emissiveIntensity: 0.2
-                    });
-                    const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
-                    fragment.position.copy(this.position);
-                    
-                    // Give fragments outward velocity with downward bias
-                    fragment.velocity = new THREE.Vector3(
-                        Math.cos(angle) * 0.15,
-                        -0.1 + Math.random() * 0.05, // Mostly downward
-                        Math.sin(angle) * 0.15
-                    );
-                    
-                    particlesGroup.add(fragment);
-                    fragments.push({
-                        mesh: fragment,
-                        material: fragmentMaterial,
-                        velocity: fragment.velocity,
-                        life: 1.0
-                    });
-                }
-
-                // Animate the misfire effect
-                const animateMisfire = () => {
-                    let allDead = true;
-                    
-                    // Animate central flash
-                    flashMesh.scale.multiplyScalar(1.05);
-                    flashMaterial.opacity *= 0.85;
-                    
-                    // Animate fragments falling
-                    fragments.forEach(fragment => {
-                        if (fragment.life > 0) {
-                            allDead = false;
-                            
-                            // Apply gravity
-                            fragment.velocity.y -= 0.01;
-                            fragment.mesh.position.add(fragment.velocity);
-                            
-                            // Rotate for visual interest
-                            fragment.mesh.rotation.x += 0.1;
-                            fragment.mesh.rotation.y += 0.15;
-                            
-                            // Fade out
-                            fragment.life -= 0.03;
-                            fragment.material.opacity = fragment.life * 0.7;
-                            fragment.mesh.scale.setScalar(fragment.life);
-                        }
-                    });
-                    
-                    if (flashMaterial.opacity > 0.01 || !allDead) {
-                        requestAnimationFrame(animateMisfire);
-                    } else {
-                        // Clean up
-                        particlesGroup.remove(flashMesh);
-                        fragments.forEach(f => particlesGroup.remove(f.mesh));
-                        
-                        // Remove the original particle
                         this.remove();
                     }
                 };
-                
-                // Add a brief smoke trail effect
-                const smokeCount = 5;
-                for (let i = 0; i < smokeCount; i++) {
-                    setTimeout(() => {
-                        const smokeGeometry = new THREE.SphereGeometry(0.3 + i * 0.1, 8, 8);
-                        const smokeMaterial = new THREE.MeshBasicMaterial({
-                            color: 0x666666,
-                            transparent: true,
-                            opacity: 0.3 - i * 0.05
-                        });
-                        const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
-                        smoke.position.copy(this.position);
-                        smoke.position.y -= i * 0.2;
-                        particlesGroup.add(smoke);
-                        
-                        // Fade out smoke
-                        const fadeSmoke = () => {
-                            smoke.scale.multiplyScalar(1.02);
-                            smokeMaterial.opacity *= 0.95;
-                            if (smokeMaterial.opacity > 0.01) {
-                                requestAnimationFrame(fadeSmoke);
-                            } else {
-                                particlesGroup.remove(smoke);
-                            }
-                        };
-                        fadeSmoke();
-                    }, i * 50);
-                }
-                
-                animateMisfire();
+                animateFlight();
             }
             
             remove() {
@@ -2398,23 +1534,13 @@
             }
         }
 
-        // Initialize particles
         let particles = [];
         let nextParticleId = 0;
         
         function spawnParticles(count) {
             for (let i = 0; i < count; i++) {
-                const particle = new ResourceParticle(nextParticleId++, simulationState.elapsedTime);
-                particles.push(particle);
+                particles.push(new ResourceParticle(nextParticleId++, simulationState.elapsedTime));
                 simulationState.totalSpawned++;
-                
-                // Track period stats
-                if (simulationState.elapsedTime <= 5) {
-                    simulationState.periodStats.fiveYear.spawned++;
-                }
-                if (simulationState.elapsedTime <= 10) {
-                    simulationState.periodStats.tenYear.spawned++;
-                }
             }
         }
         
@@ -2422,470 +1548,85 @@
             particles.forEach(p => p.remove());
             particles = [];
             nextParticleId = 0;
-            
-            // Don't spawn initial particles in comparison mode
             if (simulationState.mode === 'single' && parameters.initialParticles > 0) {
                 spawnParticles(parameters.initialParticles);
             }
         }
 
-        // Create gravity field visualization
-        function updateGravityFieldVisualization() {
-            // Clear existing gravity field visualization
-            while(gravityGroup.children.length > 0) {
-                gravityGroup.remove(gravityGroup.children[0]);
-            }
-            
-            if (!visibility.gravity) return;
-            
-            // Create a grid of points to visualize the gravity field
-            const gridSize = 20;
-            const gridStep = coneRadius * 2 / gridSize;
-            const heights = [5, 15, 25, 35];
-            
-            heights.forEach(height => {
-                for (let x = -coneRadius; x <= coneRadius; x += gridStep) {
-                    for (let z = -coneRadius; z <= coneRadius; z += gridStep) {
-                        const position = new THREE.Vector3(x, height, z);
-                        
-                        // Calculate combined gravity field strength at this point
-                        let fieldStrength = 0;
-                        
-                        // Central gravity
-                        const distToCenter = Math.sqrt(x * x + z * z);
-                        fieldStrength += parameters.centralConvergence / (distToCenter + 1);
-                        
-                        // Cluster gravity
-                        simulationState.clusters.forEach(cluster => {
-                            const distToCluster = position.distanceTo(cluster.center);
-                            if (distToCluster < parameters.attractionRange * 2) {
-                                fieldStrength += parameters.clusterConvergence * cluster.strength / (distToCluster + 1);
-                            }
-                        });
-                        
-                        // Visualize field strength
-                        if (fieldStrength > 0.01) {
-                            const intensity = Math.min(fieldStrength * 10, 1);
-                            const geometry = new THREE.SphereGeometry(0.3 * intensity, 8, 8);
-                            const material = new THREE.MeshBasicMaterial({
-                                color: new THREE.Color(intensity, 0, 1 - intensity),
-                                transparent: true,
-                                opacity: intensity * 0.5
-                            });
-                            const sphere = new THREE.Mesh(geometry, material);
-                            sphere.position.copy(position);
-                            gravityGroup.add(sphere);
-                        }
-                    }
-                }
-            });
-        }
-
-        // Initialize scene
         createCone();
         createSections();
         createSpiral();
         createInitialParticles();
 
-        // Mode switching
         function setMode(mode, button) {
             simulationState.mode = mode;
-            document.querySelectorAll('.mode-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Add active class to clicked button
-            if (button) {
-                button.classList.add('active');
-            }
-            
-            const comparisonPanel = document.getElementById('comparison-panel');
-            if (mode === 'comparison') {
-                comparisonPanel.classList.add('active');
-                // Initialize comparison scenarios if empty
-                if (comparisonData.scenarios.length === 0) {
-                    addScenario();
-                    addScenario();
-                }
-            } else {
-                comparisonPanel.classList.remove('active');
-            }
-            
+            document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
+            if (button) button.classList.add('active');
+            document.getElementById('comparison-panel').classList.toggle('active', mode === 'comparison');
             resetSimulation();
         }
 
-        // Comparison mode functions
-        function addScenario() {
-            const scenarioId = Date.now();
-            const scenario = {
-                id: scenarioId,
-                name: `シナリオ ${comparisonData.scenarios.length + 1}`,
-                params: { ...parameters },
-                results: null
-            };
-            
-            comparisonData.scenarios.push(scenario);
-            renderScenarios();
-        }
-        
-        function removeScenario(id) {
-            comparisonData.scenarios = comparisonData.scenarios.filter(s => s.id !== id);
-            renderScenarios();
-        }
-        
-        function editScenario(id) {
-            const scenario = comparisonData.scenarios.find(s => s.id === id);
-            if (scenario) {
-                // Load scenario parameters into controls
-                Object.keys(scenario.params).forEach(key => {
-                    const input = document.getElementById(key);
-                    if (input) {
-                        parameters[key] = scenario.params[key];
-                        input.value = scenario.params[key];
-                        document.getElementById(`${key}-value`).textContent = 
-                            key.includes('Size') || key.includes('Particles') || key === 'attractionRange' || key === 'clusterThreshold' ? 
-                            scenario.params[key] : scenario.params[key].toFixed(3);
-                    }
-                });
-                
-                // Highlight active scenario
-                document.querySelectorAll('.scenario-card').forEach(card => {
-                    card.classList.remove('active');
-                });
-                document.querySelector(`[data-scenario-id="${id}"]`).classList.add('active');
-            }
-        }
-        
-        function saveScenario(id) {
-            const scenario = comparisonData.scenarios.find(s => s.id === id);
-            if (scenario) {
-                scenario.params = { ...parameters };
-                renderScenarios();
-            }
-        }
-        
-        function renderScenarios() {
-            const container = document.getElementById('scenario-list');
-            container.innerHTML = '';
-            
-            comparisonData.scenarios.forEach((scenario, index) => {
-                const card = document.createElement('div');
-                card.className = 'scenario-card';
-                card.dataset.scenarioId = scenario.id;
-                
-                const header = document.createElement('div');
-                header.className = 'scenario-header';
-                
-                const nameInput = document.createElement('input');
-                nameInput.type = 'text';
-                nameInput.className = 'scenario-name';
-                nameInput.value = scenario.name;
-                nameInput.style.cssText = 'background: transparent; border: none; font-weight: 600; color: #1f2937;';
-                nameInput.onchange = function() { updateScenarioName(scenario.id, this.value); };
-                
-                const controls = document.createElement('div');
-                controls.className = 'scenario-controls';
-                
-                const editBtn = document.createElement('button');
-                editBtn.className = 'scenario-button';
-                editBtn.textContent = '編集';
-                editBtn.onclick = function() { editScenario(scenario.id); };
-                
-                const saveBtn = document.createElement('button');
-                saveBtn.className = 'scenario-button';
-                saveBtn.textContent = '保存';
-                saveBtn.onclick = function() { saveScenario(scenario.id); };
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'scenario-button';
-                deleteBtn.textContent = '削除';
-                deleteBtn.onclick = function() { removeScenario(scenario.id); };
-                if (comparisonData.scenarios.length <= 2) {
-                    deleteBtn.disabled = true;
-                }
-                
-                controls.appendChild(editBtn);
-                controls.appendChild(saveBtn);
-                controls.appendChild(deleteBtn);
-                
-                header.appendChild(nameInput);
-                header.appendChild(controls);
-                
-                const info = document.createElement('div');
-                info.style.cssText = 'font-size: 11px; color: #6b7280;';
-                info.innerHTML = `中央: ${scenario.params.centralConvergence.toFixed(3)} | クラスター: ${scenario.params.clusterConvergence.toFixed(3)} | ピア: ${scenario.params.peerAttraction.toFixed(3)}`;
-                
-                card.appendChild(header);
-                card.appendChild(info);
-                
-                container.appendChild(card);
-            });
-        }
-        
-        function updateScenarioName(id, name) {
-            const scenario = comparisonData.scenarios.find(s => s.id === id);
-            if (scenario) {
-                scenario.name = name;
-            }
-        }
-        
-        function runComparison() {
-            // Disable button to prevent confusion
-            const runButton = event.target;
-            runButton.disabled = true;
-            runButton.textContent = '開発中';
-            
-            // Show development notice with timeline
-            const resultsDiv = document.getElementById('comparison-results');
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `
-                <div class="info-box">
-                    <strong>比較分析機能は現在開発中です</strong><br>
-                    予定機能：複数シナリオの並行実行と結果の統計的比較<br>
-                    現在は単独シミュレーションで多重重力源モデルをご利用ください。
-                </div>
-            `;
-            
-            // Re-enable button after 3 seconds
-            setTimeout(() => {
-                runButton.disabled = false;
-                runButton.textContent = '比較分析実行';
-            }, 3000);
-        }
-
-        // Parameter controls
-        document.querySelectorAll('input[type="range"]').forEach(input => {
+        document.querySelectorAll('input[type="range"], select, input[type="checkbox"]').forEach(input => {
             input.addEventListener('input', function() {
                 const param = this.id;
-                const value = parseFloat(this.value);
+                const value = this.type === 'checkbox' ? this.checked : (this.type === 'range' ? parseFloat(this.value) : this.value);
                 parameters[param] = value;
-                
-                document.getElementById(`${param}-value`).textContent = 
-                    param.includes('Size') || param.includes('Particles') || param === 'analysisYears' || 
-                    param === 'attractionRange' || param === 'clusterThreshold' || param === 'vertexCapacity' || 
-                    param === 'capacityRadius' || param === 'coneTiltX' || param === 'coneTiltZ' ? 
-                    value : value.toFixed(3);
-                
-                if (param === 'initialParticles' && !simulationState.isRunning) {
-                    createInitialParticles();
+                const valueElem = document.getElementById(`${param}-value`);
+                if(valueElem) {
+                    if (this.type === 'checkbox') valueElem.textContent = value ? '有効' : '無効';
+                    else if (typeof value === 'number' && !Number.isInteger(value)) valueElem.textContent = value.toFixed(3);
+                    else valueElem.textContent = value;
                 }
-                
-                if (param === 'successThreshold') {
+                if (['successThreshold', 'coneTiltX', 'coneTiltZ', 'asymmetryX', 'asymmetryZ'].includes(param)) {
                     createSections();
-                }
-                
-                if (param === 'coneTiltX' || param === 'coneTiltZ' || param === 'asymmetryX' || param === 'asymmetryZ') {
                     createCone();
                 }
-                
-                if (param === 'pathMemoryPersistence') {
-                    document.getElementById('pathMemoryPersistence-value').textContent = value.toFixed(3);
-                }
             });
         });
 
-        // Checkbox for path memory
-        document.getElementById('pathMemoryEnabled').addEventListener('change', function() {
-            parameters.pathMemoryEnabled = this.checked;
-            document.getElementById('pathMemoryEnabled-value').textContent = this.checked ? '有効' : '無効';
-        });
-
-        // Select dropdown for queueing behavior
-        document.getElementById('queueingBehavior').addEventListener('change', function() {
-            parameters.queueingBehavior = this.value;
-            document.getElementById('queueingBehavior-value').textContent = this.value;
-        });
-
-        // Select dropdown for industry profile
-        document.getElementById('industryProfile').addEventListener('change', function() {
-            parameters.industryProfile = this.value;
-            document.getElementById('industryProfile-value').textContent = this.value;
-            
-            // Update UI to show industry characteristics
-            const profile = industryProfiles[this.value];
-            if (profile) {
-                const infoBox = document.createElement('div');
-                infoBox.className = 'info-box';
-                infoBox.innerHTML = `<strong>${this.value}特性:</strong> ${profile.description}`;
-                this.parentElement.appendChild(infoBox);
-                setTimeout(() => infoBox.remove(), 3000);
-            }
-        });
-
-        // Panel collapse
         function togglePanel() {
             const panel = document.getElementById('control-panel');
-            const button = document.querySelector('.collapse-button');
             panel.classList.toggle('collapsed');
-            button.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+            document.querySelector('.collapse-button').textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
         }
 
-        // Toggle functions
         function toggleElement(element) {
             visibility[element] = !visibility[element];
-            
-            switch(element) {
-                case 'cone':
-                    coneGroup.visible = visibility[element];
-                    break;
-                case 'sections':
-                    sectionsGroup.visible = visibility[element];
-                    break;
-                case 'spiral':
-                    spiralGroup.visible = visibility[element];
-                    break;
-                case 'success':
-                    successGroup.visible = visibility[element];
-                    break;
-                case 'trails':
-                    trailsGroup.visible = visibility[element];
-                    break;
-                case 'clusters':
-                    clustersGroup.visible = visibility[element];
-                    break;
-                case 'gravity':
-                    gravityGroup.visible = visibility[element];
-                    if (visibility[element]) {
-                        updateGravityFieldVisualization();
-                    }
-                    break;
-                case 'pathMemory':
-                    pathMemoryGroup.visible = visibility[element];
-                    break;
-            }
-            
-            const button = document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`);
-            button.classList.toggle('active', visibility[element]);
+            const groups = { cone: coneGroup, sections: sectionsGroup, spiral: spiralGroup, success: successGroup, trails: trailsGroup, clusters: clustersGroup, gravity: gravityGroup, pathMemory: pathMemoryGroup };
+            if(groups[element]) groups[element].visible = visibility[element];
+            document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`).classList.toggle('active', visibility[element]);
         }
 
-        // Preset functions - Updated for v4.0
         function loadPreset(preset, button) {
             const presets = {
-                centralized: {
-                    trtForce: 0.015,
-                    trtAcceleration: 1.0,
-                    tippingPoint: 0.7,
-                    praForce: 0.015,
-                    praDiversity: 0.8,
-                    centralConvergence: 0.05,
-                    clusterConvergence: 0.01,
-                    peerAttraction: 0.005,
-                    attractionRange: 3,
-                    clusterThreshold: 4,
-                    heterogeneity: 0.3,
-                    lifespanVariance: 0.2,
-                    // Path Memory Parameters - NEW
-                    pathMemoryEnabled: true,       // Enable path reinforcement
-                    pathMemoryStrength: 0.02,      // Strength of path attraction
-                    pathMemoryPersistence: 0.005,  // Memory persistence (0=no memory, higher=longer memory)
-                    queueingBehavior: 'priority'
-                },
-                distributed: {
-                    trtForce: 0.012,
-                    trtAcceleration: 0.9,
-                    tippingPoint: 0.75,
-                    praForce: 0.025,
-                    praDiversity: 1.2,
-                    centralConvergence: 0.015,
-                    clusterConvergence: 0.04,
-                    peerAttraction: 0.02,
-                    attractionRange: 7,
-                    clusterThreshold: 3,
-                    heterogeneity: 0.7,
-                    lifespanVariance: 0.4,
-                    // Vertex Capacity - Distributed: Flexible capacity
-                    vertexCapacity: 8,
-                    capacityRadius: 3,
-                    congestionEffect: 0.9,
-                    queueingBehavior: 'random'
-                },
-                hybrid: {
-                    trtForce: 0.015,
-                    trtAcceleration: 1.0,
-                    tippingPoint: 0.7,
-                    praForce: 0.02,
-                    praDiversity: 1.0,
-                    centralConvergence: 0.03,
-                    clusterConvergence: 0.02,
-                    peerAttraction: 0.01,
-                    attractionRange: 5,
-                    clusterThreshold: 3,
-                    heterogeneity: 0.5,
-                    lifespanVariance: 0.3,
-                    // Vertex Capacity - Hybrid: Balanced approach
-                    vertexCapacity: 5,
-                    capacityRadius: 2,
-                    congestionEffect: 0.8,
-                    queueingBehavior: 'priority'
-                },
-                emergent: {
-                    trtForce: 0.010,
-                    trtAcceleration: 0.8,
-                    tippingPoint: 0.8,
-                    praForce: 0.03,
-                    praDiversity: 1.5,
-                    centralConvergence: 0.01,
-                    clusterConvergence: 0.05,
-                    peerAttraction: 0.025,
-                    attractionRange: 8,
-                    clusterThreshold: 2,
-                    heterogeneity: 0.9,
-                    lifespanVariance: 0.5,
-                    // Vertex Capacity - Emergent: Dynamic capacity
-                    vertexCapacity: 6,
-                    capacityRadius: 2.5,
-                    congestionEffect: 0.85,
-                    queueingBehavior: 'pushback'
-                }
+                centralized: { trtForce: 0.015, praForce: 0.015, centralConvergence: 0.05, clusterConvergence: 0.01, peerAttraction: 0.005, heterogeneity: 0.3 },
+                distributed: { trtForce: 0.012, praForce: 0.025, centralConvergence: 0.015, clusterConvergence: 0.04, peerAttraction: 0.02, heterogeneity: 0.7 },
+                hybrid: { trtForce: 0.015, praForce: 0.02, centralConvergence: 0.03, clusterConvergence: 0.02, peerAttraction: 0.01, heterogeneity: 0.5 },
+                emergent: { trtForce: 0.010, praForce: 0.03, centralConvergence: 0.01, clusterConvergence: 0.05, peerAttraction: 0.025, heterogeneity: 0.9 }
             };
-            
-            const selectedPreset = presets[preset];
+            const selectedPreset = presets[preset] || presets.hybrid;
             Object.keys(selectedPreset).forEach(key => {
-                parameters[key] = selectedPreset[key];
                 const input = document.getElementById(key);
                 if (input) {
+                    parameters[key] = selectedPreset[key];
                     input.value = selectedPreset[key];
-                    const valueElement = document.getElementById(`${key}-value`);
-                    if (valueElement) {
-                        // Check data type and format accordingly
-                        if (typeof selectedPreset[key] === 'string') {
-                            valueElement.textContent = selectedPreset[key];
-                        } else if (typeof selectedPreset[key] === 'boolean') {
-                            valueElement.textContent = selectedPreset[key] ? '有効' : '無効';
-                        } else if (typeof selectedPreset[key] === 'number') {
-                            // Integer values (no decimal places needed)
-                            if (key === 'attractionRange' || key === 'clusterThreshold' || 
-                                key === 'vertexCapacity' || key === 'capacityRadius' ||
-                                key === 'coneTiltX' || key === 'coneTiltZ') {
-                                valueElement.textContent = selectedPreset[key];
-                            } else {
-                                // Float values (show 3 decimal places)
-                                valueElement.textContent = selectedPreset[key].toFixed(3);
-                            }
-                        }
-                    }
+                    const valueElem = document.getElementById(`${key}-value`);
+                    if(valueElem) valueElem.textContent = selectedPreset[key].toFixed(3);
                 }
             });
+            document.querySelectorAll('.preset-button').forEach(btn => btn.classList.remove('active'));
+            if (button) button.classList.add('active');
             
-            // Update button states
-            document.querySelectorAll('.preset-button').forEach(btn => {
-                btn.classList.remove('active');
+            // Trigger input event to update everything
+            Object.keys(selectedPreset).forEach(key => {
+                const input = document.getElementById(key);
+                if (input) input.dispatchEvent(new Event('input'));
             });
-            if (button) {
-                button.classList.add('active');
-            }
-            
-            // Update cone if asymmetry parameters exist
-            if (parameters.asymmetryX !== undefined || parameters.asymmetryZ !== undefined) {
-                createCone();
-            }
         }
 
-        // Simulation controls
         function startSimulation() {
             simulationState.isRunning = true;
             simulationState.isPaused = false;
-            document.getElementById('period-stats').style.display = 'block';
         }
         
         function pauseSimulation() {
@@ -2896,187 +1637,58 @@
             simulationState.isRunning = false;
             simulationState.isPaused = false;
             simulationState.elapsedTime = 0;
-            simulationState.lastSpawnTime = 0;
             simulationState.totalSpawned = 0;
             simulationState.successCount = 0;
-            simulationState.periodStats = {
-                fiveYear: { spawned: 0, success: 0 },
-                tenYear: { spawned: 0, success: 0 }
-            };
+            simulationState.lastSpawnTime = 0;
             
-            // Clear clusters
-            simulationState.clusters.forEach(cluster => cluster.remove());
+            simulationState.clusters.forEach(c => c.remove());
             simulationState.clusters = [];
             
             particles.forEach(p => p.remove());
             particles = [];
             nextParticleId = 0;
             
-            while(successGroup.children.length > 0) {
-                successGroup.remove(successGroup.children[0]);
-            }
-            
-            while(trailsGroup.children.length > 0) {
-                trailsGroup.remove(trailsGroup.children[0]);
-            }
-            
             createInitialParticles();
-            document.getElementById('period-stats').style.display = 'none';
             updateStats();
         }
 
-        // Statistics calculation - Updated for v4.0
         function updateStats() {
-            // Active particles
-            const activeParticles = particles.filter(p => p.isActive);
-            document.getElementById('active-particles').textContent = activeParticles.length;
-            
-            // Total spawned
+            const active = particles.filter(p => p.isActive);
+            document.getElementById('active-particles').textContent = active.length;
             document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
-            
-            // Success count and rate
             document.getElementById('success-count').textContent = simulationState.successCount;
-            const successRate = simulationState.totalSpawned > 0 ? 
-                (simulationState.successCount / simulationState.totalSpawned) * 100 : 0;
-            document.getElementById('success-rate').textContent = `${successRate.toFixed(1)}%`;
-            
-            // Simulation time
+            document.getElementById('success-rate').textContent = `${(simulationState.totalSpawned > 0 ? (simulationState.successCount / simulationState.totalSpawned) * 100 : 0).toFixed(1)}%`;
             document.getElementById('sim-time').textContent = `${simulationState.elapsedTime.toFixed(1)}年`;
             
-            // Average TRT (height)
-            const avgTrt = activeParticles.length > 0 ?
-                activeParticles.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / activeParticles.length : 0;
+            const avgTrt = active.length > 0 ? active.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / active.length : 0;
             document.getElementById('avg-trt').textContent = avgTrt.toFixed(3);
-            
-            // PRA Dispersion (standard deviation of horizontal position)
-            if (activeParticles.length > 1) {
-                const avgX = activeParticles.reduce((sum, p) => sum + p.position.x, 0) / activeParticles.length;
-                const avgZ = activeParticles.reduce((sum, p) => sum + p.position.z, 0) / activeParticles.length;
-                const variance = activeParticles.reduce((sum, p) => 
-                    sum + (p.position.x - avgX)**2 + (p.position.z - avgZ)**2, 0) / activeParticles.length;
-                document.getElementById('pra-dispersion').textContent = Math.sqrt(variance).toFixed(3);
-            } else {
-                document.getElementById('pra-dispersion').textContent = '0.000';
-            }
-            
-            // Diversity Index (based on particle types)
-            const typeCounts = activeParticles.reduce((counts, p) => {
-                counts[p.type] = (counts[p.type] || 0) + 1;
-                return counts;
-            }, {});
-            const total = activeParticles.length;
-            if (total > 0) {
-                const shannonIndex = -Object.values(typeCounts).reduce((sum, count) => {
-                    const p = count / total;
-                    return sum + p * Math.log(p);
-                }, 0);
-                document.getElementById('diversity-index').textContent = shannonIndex.toFixed(3);
-            } else {
-                document.getElementById('diversity-index').textContent = '0.000';
-            }
-            
-            // Cluster count
-            document.getElementById('cluster-count').textContent = simulationState.clusters.length;
-            
-            // Gravity sources (Central + Clusters)
-            document.getElementById('gravity-sources').textContent = 1 + simulationState.clusters.length;
-            
-            // Vertex congestion
-            const nearVertexParticles = particles.filter(p => 
-                p.isActive && p.position.y >= parameters.successThreshold - parameters.capacityRadius
-            );
-            const congestion = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
-            document.getElementById('vertex-congestion').textContent = `${congestion.toFixed(0)}%`;
-            
-            // Queued particles
+
             const queuedParticles = particles.filter(p => p.isQueued).length;
             document.getElementById('queued-particles').textContent = queuedParticles;
         }
-
-        // Period stats update
-        function updatePeriodStats() {
-            const fiveYearSuccess = simulationState.periodStats.fiveYear.success;
-            const fiveYearSpawned = simulationState.periodStats.fiveYear.spawned;
-            const fiveYearRate = fiveYearSpawned > 0 ? (fiveYearSuccess / fiveYearSpawned) * 100 : 0;
-            document.getElementById('five-year-stats').textContent = 
-                `${fiveYearSuccess}/${fiveYearSpawned} (${fiveYearRate.toFixed(1)}%)`;
-                
-            const tenYearSuccess = simulationState.periodStats.tenYear.success;
-            const tenYearSpawned = simulationState.periodStats.tenYear.spawned;
-            const tenYearRate = tenYearSpawned > 0 ? (tenYearSuccess / tenYearSpawned) * 100 : 0;
-            document.getElementById('ten-year-stats').textContent = 
-                `${tenYearSuccess}/${tenYearSpawned} (${tenYearRate.toFixed(1)}%)`;
-        }
         
-        // Animation loop
         const clock = new THREE.Clock();
-        
         function animate() {
             requestAnimationFrame(animate);
-            
             const deltaTime = clock.getDelta();
             
             if (simulationState.isRunning && !simulationState.isPaused) {
                 simulationState.elapsedTime += deltaTime * parameters.timeScale;
                 
-                // Spawn new particles periodically
                 if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
                     spawnParticles(parameters.batchSize);
                     simulationState.lastSpawnTime = simulationState.elapsedTime;
                 }
                 
-                // Rebuild spatial grid before updating particles
-                spatialGrid.clear();
-                particles.forEach(p => {
-                    if (p.isActive) spatialGrid.insert(p);
-                });
-                
-                // Update particles
                 particles.forEach(p => p.update(deltaTime, particles, parameters));
-                
-                // Remove dead particles
                 particles = particles.filter(p => p.isActive);
                 
-                // Update clusters
                 updateClusters(particles);
                 simulationState.clusters.forEach(c => c.update(particles));
                 
-                // Update gravity field visualization if active
-                if (visibility.gravity) {
-                    updateGravityFieldVisualization();
-                }
+                if (parameters.pathMemoryEnabled) pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
                 
-                // Update path memory
-                if (parameters.pathMemoryEnabled && pathMemory) {
-                    pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
-                    if (visibility.pathMemory) {
-                        pathMemory.updateVisual();
-                    }
-                }
-                
-                // Update statistics
                 updateStats();
-                updatePeriodStats();
-            }
-            
-            // Update trails
-            if (visibility.trails) {
-                while(trailsGroup.children.length > 0) {
-                    trailsGroup.remove(trailsGroup.children[0]);
-                }
-                
-                particles.forEach(p => {
-                    if (p.trail.length > 1) {
-                        const geometry = new THREE.BufferGeometry().setFromPoints(p.trail);
-                        const material = new THREE.LineBasicMaterial({
-                            color: p.getColorByHeight(),
-                            transparent: true,
-                            opacity: 0.3
-                        });
-                        const trailLine = new THREE.Line(geometry, material);
-                        trailsGroup.add(trailLine);
-                    }
-                });
             }
             
             renderer.render(scene, camera);
@@ -3084,15 +1696,23 @@
         
         animate();
         
-        // Handle window resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }, false);
 
-        // Initial preset load
+        // Initial setup to sync UI with default parameters
+        Object.keys(parameters).forEach(key => {
+            const input = document.getElementById(key);
+            if(input) {
+                input.value = parameters[key];
+                if (input.type === 'checkbox') input.checked = parameters[key];
+                input.dispatchEvent(new Event('input'));
+            }
+        });
         loadPreset('hybrid');
+
     </script>
 </body>
 </html>
