@@ -1,436 +1,310 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TRT・PRA シミュレータ v5.3 完全統合版</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<style>
-body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden; }
-#canvas-container { position:relative; width:100vw; height:100vh; }
-.panel { position:absolute; background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; max-height:90vh; overflow-y:auto; }
-#control-panel { bottom:20px; left:20px; width:370px; }
-#stats-panel { top:20px; right:20px; width:320px; font-size:13px; color:#1f2937; }
-h1,h2 { margin-top:0; color:#1f2937; }
-h1 { font-size:20px; }
-h2 { font-size:16px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; }
-.parameter-group { margin-bottom:15px; }
-.parameter { margin-bottom:10px; }
-.parameter label { display:block; font-size:12px; color:#4b5563; margin-bottom:4px; font-weight:600; }
-input[type=range], select { width:100%; }
-.parameter-value { font-size:11px; color:#6b7280; margin-left:8px; float:right; }
-.button-group { display:flex; gap:8px; flex-wrap:wrap; margin-top:15px; }
-button.btn { flex-grow:1; padding:8px 12px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; transition:background 0.2s; }
-button.btn:hover { background:#2563eb; }
-button.btn-secondary { background:#6b7280; }
-button.btn-secondary:hover { background:#4b5563; }
-.legend { position:absolute; top:20px; left:20px; background:rgba(255,255,255,0.98); padding:15px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; font-size:12px; color:#1f2937; }
-.legend-item { display:flex; align-items:center; margin-bottom:5px; }
-.legend-color { width:15px; height:15px; margin-right:8px; border-radius:3px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRT・PRA シミュレータ v5.3 完全統合版</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden }
+    #canvas-container { position:relative; width:100vw; height:100vh }
+    .panel {
+      position:absolute; background:rgba(255,255,255,0.98);
+      padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15);
+      z-index:100; max-height:90vh; overflow-y:auto;
+    }
+    #control-panel { bottom:20px; left:20px; width:370px }
+    #stats-panel { top:20px; right:20px; width:320px; font-size:13px; color:#1f2937 }
+    h1,h2 { margin-top:0; color:#1f2937 }
+    h1 { font-size:20px }
+    h2 { font-size:16px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px }
+    .parameter-group { margin-bottom:15px }
+    .parameter { margin-bottom:10px }
+    .parameter label { display:block; font-size:12px; color:#4b5563; margin-bottom:4px; font-weight:600 }
+    input[type=range], select { width:100% }
+    .parameter-value { font-size:11px; color:#6b7280; margin-left:8px; float:right }
+    .button-group { display:flex; gap:8px; flex-wrap:wrap; margin-top:15px }
+    button.btn {
+      flex-grow:1; padding:8px 12px; background:#3b82f6; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:13px;
+      transition:background 0.2s;
+    }
+    button.btn:hover { background:#2563eb }
+    button.btn-secondary { background:#6b7280 }
+    button.btn-secondary:hover { background:#4b5563 }
+    .legend {
+      position:absolute; top:20px; left:20px; background:rgba(255,255,255,0.98);
+      padding:15px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15);
+      z-index:100; font-size:12px; color:#1f2937;
+    }
+    .legend-item { display:flex; align-items:center; margin-bottom:5px }
+    .legend-color { width:15px; height:15px; margin-right:8px; border-radius:3px }
+  </style>
 </head>
 <body>
-<div id="canvas-container"></div>
-<div id="legend-panel" class="legend">
-  <h2>資源の発展段階</h2>
-  <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>純粋探索</div>
-  <div class="legend-item"><div class="legend-color" style="background:#ef4444"></div>移行期</div>
-  <div class="legend-item"><div class="legend-color" style="background:#f97316"></div>応用開発</div>
-  <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>市場活用</div>
-</div>
-<div id="stats-panel" class="panel">
-  <h2>リアルタイム指標</h2>
-  <div>シミュレーション時間: <span id="sim-time">0.0</span> 年</div>
-  <div>市場化成功数: <span id="success-count">0</span></div>
-  <div>成功率: <span id="success-rate">0.0%</span></div>
-  <div>活性資源数: <span id="active-particles">0</span></div>
-  <div>累計投入資源: <span id="total-spawned">0</span></div>
-</div>
-<div id="control-panel" class="panel">
-  <h1>TRT・PRA シミュレータ v5.3</h1>
-  <div class="parameter-group">
-    <h2>戦略的初期配置</h2>
-    <div class="parameter">
-      <label for="initialPlacementStrategy">初期配置戦略</label>
-      <select id="initialPlacementStrategy" onchange="updateParameters()">
-        <option value="random">ランダム</option>
-        <option value="focused">集中型</option>
-        <option value="diversified">分散型</option>
-        <option value="clustered">クラスター型</option>
-        <option value="edge">エッジ探索型</option>
-      </select>
+  <div id="canvas-container"></div>
+
+  <div id="legend-panel" class="legend">
+    <h2>資源の発展段階</h2>
+    <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>純粋探索</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ef4444"></div>移行期</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f97316"></div>応用開発</div>
+    <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>市場活用</div>
+  </div>
+
+  <div id="stats-panel" class="panel">
+    <h2>リアルタイム指標</h2>
+    <div>シミュレーション時間: <span id="sim-time">0.0</span> 年</div>
+    <div>市場化成功数: <span id="success-count">0</span></div>
+    <div>成功率: <span id="success-rate">0.0%</span></div>
+    <div>活性資源数: <span id="active-particles">0</span></div>
+    <div>累計投入資源: <span id="total-spawned">0</span></div>
+  </div>
+
+  <div id="control-panel" class="panel">
+    <h1>TRT・PRA シミュレータ v5.3</h1>
+
+    <div class="parameter-group">
+      <h2>戦略的初期配置</h2>
+      <div class="parameter">
+        <label for="initialPlacementStrategy">初期配置戦略</label>
+        <select id="initialPlacementStrategy" onchange="updateParameters()">
+          <option value="random">ランダム</option>
+          <option value="focused">集中型</option>
+          <option value="diversified">分散型</option>
+          <option value="clustered">クラスター型</option>
+          <option value="edge">エッジ探索型</option>
+        </select>
+      </div>
+      <div class="parameter">
+        <label for="initialParticles">初期資源数 <span class="parameter-value" id="initialParticles-value">20</span></label>
+        <input type="range" id="initialParticles" min="1" max="100" value="20" step="1" oninput="updateParameters()">
+      </div>
     </div>
-    <div class="parameter">
-      <label for="initialParticles">初期資源数 <span class="parameter-value" id="initialParticles-value">20</span></label>
-      <input type="range" id="initialParticles" min="1" max="100" value="20" step="1" oninput="updateParameters()">
+
+    <div class="parameter-group">
+      <h2>シミュレーション制御</h2>
+      <div class="parameter">
+        <label for="timeScale">時間スケール <span class="parameter-value" id="timeScale-value">0.1</span></label>
+        <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="spawnInterval">資源投入間隔 (年) <span class="parameter-value" id="spawnInterval-value">0.5</span></label>
+        <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="batchSize">投入バッチサイズ <span class="parameter-value" id="batchSize-value">3</span></label>
+        <input type="range" id="batchSize" min="1" max="10" value="3" step="1" oninput="updateParameters()">
+      </div>
+    </div>
+
+    <div class="parameter-group">
+      <h2>TRT・PRA パラメータ</h2>
+      <div class="parameter">
+        <label for="trtForce">垂直推進力 <span class="parameter-value" id="trtForce-value">0.015</span></label>
+        <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="trtAcceleration">上昇加速度 <span class="parameter-value" id="trtAcceleration-value">1.0</span></label>
+        <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="tippingPoint">ティッピングポイント <span class="parameter-value" id="tippingPoint-value">0.7</span></label>
+        <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="praForce">水平拡散力 <span class="parameter-value" id="praForce-value">0.02</span></label>
+        <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="praDiversity">多様性維持係数 <span class="parameter-value" id="praDiversity-value">1.0</span></label>
+        <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
+      </div>
+    </div>
+
+    <div class="parameter-group">
+      <h2>多重重力源パラメータ</h2>
+      <div class="parameter">
+        <label for="centralConvergence">中央収束力 <span class="parameter-value" id="centralConvergence-value">0.03</span></label>
+        <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="clusterConvergence">クラスター内収束力 <span class="parameter-value" id="clusterConvergence-value">0.02</span></label>
+        <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.005" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="clusterInertia">クラスター慣性 <span class="parameter-value" id="clusterInertia-value">0.015</span></label>
+        <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="marketPull">市場引力 <span class="parameter-value" id="marketPull-value">0.02</span></label>
+        <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="peerAttraction">粒子間引力 <span class="parameter-value" id="peerAttraction-value">0.01</span></label>
+        <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.005" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="attractionRange">引力作用範囲 <span class="parameter-value" id="attractionRange-value">5</span></label>
+        <input type="range" id="attractionRange" min="2" max="10" value="5" step="1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="clusterThreshold">クラスター形成閾値 <span class="parameter-value" id="clusterThreshold-value">3</span></label>
+        <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1" oninput="updateParameters()">
+      </div>
+    </div>
+
+    <div class="parameter-group">
+      <h2>環境バイアス・頂点容量制限</h2>
+      <div class="parameter">
+        <label for="coneTiltX">円錐傾斜X軸 <span class="parameter-value" id="coneTiltX-value">0</span></label>
+        <input type="range" id="coneTiltX" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="coneTiltZ">円錐傾斜Z軸 <span class="parameter-value" id="coneTiltZ-value">0</span></label>
+        <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="vertexCapacity">頂点最大容量 <span class="parameter-value" id="vertexCapacity-value">5</span></label>
+        <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="capacityRadius">容量制限半径 <span class="parameter-value" id="capacityRadius-value">2</span></label>
+        <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="congestionEffect">混雑効果係数 <span class="parameter-value" id="congestionEffect-value">0.8</span></label>
+        <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05" oninput="updateParameters()">
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn" onclick="startSimulation()">開始</button>
+      <button class="btn btn-secondary" onclick="pauseSimulation()">一時停止</button>
+      <button class="btn btn-secondary" onclick="resetSimulation()">リセット</button>
+      <button class="btn" onclick="exportCSV()">CSV出力</button>
     </div>
   </div>
-  <div class="parameter-group">
-    <h2>シミュレーション制御</h2>
-    <div class="parameter">
-      <label for="timeScale">時間スケール <span class="parameter-value" id="timeScale-value">0.1</span></label>
-      <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="spawnInterval">資源投入間隔 (年) <span class="parameter-value" id="spawnInterval-value">0.5</span></label>
-      <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="batchSize">投入バッチサイズ <span class="parameter-value" id="batchSize-value">3</span></label>
-      <input type="range" id="batchSize" min="1" max="10" value="3" step="1" oninput="updateParameters()">
-    </div>
-  </div>
-  <div class="parameter-group">
-    <h2>TRT・PRA パラメータ</h2>
-    <div class="parameter">
-      <label for="trtForce">垂直推進力 <span class="parameter-value" id="trtForce-value">0.015</span></label>
-      <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="trtAcceleration">上昇加速度 <span class="parameter-value" id="trtAcceleration-value">1.0</span></label>
-      <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="tippingPoint">ティッピングポイント <span class="parameter-value" id="tippingPoint-value">0.7</span></label>
-      <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="praForce">水平拡散力 <span class="parameter-value" id="praForce-value">0.02</span></label>
-      <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="praDiversity">多様性維持係数 <span class="parameter-value" id="praDiversity-value">1.0</span></label>
-      <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
-    </div>
-  </div>
-  <div class="parameter-group">
-    <h2>多重重力源パラメータ</h2>
-    <div class="parameter">
-      <label for="centralConvergence">中央収束力 <span class="parameter-value" id="centralConvergence-value">0.03</span></label>
-      <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="clusterConvergence">クラスター内収束力 <span class="parameter-value" id="clusterConvergence-value">0.02</span></label>
-      <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.005" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="clusterInertia">クラスター慣性 <span class="parameter-value" id="clusterInertia-value">0.015</span></label>
-      <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="marketPull">市場引力 <span class="parameter-value" id="marketPull-value">0.02</span></label>
-      <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="peerAttraction">粒子間引力 <span class="parameter-value" id="peerAttraction-value">0.01</span></label>
-      <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.005" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="attractionRange">引力作用範囲 <span class="parameter-value" id="attractionRange-value">5</span></label>
-      <input type="range" id="attractionRange" min="2" max="10" value="5" step="1" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="clusterThreshold">クラスター形成閾値 <span class="parameter-value" id="clusterThreshold-value">3</span></label>
-      <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1" oninput="updateParameters()">
-    </div>
-  </div>
-  <div class="parameter-group">
-    <h2>環境バイアス・頂点容量制限</h2>
-    <div class="parameter">
-      <label for="coneTiltX">円錐傾斜X軸 <span class="parameter-value" id="coneTiltX-value">0</span></label>
-      <input type="range" id="coneTiltX" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="coneTiltZ">円錐傾斜Z軸 <span class="parameter-value" id="coneTiltZ-value">0</span></label>
-      <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="vertexCapacity">頂点最大容量 <span class="parameter-value" id="vertexCapacity-value">5</span></label>
-      <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="capacityRadius">容量制限半径 <span class="parameter-value" id="capacityRadius-value">2</span></label>
-      <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5" oninput="updateParameters()">
-    </div>
-    <div class="parameter">
-      <label for="congestionEffect">混雑効果係数 <span class="parameter-value" id="congestionEffect-value">0.8</span></label>
-      <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05" oninput="updateParameters()">
-    </div>
-  </div>
-  <div class="button-group">
-    <button class="btn" onclick="startSimulation()">開始</button>
-    <button class="btn btn-secondary" onclick="pauseSimulation()">一時停止</button>
-    <button class="btn btn-secondary" onclick="resetSimulation()">リセット</button>
-    <button class="btn" onclick="exportCSV()">CSV出力</button>
-  </div>
-</div>
-<script>
-let scene, camera, renderer, coneGroup;
-let particles = [], nextParticleId = 0;
-let animationId;
-let simulationState = {
-  isRunning: false,
-  isPaused: false,
-  elapsedTime: 0,
-  lastSpawnTime: 0,
-  totalSpawned: 0,
-  successCount: 0,
-  log: []
-};
-const coneHeight = 40;
-const coneRadius = 20;
-const parameters = {
-  initialPlacementStrategy: 'random',
-  initialParticles: 20,
-  timeScale: 0.1,
-  spawnInterval: 0.5,
-  batchSize: 3,
-  trtForce: 0.015,
-  trtAcceleration: 1.0,
-  tippingPoint: 0.7,
-  praForce: 0.02,
-  praDiversity: 1.0,
-  centralConvergence: 0.03,
-  clusterConvergence: 0.02,
-  clusterInertia: 0.015,
-  marketPull: 0.02,
-  peerAttraction: 0.01,
-  attractionRange: 5,
-  clusterThreshold: 3,
-  successThreshold: 38,
-  coneTiltX: 0,
-  coneTiltZ: 0,
-  vertexCapacity: 5,
-  capacityRadius: 2,
-  congestionEffect: 0.8
-};
 
-function init() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f0);
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(40, 40, 40);
-  camera.lookAt(0, 10, 0);
-  renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(50, 100, 50);
-  scene.add(dirLight);
-
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshPhongMaterial({color:0xe0e0e0}));
-  ground.rotation.x = -Math.PI/2;
-  scene.add(ground);
-
-  coneGroup = new THREE.Group();
-  const coneGeom = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
-  const coneMat = new THREE.MeshPhongMaterial({color:0x3b82f6, transparent:true, opacity:0.15, side:THREE.DoubleSide});
-  const cone = new THREE.Mesh(coneGeom, coneMat);
-  cone.position.y = coneHeight/2;
-  coneGroup.add(cone);
-  scene.add(coneGroup);
-
-  window.addEventListener('resize', onWindowResize);
-  document.querySelectorAll('input, select').forEach(el => el.dispatchEvent(new Event('input')));
-}
-
-class Particle {
-  constructor(id, position) {
-    this.id = id;
-    this.position = position.clone();
-    this.velocity = new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05);
-    this.age = 0;
-    this.isActive = true;
-    this.spawnTime = simulationState.elapsedTime;
-    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const material = new THREE.MeshPhongMaterial({color:this.getColor()});
-    this.mesh = new THREE.Mesh(geometry, material);
-    this.mesh.position.copy(this.position);
-    scene.add(this.mesh);
-  }
-  update(deltaTime) {
-    if (!this.isActive) return;
-    const hRatio = this.position.y / coneHeight;
-    this.velocity.y += parameters.trtForce * (1-hRatio) * (hRatio < parameters.tippingPoint ? 1 : parameters.trtAcceleration) * deltaTime;
-    this.velocity.x += (Math.random()-0.5) * parameters.praForce * parameters.praDiversity * deltaTime;
-    this.velocity.z += (Math.random()-0.5) * parameters.praForce * parameters.praDiversity * deltaTime;
-    const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
-    this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * hRatio * deltaTime));
-    if(hRatio > 0.7){
-      const toVertex = new THREE.Vector3(0, parameters.successThreshold-this.position.y, 0);
-      this.velocity.add(toVertex.normalize().multiplyScalar(parameters.marketPull * deltaTime));
+  <script>
+    // === 初期化 ===
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f0f0);
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+      camera.position.set(40,40,40);
+      camera.lookAt(0,10,0);
+      renderer = new THREE.WebGLRenderer({antialias:true});
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.getElementById('canvas-container').appendChild(renderer.domElement);
+      scene.add(new THREE.AmbientLight(0xffffff,0.6));
+      const d = new THREE.DirectionalLight(0xffffff,0.8); d.position.set(50,100,50);
+      scene.add(d);
+      const g = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshPhongMaterial({color:0xe0e0e0}));
+      g.rotation.x=-Math.PI/2; scene.add(g);
+      window.addEventListener('resize', onWindowResize);
+      document.querySelectorAll('input,select').forEach(el=>el.dispatchEvent(new Event('input')));
     }
-    this.position.add(this.velocity.clone().multiplyScalar(deltaTime * parameters.timeScale * 10));
-    const maxRadius = coneRadius * (1 - this.position.y/coneHeight);
-    if (Math.sqrt(this.position.x**2 + this.position.z**2) > maxRadius) this.isActive = false;
-    if (this.position.y >= parameters.successThreshold) { this.succeed(); return; }
-    if (this.position.y < 0) this.isActive = false;
-    if (this.isActive) {
-      this.mesh.position.copy(this.position);
-      this.mesh.material.color.set(this.getColor());
-      simulationState.log.push({
-        time: simulationState.elapsedTime.toFixed(2),
-        id: this.id,
-        x: this.position.x.toFixed(2),
-        y: this.position.y.toFixed(2),
-        z: this.position.z.toFixed(2)
-      });
-    } else {
-      scene.remove(this.mesh);
-    }
-  }
-  getColor() {
-    const h = this.position.y/coneHeight;
-    if (h<0.25) return 0x8b5cf6;
-    if (h<0.5) return 0xef4444;
-    if (h<0.75) return 0xf97316;
-    return 0x10b981;
-  }
-  succeed() {
-    if(!this.isActive) return;
-    this.isActive = false;
-    simulationState.successCount++;
-    scene.remove(this.mesh);
-  }
-}
 
-function createInitialParticles() {
-  particles.forEach(p => scene.remove(p.mesh));
-  particles = [];
-  nextParticleId = 0;
-  const count = parameters.initialParticles;
-  switch(parameters.initialPlacementStrategy) {
-    case 'focused':
-      const focus = new THREE.Vector3((Math.random()-0.5)*10, 1, (Math.random()-0.5)*10);
-      for(let i=0;i<count;i++){
-        const pos = focus.clone().add(new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).multiplyScalar(3));
-        particles.push(new Particle(nextParticleId++, pos));
+    class Particle {
+      constructor(id,pos) {
+        this.id=id; this.position=pos.clone();
+        this.velocity=new THREE.Vector3((Math.random()-0.5)*0.05,Math.random()*0.02+0.01,(Math.random()-0.5)*0.05);
+        this.isActive=true; this.spawnTime=simState.elapsedTime;
+        const geo=new THREE.SphereGeometry(0.3), mat=new THREE.MeshPhongMaterial({color:this.getColor()});
+        this.mesh=new THREE.Mesh(geo,mat); this.mesh.position.copy(this.position);
+        scene.add(this.mesh);
       }
-      break;
-    case 'diversified':
-      for(let i=0;i<count;i++){
-        const angle = (i/count)*Math.PI*2;
-        const radius = coneRadius*0.8;
-        const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius);
-        particles.push(new Particle(nextParticleId++, pos));
-      }
-      break;
-    case 'clustered':
-      const clusters = 3;
-      for(let i=0;i<clusters;i++){
-        const angle = (i/clusters)*Math.PI*2;
-        const radius = coneRadius*0.6;
-        const center = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius);
-        for(let j=0;j<Math.floor(count/clusters);j++){
-          const pos = center.clone().add(new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).multiplyScalar(4));
-          particles.push(new Particle(nextParticleId++, pos));
+      update(dt) {
+        if(!this.isActive) return;
+        const h=this.position.y/coneHeight;
+        this.velocity.y += params.trtForce*(1-h)*(h<params.tippingPoint?1:params.trtAcceleration)*dt;
+        this.velocity.x += (Math.random()-0.5)*params.praForce*params.praDiversity*dt;
+        this.velocity.z += (Math.random()-0.5)*params.praForce*params.praDiversity*dt;
+        const tc=new THREE.Vector3(-this.position.x,0,-this.position.z).normalize();
+        this.velocity.add(tc.multiplyScalar(params.centralConvergence*h*dt));
+        if(h>0.7){
+          const tv=new THREE.Vector3(0,params.successThreshold-this.position.y,0);
+          this.velocity.add(tv.normalize().multiplyScalar(params.marketPull*dt));
         }
+        this.position.add(this.velocity.clone().multiplyScalar(dt*params.timeScale*10));
+        const maxR=coneRadius*(1-this.position.y/coneHeight);
+        if(Math.sqrt(this.position.x**2+this.position.z**2)>maxR) this.isActive=false;
+        if(this.position.y>=params.successThreshold){this.succeed();return;}
+        if(this.position.y<0) this.isActive=false;
+        if(this.isActive){
+          this.mesh.position.copy(this.position);
+          this.mesh.material.color.set(this.getColor());
+          simState.log.push({t:simState.elapsedTime.toFixed(2),id:this.id,x:this.position.x.toFixed(2),y:this.position.y.toFixed(2),z:this.position.z.toFixed(2)});
+        } else scene.remove(this.mesh);
       }
-      break;
-    case 'edge':
-      for(let i=0;i<count;i++){
-        const angle = Math.random()*Math.PI*2;
-        const radius = coneRadius*0.95;
-        const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius);
-        particles.push(new Particle(nextParticleId++, pos));
+      getColor(){
+        const h=this.position.y/coneHeight;
+        if(h<0.25) return 0x8b5cf6; if(h<0.5) return 0xef4444;
+        if(h<0.75) return 0xf97316; return 0x10b981;
       }
-      break;
-    default:
-      for(let i=0;i<count;i++){
-        const angle = Math.random()*Math.PI*2;
-        const radius = Math.random()*coneRadius*0.9;
-        const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius);
-        particles.push(new Particle(nextParticleId++, pos));
-      }
-      break;
-  }
-  simulationState.totalSpawned += count;
-}
-
-function startSimulation() {
-  if(simulationState.isRunning) resetSimulation();
-  simulationState.isRunning = true;
-  simulationState.isPaused = false;
-  animate();
-}
-function pauseSimulation() { simulationState.isPaused = !simulationState.isPaused; }
-function resetSimulation() {
-  cancelAnimationFrame(animationId);
-  simulationState.isRunning = false;
-  simulationState.isPaused = false;
-  simulationState.elapsedTime = 0;
-  simulationState.lastSpawnTime = 0;
-  simulationState.totalSpawned = 0;
-  simulationState.successCount = 0;
-  simulationState.log = [];
-  particles.forEach(p=>scene.remove(p.mesh));
-  particles = [];
-  createInitialParticles();
-  updateStats();
-}
-const clock = new THREE.Clock();
-function animate() {
-  animationId = requestAnimationFrame(animate);
-  if(!simulationState.isRunning || simulationState.isPaused) return;
-  const deltaTime = clock.getDelta();
-  simulationState.elapsedTime += deltaTime * parameters.timeScale;
-  if(simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
-    for(let i=0;i<parameters.batchSize;i++){
-      const angle = Math.random()*Math.PI*2;
-      const radius = Math.random()*coneRadius*0.9;
-      const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius);
-      particles.push(new Particle(nextParticleId++, pos));
+      succeed(){this.isActive=false;simState.successCount++;scene.remove(this.mesh);}
     }
-    simulationState.totalSpawned += parameters.batchSize;
-    simulationState.lastSpawnTime = simulationState.elapsedTime;
-  }
-  particles.forEach(p => p.update(deltaTime));
-  particles = particles.filter(p => p.isActive);
-  updateStats();
-  renderer.render(scene, camera);
-}
-function updateParameters() {
-  document.querySelectorAll('input[type="range"], select').forEach(el => {
-    parameters[el.id] = el.type === 'range' ? parseFloat(el.value) : el.value;
-    const valEl = document.getElementById(el.id+'-value');
-    if(valEl) valEl.textContent = parameters[el.id];
-  });
-}
-function updateStats() {
-  document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1);
-  document.getElementById('success-count').textContent = simulationState.successCount;
-  document.getElementById('active-particles').textContent = particles.length;
-  document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
-  const rate = simulationState.totalSpawned>0?(simulationState.successCount/simulationState.totalSpawned)*100:0;
-  document.getElementById('success-rate').textContent = rate.toFixed(1)+'%';
-}
-function exportCSV() {
-  if(simulationState.log.length===0){
-    alert('エクスポートするデータがありません。');
-    return;
-  }
-  let csv = 'time,particle_id,x,y,z\n';
-  simulationState.log.forEach(row=>{
-    csv += `${row.time},${row.id},${row.x},${row.y},${row.z}\n`;
-  });
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'simulation_data.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-function onWindowResize(){
-  camera.aspect = window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
-init();
-updateParameters();
-resetSimulation();
-</script>
+
+    function createInitialParticles(){
+      particles.forEach(p=>scene.remove(p.mesh));
+      particles=[]; nextParticleId=0;
+      const n=params.initialParticles;
+      switch(params.initialPlacementStrategy){
+        case'focused':
+          const fc=new THREE.Vector3((Math.random()-0.5)*10,1,(Math.random()-0.5)*10);
+          for(let i=0;i<n;i++) particles.push(new Particle(nextParticleId++,fc.clone().add(new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).multiplyScalar(3))));
+          break;
+        case'diversified':
+          for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2,r=coneRadius*0.8;particles.push(new Particle(nextParticleId++,new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r)));}
+          break;
+        case'clustered':
+          for(let i=0;i<3;i++){const a=(i/3)*Math.PI*2,r=coneRadius*0.6,ctr=new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r);
+            for(let j=0;j<Math.floor(n/3);j++) particles.push(new Particle(nextParticleId++,ctr.clone().add(new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).multiplyScalar(4))));
+          }
+          break;
+        case'edge':
+          for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=coneRadius*0.95;particles.push(new Particle(nextParticleId++,new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r)));}break;
+        default:
+          for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=Math.random()*coneRadius*0.9;particles.push(new Particle(nextParticleId++,new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r)));}break;
+      }
+      simState.totalSpawned+=n;
+    }
+
+    function startSimulation(){if(simState.isRunning) resetSimulation();simState.isRunning=true;simState.isPaused=false;animate();}
+    function pauseSimulation(){simState.isPaused=!simState.isPaused;}
+    function resetSimulation(){cancelAnimationFrame(animationFrameId);simState={isRunning:false,isPaused:false,elapsedTime:0,lastSpawnTime:0,totalSpawned:0,successCount:0,log:[]};particles.forEach(p=>scene.remove(p.mesh));particles=[];createInitialParticles();updateStats();}
+    const clock=new THREE.Clock();
+    function animate(){
+      animationFrameId=requestAnimationFrame(animate);
+      if(!simState.isRunning||simState.isPaused)return;
+      const dt=clock.getDelta();simState.elapsedTime+=dt*params.timeScale;
+      if(simState.elapsedTime-simState.lastSpawnTime>=params.spawnInterval){
+        for(let i=0;i<params.batchSize;i++){const a=Math.random()*Math.PI*2,r=Math.random()*coneRadius*0.9;particles.push(new Particle(nextParticleId++,new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r)));}simState.totalSpawned+=params.batchSize;simState.lastSpawnTime=simState.elapsedTime;
+      }
+      particles.forEach(p=>p.update(dt));particles=particles.filter(p=>p.isActive);
+      updateStats();renderer.render(scene,camera);
+    }
+
+    function updateParameters(){
+      document.querySelectorAll('input[type="range"],select').forEach(el=>{params[el.id]=el.type==='range'?parseFloat(el.value):el.value;const ve=document.getElementById(el.id+'-value');if(ve)ve.textContent=params[el.id];});
+    }
+    function updateStats(){
+      document.getElementById('sim-time').textContent=simState.elapsedTime.toFixed(1);
+      document.getElementById('success-count').textContent=simState.successCount;
+      document.getElementById('active-particles').textContent=particles.length;
+      document.getElementById('total-spawned').textContent=simState.totalSpawned;
+      const rate=simState.totalSpawned>0?(simState.successCount/simState.totalSpawned)*100:0;
+      document.getElementById('success-rate').textContent=`${rate.toFixed(1)}%`;
+    }
+    function exportCSV(){
+      if(simState.log.length===0){alert('エクスポートするデータがありません');return;}
+      let csv='time,particle_id,x,y,z\n';simState.log.forEach(r=>csv+=`${r.time},${r.id},${r.x},${r.y},${r.z}\n`);
+      const b=new Blob([csv],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='data.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
+    function onWindowResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}
+    
+    const params=parameters, simState=simulationState;init();updateParameters();resetSimulation();
+  </script>
 </body>
 </html>
