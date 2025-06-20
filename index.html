@@ -1940,6 +1940,7 @@
                 // === ASYMMETRIC BOUNDARY CONSTRAINTS === //
                 // Account for cone tilt and asymmetry in boundary checking
                 const tiltMatrix = new THREE.Matrix4();
+                // --- 修正箇所：構文エラーを修正 ---
                 tiltMatrix.makeRotationFromEuler(new THREE.Euler(
                     -params.coneTiltX * Math.PI / 180,
                     0,
