@@ -519,7 +519,6 @@
         </div>
         <div class="stats-panel">
             <h2 style="margin-top: 0; font-size: 16px;">リアルタイム指標</h2>
-            
             <div class="stat-highlight">
                 <div class="stat-item">
                     <span class="stat-label">シミュレーション時間:</span>
@@ -534,7 +533,6 @@
                     <span class="stat-value" id="success-rate">0.0%</span>
                 </div>
             </div>
-            
             <div class="stat-item">
                 <span class="stat-label">活性資源数:</span>
                 <span class="stat-value" id="active-particles">0</span>
@@ -578,25 +576,22 @@
                 <h1>TRT・PRA 戦略シミュレータ v4.0</h1>
                 <button class="collapse-button" onclick="togglePanel()">▼</button>
             </div>
-            
             <div class="panel-content">
                 <div class="warning-box">
                     <strong>v4.0 革新的機能：</strong>多重重力源モデル - 中央戦略、クラスター、プロジェクト間の複雑な引力相互作用を実装
                 </div>
-                
                 <div class="mode-selector">
                     <button class="mode-button active" onclick="setMode('single', this)">単独シミュレーション</button>
                     <button class="mode-button" onclick="setMode('comparison', this)">比較分析モード <span style="font-size: 10px;">(開発中)</span></button>
                 </div>
-                
                 <div class="time-controls">
                     <h2>時間シミュレーション</h2>
                     <div class="parameter">
-                        <label>時間スケール（1秒 = X年）<span class="parameter-value" id="timeScale-value">0.1</span></label>
+                        <label>時間スケール（1秒 = X年）<span class="parameter-value" id="timeScale-value">0.100</span></label>
                         <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01">
                     </div>
                     <div class="parameter">
-                        <label>資源投入間隔（年）<span class="parameter-value" id="spawnInterval-value">0.5</span></label>
+                        <label>資源投入間隔（年）<span class="parameter-value" id="spawnInterval-value">0.500</span></label>
                         <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1">
                     </div>
                     <div class="parameter">
@@ -609,36 +604,28 @@
                         <button class="control-button" onclick="resetSimulation()">リセット</button>
                     </div>
                 </div>
-                
                 <div class="preset-buttons">
                     <button class="preset-button" onclick="loadPreset('centralized', this)">中央集権型</button>
                     <button class="preset-button" onclick="loadPreset('distributed', this)">分散自律型</button>
                     <button class="preset-button" onclick="loadPreset('hybrid', this)">ハイブリッド型</button>
                     <button class="preset-button" onclick="loadPreset('emergent', this)">創発重視型</button>
                 </div>
-
                 <div class="parameter-group">
                     <h2>資源特性</h2>
                     <div class="parameter">
-                        <label>資源異質性<span class="parameter-value" id="heterogeneity-value">0.5</span></label>
+                        <label>資源異質性<span class="parameter-value" id="heterogeneity-value">0.500</span></label>
                         <input type="range" id="heterogeneity" min="0" max="1.0" value="0.5" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>資源寿命変動<span class="parameter-value" id="lifespanVariance-value">0.3</span></label>
+                        <label>資源寿命変動<span class="parameter-value" id="lifespanVariance-value">0.300</span></label>
                         <input type="range" id="lifespanVariance" min="0" max="1.0" value="0.3" step="0.1">
                     </div>
                 </div>
-
                 <div class="parameter-group">
                     <h2>TRT（時間軸的資源移行）
                         <span class="tooltip-container">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">
-                                探索から活用への段階的な移行を表します。<br>
-                                垂直推進力：研究開発から市場投入への移行速度<br>
-                                上昇加速度：成熟段階での成長加速度<br>
-                                ティッピングポイント：急成長が始まる臨界点
-                            </span>
+                            <span class="tooltip-content">探索から活用への段階的な移行を表します。<br>垂直推進力：研究開発から市場投入への移行速度<br>上昇加速度：成熟段階での成長加速度<br>ティッピングポイント：急成長が始まる臨界点</span>
                         </span>
                     </h2>
                     <div class="parameter">
@@ -646,11 +633,11 @@
                         <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001">
                     </div>
                     <div class="parameter">
-                        <label>上昇加速度<span class="parameter-value" id="trtAcceleration-value">1.0</span></label>
+                        <label>上昇加速度<span class="parameter-value" id="trtAcceleration-value">1.000</span></label>
                         <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>ティッピングポイント<span class="parameter-value" id="tippingPoint-value">0.7</span></label>
+                        <label>ティッピングポイント<span class="parameter-value" id="tippingPoint-value">0.700</span></label>
                         <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05">
                     </div>
                 </div>
@@ -658,43 +645,31 @@
                     <h2>PRA（並列的資源配分）
                         <span class="tooltip-container">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">
-                                多様な研究プロジェクトへの同時的な資源配分を表します。<br>
-                                水平拡散力：プロジェクト間の資源分散度<br>
-                                多様性維持係数：ポートフォリオの多様性を保つ強さ
-                            </span>
+                            <span class="tooltip-content">多様な研究プロジェクトへの同時的な資源配分を表します。<br>水平拡散力：プロジェクト間の資源分散度<br>多様性維持係数：ポートフォリオの多様性を保つ強さ</span>
                         </span>
                     </h2>
                     <div class="parameter">
-                        <label>水平拡散力<span class="parameter-value" id="praForce-value">0.02</span></label>
+                        <label>水平拡散力<span class="parameter-value" id="praForce-value">0.020</span></label>
                         <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001">
                     </div>
                     <div class="parameter">
-                        <label>多様性維持係数<span class="parameter-value" id="praDiversity-value">1.0</span></label>
+                        <label>多様性維持係数<span class="parameter-value" id="praDiversity-value">1.000</span></label>
                         <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1">
                     </div>
                 </div>
-
                 <div class="parameter-group" style="background: #f0fdf4; border-color: #86efac;">
                     <h2>多重重力源ダイナミクス【NEW】
                         <span class="tooltip-container">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">
-                                組織内の多層的な引力構造を表現します。<br>
-                                中央収束力：本社・経営陣の戦略的統制力<br>
-                                クラスター収束力：部門間の協働の強さ<br>
-                                クラスター慣性：過度な内部結束による市場化阻害<br>
-                                市場引力：市場ニーズによる牽引力<br>
-                                粒子間引力：個人/プロジェクト間の自発的協力
-                            </span>
+                            <span class="tooltip-content">組織内の多層的な引力構造を表現します。<br>中央収束力：本社・経営陣の戦略的統制力<br>クラスター収束力：部門間の協働の強さ<br>クラスター慣性：過度な内部結束による市場化阻害<br>市場引力：市場ニーズによる牽引力<br>粒子間引力：個人/プロジェクト間の自発的協力</span>
                         </span>
                     </h2>
                     <div class="parameter">
-                        <label>中央収束力<span class="parameter-value" id="centralConvergence-value">0.03</span></label>
+                        <label>中央収束力<span class="parameter-value" id="centralConvergence-value">0.030</span></label>
                         <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005">
                     </div>
                     <div class="parameter">
-                        <label>クラスター内収束力<span class="parameter-value" id="clusterConvergence-value">0.02</span></label>
+                        <label>クラスター内収束力<span class="parameter-value" id="clusterConvergence-value">0.020</span></label>
                         <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.005">
                     </div>
                     <div class="parameter">
@@ -702,15 +677,15 @@
                         <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005">
                     </div>
                     <div class="parameter">
-                        <label>市場引力【NEW】<span class="parameter-value" id="marketPull-value">0.02</span></label>
+                        <label>市場引力【NEW】<span class="parameter-value" id="marketPull-value">0.020</span></label>
                         <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005">
                     </div>
                     <div class="parameter">
-                        <label>クラスター透過性【NEW】<span class="parameter-value" id="clusterPermeability-value">0.8</span></label>
+                        <label>クラスター透過性【NEW】<span class="parameter-value" id="clusterPermeability-value">0.800</span></label>
                         <input type="range" id="clusterPermeability" min="0" max="1.0" value="0.8" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>粒子間引力<span class="parameter-value" id="peerAttraction-value">0.01</span></label>
+                        <label>粒子間引力<span class="parameter-value" id="peerAttraction-value">0.010</span></label>
                         <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.005">
                     </div>
                     <div class="parameter">
@@ -722,25 +697,18 @@
                         <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1">
                     </div>
                 </div>
-
                 <div class="parameter-group">
                     <h2>収束ダイナミクス</h2>
                     <div class="parameter">
-                        <label>成功閾値（高さ）<span class="parameter-value" id="successThreshold-value">38</span></label>
+                        <label>成功閾値（高さ）<span class="parameter-value" id="successThreshold-value">38.000</span></label>
                         <input type="range" id="successThreshold" min="35" max="39.5" value="38" step="0.5">
                     </div>
                 </div>
-
                 <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
                     <h2>産業特性と資源再利用【NEW】
                         <span class="tooltip-container">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">
-                                産業による成功率の違いと失敗資源の扱いを設定します。<br>
-                                バイオ：低成功率・高知識価値<br>
-                                ソフトウェア：高成功率・渋滞発生<br>
-                                消費財：中成功率・中程度の再利用
-                            </span>
+                            <span class="tooltip-content">産業による成功率の違いと失敗資源の扱いを設定します。<br>バイオ：低成功率・高知識価値<br>ソフトウェア：高成功率・渋滞発生<br>消費財：中成功率・中程度の再利用</span>
                         </span>
                     </h2>
                     <div class="parameter">
@@ -753,15 +721,15 @@
                         </select>
                     </div>
                     <div class="parameter">
-                        <label>資源リサイクル率<span class="parameter-value" id="resourceRecycleRate-value">0.7</span></label>
+                        <label>資源リサイクル率<span class="parameter-value" id="resourceRecycleRate-value">0.700</span></label>
                         <input type="range" id="resourceRecycleRate" min="0" max="1.0" value="0.7" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>知識継承率<span class="parameter-value" id="knowledgeTransferRate-value">0.3</span></label>
+                        <label>知識継承率<span class="parameter-value" id="knowledgeTransferRate-value">0.300</span></label>
                         <input type="range" id="knowledgeTransferRate" min="0" max="1.0" value="0.3" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>自然減衰率<span class="parameter-value" id="attritionRate-value">0.02</span></label>
+                        <label>自然減衰率<span class="parameter-value" id="attritionRate-value">0.020</span></label>
                         <input type="range" id="attritionRate" min="0" max="0.1" value="0.02" step="0.01">
                     </div>
                 </div>
@@ -772,11 +740,11 @@
                         <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1">
                     </div>
                     <div class="parameter">
-                        <label>容量制限半径<span class="parameter-value" id="capacityRadius-value">2</span></label>
+                        <label>容量制限半径<span class="parameter-value" id="capacityRadius-value">2.000</span></label>
                         <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5">
                     </div>
                     <div class="parameter">
-                        <label>混雑効果係数<span class="parameter-value" id="congestionEffect-value">0.8</span></label>
+                        <label>混雑効果係数<span class="parameter-value" id="congestionEffect-value">0.800</span></label>
                         <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05">
                     </div>
                     <div class="parameter">
@@ -788,7 +756,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="parameter-group" style="background: #e0f2fe; border-color: #0284c7;">
                     <h2>環境バイアス【新機能】</h2>
                     <div class="parameter">
@@ -800,15 +767,14 @@
                         <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5">
                     </div>
                     <div class="parameter">
-                        <label>断面非対称性X<span class="parameter-value" id="asymmetryX-value">1.0</span></label>
+                        <label>断面非対称性X<span class="parameter-value" id="asymmetryX-value">1.000</span></label>
                         <input type="range" id="asymmetryX" min="0.5" max="2.0" value="1.0" step="0.1">
                     </div>
                     <div class="parameter">
-                        <label>断面非対称性Z<span class="parameter-value" id="asymmetryZ-value">1.0</span></label>
+                        <label>断面非対称性Z<span class="parameter-value" id="asymmetryZ-value">1.000</span></label>
                         <input type="range" id="asymmetryZ" min="0.5" max="2.0" value="1.0" step="0.1">
                     </div>
                 </div>
-
                 <div class="parameter-group" style="background: #f0fdf4; border-color: #16a34a;">
                     <h2>経路記憶システム【新機能】</h2>
                     <div class="parameter">
@@ -816,7 +782,7 @@
                         <input type="checkbox" id="pathMemoryEnabled" checked style="width: auto;">
                     </div>
                     <div class="parameter">
-                        <label>記憶強度<span class="parameter-value" id="pathMemoryStrength-value">0.02</span></label>
+                        <label>記憶強度<span class="parameter-value" id="pathMemoryStrength-value">0.020</span></label>
                         <input type="range" id="pathMemoryStrength" min="0" max="0.1" value="0.02" step="0.005">
                     </div>
                     <div class="parameter">
@@ -824,7 +790,6 @@
                         <input type="range" id="pathMemoryPersistence" min="0" max="0.02" value="0.005" step="0.001">
                     </div>
                 </div>
-
                 <div class="toggle-buttons">
                     <button class="toggle-button active" id="toggleCone" onclick="toggleElement('cone')">円錐</button>
                     <button class="toggle-button active" id="toggleSections" onclick="toggleElement('sections')">断面</button>
@@ -835,43 +800,29 @@
                     <button class="toggle-button" id="toggleGravity" onclick="toggleElement('gravity')" style="opacity: 0.5; cursor: not-allowed;" disabled title="重力場表示機能は開発中です">重力場 (開発中)</button>
                     <button class="toggle-button" id="togglePathMemory" onclick="toggleElement('pathMemory')">経路記憶</button>
                 </div>
-                
                 <div class="success-counter" id="period-stats" style="display: none;">
                     <div>5年間：<span id="five-year-stats">0/0 (0%)</span></div>
                     <div>10年間：<span id="ten-year-stats">0/0 (0%)</span></div>
                 </div>
             </div>
         </div>
-
         <div class="cluster-visualization" id="cluster-vis" style="display: none;">
             <h2 style="margin-top: 0; font-size: 14px;">活性クラスター</h2>
-            <div id="cluster-list">
-            </div>
+            <div id="cluster-list"></div>
         </div>
-
         <div id="comparison-panel" class="comparison-panel">
             <div class="comparison-header">
                 <h2 style="margin: 0; font-size: 16px;">シナリオ比較分析</h2>
                 <button class="comparison-collapse-btn" onclick="toggleComparisonPanel()">▼</button>
             </div>
-            
             <div id="comparison-content">
-                <div id="scenario-list">
-                </div>
-                
-                <button class="control-button" onclick="addScenario()" style="width: 100%; margin: 10px 0;">
-                    ＋ シナリオ追加
-                </button>
-                
+                <div id="scenario-list"></div>
+                <button class="control-button" onclick="addScenario()" style="width: 100%; margin: 10px 0;">＋ シナリオ追加</button>
                 <div class="parameter">
                     <label>分析期間（年）<span class="parameter-value" id="analysisYears-value">10</span></label>
                     <input type="range" id="analysisYears" min="5" max="30" value="10" step="5">
                 </div>
-                
-                <button class="control-button" onclick="runComparison()" style="width: 100%; margin: 10px 0; background: #9ca3af; cursor: not-allowed;" disabled>
-                    比較分析実行（開発中）
-                </button>
-                
+                <button class="control-button" onclick="runComparison()" style="width: 100%; margin: 10px 0; background: #9ca3af; cursor: not-allowed;" disabled>比較分析実行（開発中）</button>
                 <div id="comparison-results" style="display: none;">
                     <h2 style="font-size: 14px;">分析結果</h2>
                     <div id="success-rate-chart" class="comparison-chart"></div>
@@ -882,17 +833,11 @@
     </div>
 
     <script>
-        // Three.js setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf8f8f8);
         scene.fog = new THREE.Fog(0xf8f8f8, 100, 300);
 
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(50, 40, 60);
         camera.lookAt(0, 20, 0);
 
@@ -902,7 +847,6 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -910,19 +854,13 @@
         directionalLight.castShadow = true;
         scene.add(directionalLight);
 
-        // Ground plane
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xe0e0e0,
-            side: THREE.DoubleSide
-        });
+        const groundMaterial = new THREE.MeshPhongMaterial({ color: 0xe0e0e0, side: THREE.DoubleSide });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = 0;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Parameters object
         const parameters = {
             initialParticles: 20,
             simulationSpeed: 1.0,
@@ -963,7 +901,6 @@
             industryProfile: 'hybrid'
         };
 
-        // Simulation state
         const simulationState = {
             isRunning: false,
             isPaused: false,
@@ -971,34 +908,12 @@
             lastSpawnTime: 0,
             totalSpawned: 0,
             successCount: 0,
-            periodStats: {
-                fiveYear: { spawned: 0, success: 0 },
-                tenYear: { spawned: 0, success: 0 }
-            },
             mode: 'single',
-            clusters: [],
-            gravitySources: []
+            clusters: []
         };
+        
+        const visibility = { cone: true, sections: true, spiral: true, success: true, trails: false, clusters: true, gravity: false, pathMemory: false };
 
-        // Comparison mode data
-        const comparisonData = {
-            scenarios: [],
-            results: []
-        };
-
-        // Visibility toggles
-        const visibility = {
-            cone: true,
-            sections: true,
-            spiral: true,
-            success: true,
-            trails: false,
-            clusters: true,
-            gravity: false,
-            pathMemory: false
-        };
-
-        // Main groups
         const coneGroup = new THREE.Group();
         const sectionsGroup = new THREE.Group();
         const spiralGroup = new THREE.Group();
@@ -1008,25 +923,17 @@
         const clustersGroup = new THREE.Group();
         const gravityGroup = new THREE.Group();
         const pathMemoryGroup = new THREE.Group();
-        
         scene.add(coneGroup, sectionsGroup, spiralGroup, particlesGroup, successGroup, trailsGroup, clustersGroup, gravityGroup, pathMemoryGroup);
 
-        // Cone parameters
         const coneHeight = 40;
         const coneRadius = 20;
 
-        // Particle types enum
-        const ParticleType = {
-            STANDARD: 'standard',
-            EXPLORER: 'explorer',
-            EXPLOITER: 'exploiter'
-        };
+        const ParticleType = { STANDARD: 'standard', EXPLORER: 'explorer', EXPLOITER: 'exploiter' };
+
         class PathMemory {
             constructor(resolution = 20) {
                 this.resolution = resolution;
-                this.grid = Array.from({ length: resolution }, () => 
-                           Array.from({ length: resolution }, () => 
-                           Array(resolution).fill(0)));
+                this.grid = Array.from({ length: resolution }, () => Array.from({ length: resolution }, () => Array(resolution).fill(0)));
                 this.maxValue = 0;
             }
             worldToGrid(position) {
@@ -1044,13 +951,9 @@
                 for (let dx = -2; dx <= 2; dx++) {
                     for (let dy = -2; dy <= 2; dy++) {
                         for (let dz = -2; dz <= 2; dz++) {
-                            const x = coords.x + dx;
-                            const y = coords.y + dy;
-                            const z = coords.z + dz;
+                            const x = coords.x + dx, y = coords.y + dy, z = coords.z + dz;
                             if (x >= 0 && x < this.resolution && y >= 0 && y < this.resolution && z >= 0 && z < this.resolution) {
-                                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
-                                const falloff = Math.exp(-distance * 0.5);
-                                this.grid[x][y][z] += strength * falloff;
+                                this.grid[x][y][z] += strength * Math.exp(-Math.sqrt(dx*dx + dy*dy + dz*dz) * 0.5);
                                 this.maxValue = Math.max(this.maxValue, this.grid[x][y][z]);
                             }
                         }
@@ -1058,8 +961,8 @@
                 }
             }
             getMemoryAt(position) {
-                const coords = this.worldToGrid(position);
-                return this.grid[coords.x][coords.y][coords.z] / (this.maxValue + 0.01);
+                const { x, y, z } = this.worldToGrid(position);
+                return this.grid[x][y][z] / (this.maxValue + 0.01);
             }
             decay(factor) {
                 for (let x = 0; x < this.resolution; x++) {
@@ -1072,57 +975,39 @@
                 this.maxValue *= factor;
             }
         }
-        
-        const pathMemory = new PathMemory(parameters.pathMemoryResolution);
+        const pathMemory = new PathMemory();
+
         class Cluster {
             constructor(id, center, members) {
                 this.id = id;
                 this.center = center.clone();
                 this.members = new Set(members);
-                this.color = new THREE.Color(Math.random(), Math.random(), Math.random());
-                this.strength = 1.0;
-                this.age = 0;
+                this.color = new THREE.Color(Math.random() * 0xffffff);
                 this.createVisual();
             }
             createVisual() {
                 const geometry = new THREE.SphereGeometry(1, 16, 16);
                 const material = new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.3 });
                 this.mesh = new THREE.Mesh(geometry, material);
-                this.mesh.position.copy(this.center);
                 clustersGroup.add(this.mesh);
-                
-                const ringGeometry = new THREE.RingGeometry(parameters.attractionRange - 0.5, parameters.attractionRange, 32);
-                const ringMaterial = new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
-                this.ring = new THREE.Mesh(ringGeometry, ringMaterial);
-                this.ring.rotation.x = -Math.PI / 2;
-                this.ring.position.copy(this.center);
-                clustersGroup.add(this.ring);
             }
             update(particles) {
-                if (this.members.size > 0) {
-                    const memberParticles = particles.filter(p => this.members.has(p.id));
-                    if (memberParticles.length > 0) {
-                        this.center.set(0, 0, 0);
-                        memberParticles.forEach(p => { this.center.add(p.position); });
-                        this.center.divideScalar(memberParticles.length);
-                        this.mesh.position.copy(this.center);
-                        this.ring.position.copy(this.center);
-                        this.strength = Math.min(2.0, 0.5 + this.members.size * 0.1);
-                        this.mesh.scale.setScalar(this.strength);
-                    }
+                const memberParticles = particles.filter(p => this.members.has(p.id));
+                if (memberParticles.length > 0) {
+                    this.center.set(0, 0, 0);
+                    memberParticles.forEach(p => this.center.add(p.position));
+                    this.center.divideScalar(memberParticles.length);
+                    this.mesh.position.copy(this.center);
                 }
-                this.age++;
             }
             remove() {
                 clustersGroup.remove(this.mesh);
-                clustersGroup.remove(this.ring);
             }
         }
 
         function createCone() {
             while(coneGroup.children.length > 0) coneGroup.remove(coneGroup.children[0]);
-            coneGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
-            coneGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
+            coneGroup.rotation.set(parameters.coneTiltX * Math.PI / 180, 0, parameters.coneTiltZ * Math.PI / 180);
             const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
             const positions = coneGeometry.attributes.position;
             for (let i = 0; i < positions.count; i++) {
@@ -1130,104 +1015,53 @@
                 positions.setZ(i, positions.getZ(i) * parameters.asymmetryZ);
             }
             positions.needsUpdate = true;
-            coneGeometry.computeVertexNormals();
             const coneMaterial = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             cone.position.y = coneHeight / 2;
             coneGroup.add(cone);
-            const wireframeGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 16, 8, true);
-            const wirePositions = wireframeGeometry.attributes.position;
-            for (let i = 0; i < wirePositions.count; i++) {
-                wirePositions.setX(i, wirePositions.getX(i) * parameters.asymmetryX);
-                wirePositions.setZ(i, wirePositions.getZ(i) * parameters.asymmetryZ);
-            }
-            wirePositions.needsUpdate = true;
-            const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x2563eb, wireframe: true, transparent: true, opacity: 0.3 });
-            const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-            wireframe.position.y = coneHeight / 2;
-            coneGroup.add(wireframe);
         }
 
         function createSections() {
             while(sectionsGroup.children.length > 0) sectionsGroup.remove(sectionsGroup.children[0]);
-            sectionsGroup.rotation.x = parameters.coneTiltX * Math.PI / 180;
-            sectionsGroup.rotation.z = parameters.coneTiltZ * Math.PI / 180;
+            sectionsGroup.rotation.copy(coneGroup.rotation);
             const heights = [5, 15, 25, 35];
             const colors = [0x8b5cf6, 0xef4444, 0xf97316, 0x10b981];
             heights.forEach((height, index) => {
                 const radius = coneRadius * (1 - height / coneHeight);
                 const curve = new THREE.EllipseCurve(0, 0, radius * parameters.asymmetryX, radius * parameters.asymmetryZ, 0, 2 * Math.PI, false, 0);
-                const points = curve.getPoints(50);
-                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
                 const material = new THREE.LineBasicMaterial({ color: colors[index], transparent: true, opacity: 0.5 });
                 const ellipse = new THREE.Line(geometry, material);
                 ellipse.rotation.x = -Math.PI / 2;
                 ellipse.position.y = height;
                 sectionsGroup.add(ellipse);
             });
-            const successHeight = parameters.successThreshold;
-            const successRadius = coneRadius * (1 - successHeight / coneHeight);
-            const successCurve = new THREE.EllipseCurve(0, 0, successRadius * parameters.asymmetryX, successRadius * parameters.asymmetryZ, 0, 2 * Math.PI, false, 0);
-            const successPoints = successCurve.getPoints(50);
-            const successGeometry = new THREE.BufferGeometry().setFromPoints(successPoints);
-            const successMaterial = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.8, linewidth: 3 });
-            const successLine = new THREE.Line(successGeometry, successMaterial);
-            successLine.rotation.x = -Math.PI / 2;
-            successLine.position.y = successHeight;
-            sectionsGroup.add(successLine);
         }
-
-        function createSpiral() {
-            while(spiralGroup.children.length > 0) spiralGroup.remove(spiralGroup.children[0]);
-            const points = [];
-            for (let i = 0; i <= 300; i++) {
-                const t = i / 300;
-                const height = t * coneHeight;
-                const maxRadius = coneRadius * (1 - t) * 0.9;
-                const angle = t * Math.PI * 8;
-                points.push(new THREE.Vector3(Math.cos(angle) * maxRadius, height, Math.sin(angle) * maxRadius));
-            }
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.8, linewidth: 3 });
-            spiralGroup.add(new THREE.Line(geometry, material));
-        }
-
-        const industryProfiles = {
-            biotech: { baseSuccessRate: 0.02, congestionEffect: 0.95, attritionRate: 0.05, recycleValue: 0.9, capacityConstraint: false, description: "超低成功率・規制ゲート・高知識価値" },
-            software: { baseSuccessRate: 0.3, congestionEffect: 0.6, attritionRate: 0.01, recycleValue: 0.5, capacityConstraint: true, description: "高成功率・市場渋滞・迅速な再利用" },
-            consumer: { baseSuccessRate: 0.2, congestionEffect: 0.7, attritionRate: 0.02, recycleValue: 0.6, capacityConstraint: true, description: "中成功率・棚競争・ブランド転用可" },
-            hybrid: { baseSuccessRate: 0.15, congestionEffect: 0.75, attritionRate: 0.02, recycleValue: 0.7, capacityConstraint: true, description: "バランス型・多様な制約" }
-        };
-        function getCurrentIndustryProfile() {
-            return industryProfiles[parameters.industryProfile] || industryProfiles.hybrid;
-        }
-
+        
         class SpatialGrid {
             constructor(size, divisions) {
-                this.size = size;
-                this.divisions = divisions;
                 this.cellSize = size / divisions;
                 this.grid = {};
             }
-            getKey(x, y, z) {
-                return `${Math.floor((x + this.size/2) / this.cellSize)},${Math.floor(y / this.cellSize)},${Math.floor((z + this.size/2) / this.cellSize)}`;
+            getKey(p) {
+                return `${Math.floor(p.x / this.cellSize)},${Math.floor(p.y / this.cellSize)},${Math.floor(p.z / this.cellSize)}`;
             }
             clear() { this.grid = {}; }
             insert(particle) {
-                const key = this.getKey(particle.position.x, particle.position.y, particle.position.z);
+                const key = this.getKey(particle.position);
                 if (!this.grid[key]) this.grid[key] = [];
                 this.grid[key].push(particle);
             }
             getNearbyParticles(position, radius) {
                 const nearby = [];
-                const cellRadius = Math.ceil(radius / this.cellSize);
-                const centerX = Math.floor((position.x + this.size/2) / this.cellSize);
-                const centerY = Math.floor(position.y / this.cellSize);
-                const centerZ = Math.floor((position.z + this.size/2) / this.cellSize);
-                for (let dx = -cellRadius; dx <= cellRadius; dx++) {
-                    for (let dy = -cellRadius; dy <= cellRadius; dy++) {
-                        for (let dz = -cellRadius; dz <= cellRadius; dz++) {
-                            const key = `${centerX + dx},${centerY + dy},${centerZ + dz}`;
+                const R = Math.ceil(radius / this.cellSize);
+                const cX = Math.floor(position.x / this.cellSize);
+                const cY = Math.floor(position.y / this.cellSize);
+                const cZ = Math.floor(position.z / this.cellSize);
+                for (let i = cX - R; i <= cX + R; i++) {
+                    for (let j = cY - R; j <= cY + R; j++) {
+                        for (let k = cZ - R; k <= cZ + R; k++) {
+                            const key = `${i},${j},${k}`;
                             if (this.grid[key]) {
                                 this.grid[key].forEach(p => {
                                     if (position.distanceTo(p.position) <= radius) nearby.push(p);
@@ -1239,120 +1073,38 @@
                 return nearby;
             }
         }
-        const spatialGrid = new SpatialGrid(coneRadius * 2, 10);
-        function findClusters(particles) {
-            const clusters = [];
-            const visited = new Set();
-            spatialGrid.clear();
-            particles.forEach(p => spatialGrid.insert(p));
-            particles.forEach(p => {
-                if (visited.has(p.id)) return;
-                visited.add(p.id);
-                const neighbors = spatialGrid.getNearbyParticles(p.position, parameters.attractionRange).filter(o => o.id !== p.id);
-                if (neighbors.length >= parameters.clusterThreshold - 1) {
-                    const cluster = new Set([p.id]);
-                    const stack = [...neighbors];
-                    while (stack.length > 0) {
-                        const current = stack.pop();
-                        if (visited.has(current.id)) continue;
-                        visited.add(current.id);
-                        cluster.add(current.id);
-                        const currentNeighbors = spatialGrid.getNearbyParticles(current.position, parameters.attractionRange).filter(o => o.id !== current.id);
-                        if (currentNeighbors.length >= parameters.clusterThreshold - 1) {
-                            currentNeighbors.forEach(n => { if (!visited.has(n.id)) stack.push(n); });
-                        }
-                    }
-                    if (cluster.size >= parameters.clusterThreshold) {
-                        const center = new THREE.Vector3(0,0,0);
-                        const clusterParticles = particles.filter(p => cluster.has(p.id));
-                        clusterParticles.forEach(p => center.add(p.position));
-                        center.divideScalar(clusterParticles.length);
-                        clusters.push({ members: Array.from(cluster), center: center });
-                    }
-                }
-            });
-            return clusters;
-        }
-
-        function updateClusters(particles) {
-            const newClusters = findClusters(particles.filter(p => p.isActive));
-            simulationState.clusters.forEach(c => c.remove());
-            simulationState.clusters = [];
-            newClusters.forEach((clusterData, index) => {
-                const cluster = new Cluster(`c_${Date.now()}_${index}`, clusterData.center, clusterData.members);
-                simulationState.clusters.push(cluster);
-            });
-            updateClusterPanel();
-        }
-
-        function updateClusterPanel() {
-            const list = document.getElementById('cluster-list');
-            list.innerHTML = '';
-            simulationState.clusters.forEach((c, i) => {
-                const item = document.createElement('div');
-                item.className = 'cluster-item';
-                item.innerHTML = `
-                    <div style="display: flex; align-items: center;">
-                        <div class="cluster-color" style="background: #${c.color.getHexString()};"></div>
-                        <span>クラスター ${i + 1}</span>
-                    </div>
-                    <span>${c.members.size} 資源</span>`;
-                list.appendChild(item);
-            });
-            document.getElementById('cluster-vis').style.display = simulationState.clusters.length > 0 ? 'block' : 'none';
-        }
+        const spatialGrid = new SpatialGrid(coneRadius * 4, 20);
 
         class ResourceParticle {
-            constructor(id, spawnTime = 0) {
+            constructor(id) {
                 this.id = id;
-                this.spawnTime = spawnTime;
                 this.age = 0;
-                this.clusterId = null;
-                this.generation = 0;
-                this.inheritedKnowledge = 0;
+                this.isActive = true;
+                this.hasSucceeded = false;
+                this.isQueued = false;
+                this.trail = [];
+                this.maxAge = 100 * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
                 
                 const typeRandom = Math.random();
-                if (parameters.heterogeneity > 0) {
-                    if (typeRandom < parameters.heterogeneity * 0.3) this.type = ParticleType.EXPLORER;
-                    else if (typeRandom < parameters.heterogeneity * 0.6) this.type = ParticleType.EXPLOITER;
-                    else this.type = ParticleType.STANDARD;
-                } else {
-                    this.type = ParticleType.STANDARD;
-                }
-                
+                if (typeRandom < parameters.heterogeneity * 0.3) this.type = ParticleType.EXPLORER;
+                else if (typeRandom < parameters.heterogeneity * 0.6) this.type = ParticleType.EXPLOITER;
+                else this.type = ParticleType.STANDARD;
                 this.setAttributesByType();
-                
+
                 const angle = Math.random() * Math.PI * 2;
                 const radius = Math.random() * coneRadius * 0.8;
                 this.position = new THREE.Vector3(Math.cos(angle) * radius, 0.5, Math.sin(angle) * radius);
                 this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
                 
                 this.createMesh();
-                this.trail = [];
-                this.maxTrailLength = 50;
-                this.isActive = true;
-                this.hasSucceeded = false;
-                this.maxAge = 100 * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
-                
-                if (this.inheritedKnowledge > 0) {
-                    this.velocity.y *= (1 + this.inheritedKnowledge * 0.1);
-                    this.trtAffinity *= (1 + this.inheritedKnowledge * 0.05);
-                }
             }
-            
             setAttributesByType() {
                 switch(this.type) {
-                    case ParticleType.EXPLORER:
-                        this.trtAffinity = 0.7; this.praAffinity = 1.3; this.size = 0.35;
-                        break;
-                    case ParticleType.EXPLOITER:
-                        this.trtAffinity = 1.3; this.praAffinity = 0.7; this.size = 0.4;
-                        break;
-                    default: // STANDARD
-                        this.trtAffinity = 1.0; this.praAffinity = 1.0; this.size = 0.3;
+                    case ParticleType.EXPLORER: this.trtAffinity = 0.7; this.praAffinity = 1.3; this.size = 0.35; break;
+                    case ParticleType.EXPLOITER: this.trtAffinity = 1.3; this.praAffinity = 0.7; this.size = 0.4; break;
+                    default: this.trtAffinity = 1.0; this.praAffinity = 1.0; this.size = 0.3;
                 }
             }
-            
             createMesh() {
                 let geometry;
                 switch(this.type) {
@@ -1360,174 +1112,80 @@
                     case ParticleType.EXPLOITER: geometry = new THREE.BoxGeometry(this.size * 1.5, this.size * 1.5, this.size * 1.5); break;
                     default: geometry = new THREE.SphereGeometry(this.size, 16, 16);
                 }
-                const material = new THREE.MeshPhongMaterial({ color: this.getColorByHeight(), transparent: true, opacity: 0.9, emissive: this.getColorByHeight(), emissiveIntensity: 0.3 });
+                const material = new THREE.MeshPhongMaterial({ color: this.getColorByHeight(), transparent: true, opacity: 0.9 });
                 this.mesh = new THREE.Mesh(geometry, material);
-                this.mesh.position.copy(this.position);
                 this.mesh.castShadow = true;
                 particlesGroup.add(this.mesh);
             }
-            
             getColorByHeight() {
-                const height = this.position.y;
-                if (height < 10) return 0x8b5cf6;
-                if (height < 20) return 0xef4444;
-                if (height < 30) return 0xf97316;
-                return 0x10b981;
+                const h = this.position.y;
+                if (h < 10) return 0x8b5cf6; if (h < 20) return 0xef4444; if (h < 30) return 0xf97316; return 0x10b981;
             }
-            
-            update(deltaTime, particles, params) {
+            update(deltaTime, allParticles) {
                 if (!this.isActive) return;
-                
-                this.age += deltaTime * params.timeScale;
-                const industryProfile = getCurrentIndustryProfile();
-                if ((this.age > this.maxAge && this.position.y < params.successThreshold * 0.8) || (Math.random() < industryProfile.attritionRate * deltaTime)) {
-                    this.die('attrition');
-                    return;
-                }
-                
+
+                this.age += deltaTime * parameters.timeScale;
+                if (this.age > this.maxAge) return this.die();
+
                 const heightRatio = this.position.y / coneHeight;
-                const nearVertexThreshold = params.successThreshold - params.capacityRadius;
-                if (this.position.y >= nearVertexThreshold && !this.hasSucceeded) {
-                    const nearVertexParticles = particles.filter(p => p.isActive && p.position.y >= nearVertexThreshold && !p.hasSucceeded);
-                    if (nearVertexParticles.length > params.vertexCapacity) {
-                        this.velocity.y *= params.congestionEffect;
-                        this.isQueued = true;
-                    } else {
-                        this.isQueued = false;
-                    }
-                }
                 
-                const trtStrength = params.trtForce * (1 - heightRatio) * params.trtAcceleration * this.trtAffinity;
-                this.velocity.y += (heightRatio < params.tippingPoint) ? trtStrength * deltaTime : trtStrength * deltaTime * 1.5;
-                
-                const praStrength = params.praForce * (1 - heightRatio) * params.praDiversity * this.praAffinity;
-                this.velocity.x += (Math.random() - 0.5) * praStrength * deltaTime;
-                this.velocity.z += (Math.random() - 0.5) * praStrength * deltaTime;
-                
+                // TRT & PRA forces
+                this.velocity.y += parameters.trtForce * (1 - heightRatio) * (heightRatio < parameters.tippingPoint ? 1 : 1.5) * this.trtAffinity * deltaTime;
+                this.velocity.x += (Math.random() - 0.5) * parameters.praForce * this.praAffinity * deltaTime;
+                this.velocity.z += (Math.random() - 0.5) * parameters.praForce * this.praAffinity * deltaTime;
+
+                // Gravity forces
                 const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
-                this.velocity.x += toCenter.x * params.centralConvergence * heightRatio * deltaTime;
-                this.velocity.z += toCenter.z * params.centralConvergence * heightRatio * deltaTime;
-                
-                const myCluster = simulationState.clusters.find(c => c.members.has(this.id));
-                if (myCluster) {
-                    const toClusterCenter = new THREE.Vector3().subVectors(myCluster.center, this.position).setY(0).normalize();
-                    const clusterForce = params.clusterConvergence * myCluster.strength;
-                    this.velocity.x += toClusterCenter.x * clusterForce * deltaTime;
-                    this.velocity.z += toClusterCenter.z * clusterForce * deltaTime;
-                }
-                
-                const nearbyParticles = spatialGrid.getNearbyParticles(this.position, params.attractionRange);
-                nearbyParticles.forEach(other => {
+                this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * heightRatio * deltaTime));
+
+                const nearby = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange);
+                nearby.forEach(other => {
                     if (other.id === this.id || !other.isActive) return;
-                    const distance = this.position.distanceTo(other.position);
-                    if (distance > 0.5) {
-                        const attractionForce = new THREE.Vector3().subVectors(other.position, this.position).normalize().multiplyScalar(params.peerAttraction / (distance * distance));
-                        this.velocity.add(attractionForce.multiplyScalar(deltaTime));
-                    }
+                    const attraction = new THREE.Vector3().subVectors(other.position, this.position);
+                    this.velocity.add(attraction.normalize().multiplyScalar(parameters.peerAttraction * deltaTime / attraction.lengthSq()));
                 });
                 
-                if (params.pathMemoryEnabled && pathMemory.getMemoryAt(this.position) > 0) {
-                     const gradientStep = 0.5;
-                     const memoryGradient = new THREE.Vector3(
-                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x + gradientStep, this.position.y, this.position.z)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x - gradientStep, this.position.y, this.position.z))) / (2 * gradientStep),
-                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y + gradientStep, this.position.z)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y - gradientStep, this.position.z))) / (2 * gradientStep),
-                         (pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y, this.position.z + gradientStep)) - pathMemory.getMemoryAt(new THREE.Vector3(this.position.x, this.position.y, this.position.z - gradientStep))) / (2 * gradientStep)
-                     );
-                     this.velocity.add(memoryGradient.multiplyScalar(params.pathMemoryStrength * deltaTime));
+                // Path memory
+                if (parameters.pathMemoryEnabled && pathMemory.getMemoryAt(this.position) > 0.01) {
+                    const gradient = new THREE.Vector3();
+                    const step = 0.5;
+                    gradient.x = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(step, 0, 0))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(step, 0, 0)));
+                    gradient.y = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(0, step, 0))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(0, step, 0)));
+                    gradient.z = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(0, 0, step))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(0, 0, step)));
+                    this.velocity.add(gradient.multiplyScalar(parameters.pathMemoryStrength * deltaTime));
                 }
-                
-                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * params.simulationSpeed));
-                if (visibility.trails) this.trail.push(this.position.clone());
-                
-                const tiltMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-params.coneTiltX * Math.PI / 180, 0, -params.coneTiltZ * Math.PI / 180));
-                const localPos = this.position.clone().applyMatrix4(tiltMatrix);
-                let effectiveX = localPos.x / params.asymmetryX;
-                let effectiveZ = localPos.z / params.asymmetryZ;
-                let currentRadius = Math.sqrt(effectiveX ** 2 + effectiveZ ** 2);
-                const maxRadiusAtCurrentHeight = coneRadius * (1 - localPos.y / coneHeight);
-                if (currentRadius > maxRadiusAtCurrentHeight) {
-                    const scale = maxRadiusAtCurrentHeight / currentRadius * 0.95;
-                    localPos.x = effectiveX * scale * params.asymmetryX;
-                    localPos.z = effectiveZ * scale * params.asymmetryZ;
-                    this.position.copy(localPos.applyMatrix4(tiltMatrix.clone().invert()));
-                    const normal = new THREE.Vector3(effectiveX, 0, effectiveZ).normalize();
-                    this.velocity.sub(normal.multiplyScalar(2 * this.velocity.dot(normal))).multiplyScalar(0.5);
+
+                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * parameters.simulationSpeed));
+
+                // Boundary constraints
+                const localPos = this.position.clone().applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(coneGroup.rotation).invert());
+                const currentRadius = Math.sqrt(Math.pow(localPos.x / parameters.asymmetryX, 2) + Math.pow(localPos.z / parameters.asymmetryZ, 2));
+                const maxRadius = coneRadius * (1 - localPos.y / coneHeight);
+                if (currentRadius > maxRadius) {
+                    const scale = maxRadius / currentRadius * 0.95;
+                    localPos.x *= scale;
+                    localPos.z *= scale;
+                    this.position.copy(localPos.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(coneGroup.rotation)));
                 }
-                
-                if (this.position.y >= params.successThreshold && !this.hasSucceeded) {
-                    const vertexOccupants = particles.filter(p => p.hasSucceeded || (p.isActive && p.position.y >= params.successThreshold));
-                    const successProbability = industryProfile.baseSuccessRate + (this.inheritedKnowledge * 0.05) + (this.generation * 0.02);
-                    if (vertexOccupants.length < params.vertexCapacity && Math.random() < successProbability) {
-                        this.succeed();
-                    } else if (industryProfile.capacityConstraint && vertexOccupants.length >= params.vertexCapacity) {
-                        this.die('congestion');
-                    }
-                }
-                
+
+                if (this.position.y >= parameters.successThreshold) return this.succeed();
+
                 this.mesh.position.copy(this.position);
-                this.mesh.material.color.setHex(myCluster ? new THREE.Color(this.getColorByHeight()).lerp(myCluster.color, 0.3).getHex() : this.getColorByHeight());
-                this.mesh.material.emissive.setHex(this.getColorByHeight());
-                this.mesh.material.opacity = (this.isQueued ? 0.6 : 1) * 0.9 * (1 - (this.age / this.maxAge) * 0.3);
+                this.mesh.material.color.setHex(this.getColorByHeight());
                 this.velocity.multiplyScalar(0.98);
             }
-            
             succeed() {
+                if (!this.isActive) return;
                 this.hasSucceeded = true;
                 simulationState.successCount++;
                 if (parameters.pathMemoryEnabled) {
-                    this.trail.forEach((pos, i) => pathMemory.addMemory(pos, (i / this.trail.length) * 0.5 + 0.5));
-                    pathMemory.addMemory(this.position, 2.0);
+                     this.trail.forEach((pos, i) => pathMemory.addMemory(pos, 0.5 + (i / this.trail.length) * 0.5));
                 }
                 this.remove();
             }
-            
-            die(reason = 'natural') {
-                if (!this.isActive) return;
-                this.isActive = false;
-                if (parameters.knowledgeTransferRate > 0) this.transferKnowledge();
-                this.createMisfireEffect();
+            die() {
+                this.remove();
             }
-            
-            recycle() {
-                this.position.set(Math.cos(Math.random() * 2 * Math.PI) * coneRadius * 0.7, Math.random() * 10 + 5, Math.sin(Math.random() * 2 * Math.PI) * coneRadius * 0.7);
-                this.velocity.set((Math.random() - 0.5) * 0.03, Math.random() * 0.02 + 0.015, (Math.random() - 0.5) * 0.03);
-                this.generation++;
-                this.inheritedKnowledge += 0.2;
-                this.trtAffinity *= 1.1;
-                this.maxAge *= 1.2;
-                this.age = 0;
-                this.isActive = true;
-                this.hasSucceeded = false;
-            }
-            
-            transferKnowledge() {
-                const nearby = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange * 2);
-                const knowledgePerParticle = this.inheritedKnowledge / Math.max(1, nearby.length);
-                nearby.forEach(other => {
-                    if (other.isActive && other.id !== this.id) {
-                        other.inheritedKnowledge += knowledgePerParticle * parameters.knowledgeTransferRate;
-                    }
-                });
-            }
-            
-            createMisfireEffect() {
-                this.velocity.y *= 0.3;
-                this.velocity.x *= 0.5;
-                this.velocity.z *= 0.5;
-                const animateFlight = () => {
-                    if (this.mesh.material.opacity > 0.1) {
-                        this.velocity.y -= 0.002;
-                        this.position.add(this.velocity.clone().multiplyScalar(0.1));
-                        this.mesh.position.copy(this.position);
-                        this.mesh.material.opacity *= 0.98;
-                        requestAnimationFrame(animateFlight);
-                    } else {
-                        this.remove();
-                    }
-                };
-                animateFlight();
-            }
-            
             remove() {
                 this.isActive = false;
                 particlesGroup.remove(this.mesh);
@@ -1536,118 +1194,87 @@
 
         let particles = [];
         let nextParticleId = 0;
-        
         function spawnParticles(count) {
             for (let i = 0; i < count; i++) {
-                particles.push(new ResourceParticle(nextParticleId++, simulationState.elapsedTime));
+                particles.push(new ResourceParticle(nextParticleId++));
                 simulationState.totalSpawned++;
             }
         }
-        
         function createInitialParticles() {
             particles.forEach(p => p.remove());
             particles = [];
             nextParticleId = 0;
-            if (simulationState.mode === 'single' && parameters.initialParticles > 0) {
-                spawnParticles(parameters.initialParticles);
-            }
+            if (simulationState.mode === 'single') spawnParticles(parameters.initialParticles);
         }
 
         createCone();
         createSections();
-        createSpiral();
         createInitialParticles();
 
         function setMode(mode, button) {
             simulationState.mode = mode;
             document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
             if (button) button.classList.add('active');
-            document.getElementById('comparison-panel').classList.toggle('active', mode === 'comparison');
             resetSimulation();
         }
 
-        document.querySelectorAll('input[type="range"], select, input[type="checkbox"]').forEach(input => {
-            input.addEventListener('input', function() {
-                const param = this.id;
-                const value = this.type === 'checkbox' ? this.checked : (this.type === 'range' ? parseFloat(this.value) : this.value);
-                parameters[param] = value;
-                const valueElem = document.getElementById(`${param}-value`);
-                if(valueElem) {
-                    if (this.type === 'checkbox') valueElem.textContent = value ? '有効' : '無効';
-                    else if (typeof value === 'number' && !Number.isInteger(value)) valueElem.textContent = value.toFixed(3);
-                    else valueElem.textContent = value;
-                }
-                if (['successThreshold', 'coneTiltX', 'coneTiltZ', 'asymmetryX', 'asymmetryZ'].includes(param)) {
-                    createSections();
-                    createCone();
+        function updateAllParameters() {
+             Object.keys(parameters).forEach(key => {
+                const input = document.getElementById(key);
+                if(input) {
+                    const value = input.type === 'checkbox' ? input.checked : (input.type === 'range' ? parseFloat(input.value) : input.value);
+                    parameters[key] = value;
+                    const valueElem = document.getElementById(`${key}-value`);
+                    if(valueElem) {
+                        if (input.type === 'checkbox') valueElem.textContent = value ? '有効' : '無効';
+                        else if (typeof value === 'number' && !Number.isInteger(value)) valueElem.textContent = value.toFixed(3);
+                        else valueElem.textContent = value;
+                    }
                 }
             });
-        });
+            createCone();
+            createSections();
+        }
+        document.querySelectorAll('input, select').forEach(input => input.addEventListener('input', updateAllParameters));
 
         function togglePanel() {
-            const panel = document.getElementById('control-panel');
-            panel.classList.toggle('collapsed');
-            document.querySelector('.collapse-button').textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+            document.getElementById('control-panel').classList.toggle('collapsed');
         }
 
         function toggleElement(element) {
             visibility[element] = !visibility[element];
-            const groups = { cone: coneGroup, sections: sectionsGroup, spiral: spiralGroup, success: successGroup, trails: trailsGroup, clusters: clustersGroup, gravity: gravityGroup, pathMemory: pathMemoryGroup };
+            const groups = { cone: coneGroup, sections: sectionsGroup, particles: particlesGroup };
             if(groups[element]) groups[element].visible = visibility[element];
             document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`).classList.toggle('active', visibility[element]);
         }
-
-        function loadPreset(preset, button) {
+        function loadPreset(preset) {
             const presets = {
-                centralized: { trtForce: 0.015, praForce: 0.015, centralConvergence: 0.05, clusterConvergence: 0.01, peerAttraction: 0.005, heterogeneity: 0.3 },
-                distributed: { trtForce: 0.012, praForce: 0.025, centralConvergence: 0.015, clusterConvergence: 0.04, peerAttraction: 0.02, heterogeneity: 0.7 },
-                hybrid: { trtForce: 0.015, praForce: 0.02, centralConvergence: 0.03, clusterConvergence: 0.02, peerAttraction: 0.01, heterogeneity: 0.5 },
-                emergent: { trtForce: 0.010, praForce: 0.03, centralConvergence: 0.01, clusterConvergence: 0.05, peerAttraction: 0.025, heterogeneity: 0.9 }
+                centralized: { trtForce: 0.015, praForce: 0.015, centralConvergence: 0.05, peerAttraction: 0.005 },
+                distributed: { trtForce: 0.012, praForce: 0.025, centralConvergence: 0.015, peerAttraction: 0.02 },
+                hybrid: { trtForce: 0.015, praForce: 0.02, centralConvergence: 0.03, peerAttraction: 0.01 },
+                emergent: { trtForce: 0.010, praForce: 0.03, centralConvergence: 0.01, peerAttraction: 0.025 }
             };
-            const selectedPreset = presets[preset] || presets.hybrid;
-            Object.keys(selectedPreset).forEach(key => {
+            const selected = presets[preset] || presets.hybrid;
+            Object.keys(selected).forEach(key => {
                 const input = document.getElementById(key);
                 if (input) {
-                    parameters[key] = selectedPreset[key];
-                    input.value = selectedPreset[key];
-                    const valueElem = document.getElementById(`${key}-value`);
-                    if(valueElem) valueElem.textContent = selectedPreset[key].toFixed(3);
+                    parameters[key] = selected[key];
+                    input.value = selected[key];
                 }
             });
-            document.querySelectorAll('.preset-button').forEach(btn => btn.classList.remove('active'));
-            if (button) button.classList.add('active');
-            
-            // Trigger input event to update everything
-            Object.keys(selectedPreset).forEach(key => {
-                const input = document.getElementById(key);
-                if (input) input.dispatchEvent(new Event('input'));
-            });
+            updateAllParameters();
+            document.querySelectorAll('.preset-button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
-        function startSimulation() {
-            simulationState.isRunning = true;
-            simulationState.isPaused = false;
-        }
-        
-        function pauseSimulation() {
-            simulationState.isPaused = !simulationState.isPaused;
-        }
-        
+        function startSimulation() { simulationState.isRunning = true; simulationState.isPaused = false; }
+        function pauseSimulation() { simulationState.isPaused = !simulationState.isPaused; }
         function resetSimulation() {
             simulationState.isRunning = false;
             simulationState.isPaused = false;
             simulationState.elapsedTime = 0;
             simulationState.totalSpawned = 0;
             simulationState.successCount = 0;
-            simulationState.lastSpawnTime = 0;
-            
-            simulationState.clusters.forEach(c => c.remove());
-            simulationState.clusters = [];
-            
-            particles.forEach(p => p.remove());
-            particles = [];
-            nextParticleId = 0;
-            
             createInitialParticles();
             updateStats();
         }
@@ -1659,14 +1286,9 @@
             document.getElementById('success-count').textContent = simulationState.successCount;
             document.getElementById('success-rate').textContent = `${(simulationState.totalSpawned > 0 ? (simulationState.successCount / simulationState.totalSpawned) * 100 : 0).toFixed(1)}%`;
             document.getElementById('sim-time').textContent = `${simulationState.elapsedTime.toFixed(1)}年`;
-            
-            const avgTrt = active.length > 0 ? active.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / active.length : 0;
-            document.getElementById('avg-trt').textContent = avgTrt.toFixed(3);
-
-            const queuedParticles = particles.filter(p => p.isQueued).length;
-            document.getElementById('queued-particles').textContent = queuedParticles;
+            document.getElementById('avg-trt').textContent = (active.length > 0 ? active.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / active.length : 0).toFixed(3);
         }
-        
+
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
@@ -1675,19 +1297,17 @@
             if (simulationState.isRunning && !simulationState.isPaused) {
                 simulationState.elapsedTime += deltaTime * parameters.timeScale;
                 
-                if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
+                if (Math.floor(simulationState.elapsedTime / parameters.spawnInterval) > Math.floor((simulationState.elapsedTime - deltaTime * parameters.timeScale) / parameters.spawnInterval)) {
                     spawnParticles(parameters.batchSize);
-                    simulationState.lastSpawnTime = simulationState.elapsedTime;
                 }
                 
-                particles.forEach(p => p.update(deltaTime, particles, parameters));
+                spatialGrid.clear();
+                particles.forEach(p => { if (p.isActive) spatialGrid.insert(p); });
+                
+                particles.forEach(p => p.update(deltaTime, particles));
                 particles = particles.filter(p => p.isActive);
                 
-                updateClusters(particles);
-                simulationState.clusters.forEach(c => c.update(particles));
-                
-                if (parameters.pathMemoryEnabled) pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
-                
+                if(parameters.pathMemoryEnabled) pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
                 updateStats();
             }
             
@@ -1700,19 +1320,11 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }, false);
-
-        // Initial setup to sync UI with default parameters
-        Object.keys(parameters).forEach(key => {
-            const input = document.getElementById(key);
-            if(input) {
-                input.value = parameters[key];
-                if (input.type === 'checkbox') input.checked = parameters[key];
-                input.dispatchEvent(new Event('input'));
-            }
         });
-        loadPreset('hybrid');
 
+        // Initialize UI on load
+        updateAllParameters();
+        document.querySelector('.preset-button').click(); // Click the first preset
     </script>
 </body>
 </html>
