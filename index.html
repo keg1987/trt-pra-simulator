@@ -3,904 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRT・PRA理論 インタラクティブ・シミュレータ v4.0 - 多重重力源モデル</title>
+    <title>TRT・PRA 戦略シミュレータ v5.1 - 戦略的初期配置</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            background: #f0f0f0;
-            overflow: hidden;
-        }
-        #canvas-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        #control-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            width: 320px;
-            max-height: 70vh;
-            overflow-y: auto;
-            z-index: 100;
-        }
-        #control-panel.collapsed {
-            height: auto;
-            max-height: 60px;
-            overflow: hidden;
-        }
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .collapse-button {
-            width: 30px;
-            height: 30px;
-            background: #e5e7eb;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-        .collapse-button:hover {
-            background: #d1d5db;
-        }
-        .panel-content {
-            transition: all 0.3s ease;
-        }
-        #control-panel.collapsed .panel-content {
-            display: none;
-        }
-        h1 {
-            font-size: 18px;
-            margin: 0;
-            color: #1f2937;
-        }
-        h2 {
-            font-size: 14px;
-            margin: 15px 0 10px 0;
-            color: #374151;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 5px;
-        }
-        .parameter-group {
-            background: #f9fafb;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            border: 1px solid #e5e7eb;
-        }
-        .parameter {
-            margin-bottom: 12px;
-        }
-        .parameter label {
-            display: block;
-            font-size: 12px;
-            color: #4b5563;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        .parameter input[type="range"] {
-            width: 100%;
-            height: 5px;
-            border-radius: 3px;
-            background: #e5e7eb;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        .parameter input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .parameter input[type="range"]::-webkit-slider-thumb:hover {
-            background: #2563eb;
-        }
-        .parameter-value {
-            display: inline-block;
-            font-size: 11px;
-            color: #6b7280;
-            margin-left: 8px;
-            min-width: 40px;
-            text-align: right;
-        }
-        .preset-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-        .preset-button {
-            padding: 6px 12px;
-            background: #6b7280;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-        }
-        .preset-button:hover {
-            background: #4b5563;
-            transform: translateY(-1px);
-        }
-        .preset-button.active {
-            background: #10b981;
-        }
-        .stats-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            z-index: 100;
-            min-width: 280px;
-        }
-        .stat-item {
-            margin: 8px 0;
-            font-size: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .stat-label {
-            color: #4b5563;
-            font-weight: 600;
-        }
-        .stat-value {
-            color: #1f2937;
-            font-weight: 700;
-            font-size: 13px;
-        }
-        .stat-highlight {
-            background: #fef3c7;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin: 4px 0;
-        }
-        .info-box {
-            background: #dbeafe;
-            border-left: 4px solid #3b82f6;
-            padding: 10px;
-            margin: 12px 0;
-            font-size: 11px;
-            color: #1e40af;
-            border-radius: 4px;
-        }
-        .warning-box {
-            background: #fee2e2;
-            border-left: 4px solid #ef4444;
-            padding: 10px;
-            margin: 12px 0;
-            font-size: 11px;
-            color: #991b1b;
-            border-radius: 4px;
-        }
-        .toggle-buttons {
-            display: flex;
-            gap: 6px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-        .toggle-button {
-            padding: 5px 10px;
-            background: #e5e7eb;
-            color: #4b5563;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-            flex: 1;
-            min-width: 60px;
-        }
-        .toggle-button:hover {
-            background: #d1d5db;
-        }
-        .toggle-button.active {
-            background: #3b82f6;
-            color: white;
-        }
-        .legend {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            z-index: 100;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 6px 0;
-            font-size: 11px;
-        }
-        .legend-color {
-            width: 18px;
-            height: 18px;
-            margin-right: 8px;
-            border-radius: 3px;
-            border: 1px solid #e5e7eb;
-        }
-        .legend-shape {
-            width: 18px;
-            height: 18px;
-            margin-right: 8px;
-            border: 2px solid #374151;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .time-controls {
-            background: #ecfdf5;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            border: 1px solid #86efac;
-        }
-        .simulation-controls {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .control-button {
-            padding: 6px 12px;
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-            flex: 1;
-        }
-        .control-button:hover {
-            background: #059669;
-        }
-        .control-button:disabled {
-            background: #d1d5db;
-            cursor: not-allowed;
-        }
-        .success-counter {
-            background: #fef3c7;
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 12px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            color: #92400e;
-        }
-        .comparison-panel {
-            position: absolute;
-            top: 200px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            z-index: 99;
-            width: 320px;
-            max-height: 400px;
-            overflow-y: auto;
-            display: none;
-            transition: all 0.3s ease;
-        }
-        .comparison-panel.collapsed {
-            height: auto;
-            max-height: 50px;
-            overflow: hidden;
-        }
-        .comparison-panel.collapsed #comparison-content {
-            display: none;
-        }
-        .comparison-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .comparison-header h2 {
-            margin: 0;
-            font-size: 16px;
-        }
-        .comparison-collapse-btn {
-            width: 24px;
-            height: 24px;
-            background: #e5e7eb;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-        .comparison-collapse-btn:hover {
-            background: #d1d5db;
-        }
-        .comparison-panel.active {
-            display: block;
-        }
-        .scenario-card {
-            background: #f9fafb;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            border: 1px solid #e5e7eb;
-        }
-        .scenario-card.active {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
-        .scenario-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .scenario-name {
-            font-weight: 600;
-            color: #1f2937;
-        }
-        .scenario-controls {
-            display: flex;
-            gap: 4px;
-        }
-        .scenario-button {
-            padding: 4px 8px;
-            background: #e5e7eb;
-            color: #4b5563;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 10px;
-            transition: all 0.2s;
-        }
-        .scenario-button:hover {
-            background: #d1d5db;
-        }
-        .comparison-chart {
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 12px;
-            height: 300px;
-        }
-        .mode-selector {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            background: #f3f4f6;
-            padding: 4px;
-            border-radius: 6px;
-        }
-        .mode-button {
-            padding: 8px 16px;
-            background: transparent;
-            color: #6b7280;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-            flex: 1;
-        }
-        .mode-button.active {
-            background: white;
-            color: #1f2937;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        .cluster-visualization {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            z-index: 100;
-            min-width: 200px;
-        }
-        .cluster-item {
-            margin: 6px 0;
-            font-size: 11px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .cluster-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
-        }
-        .tooltip-icon {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            background: #6b7280;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 14px;
-            font-size: 10px;
-            margin-left: 4px;
-            cursor: help;
-        }
-        .tooltip-content {
-            visibility: hidden;
-            width: 250px;
-            background-color: #1f2937;
-            color: #fff;
-            text-align: left;
-            padding: 8px 10px;
-            border-radius: 6px;
-            position: absolute;
-            z-index: 1000;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -125px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 11px;
-            line-height: 1.4;
-        }
-        .tooltip-content::after {
-            content: "";
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: #1f2937 transparent transparent transparent;
-        }
-        .tooltip-container:hover .tooltip-content {
-            visibility: visible;
-            opacity: 1;
-        }
+        body { margin: 0; font-family: 'Arial', sans-serif; background: #f0f0f0; overflow: hidden; }
+        #canvas-container { position: relative; width: 100vw; height: 100vh; }
+        .panel { position: absolute; background: rgba(255, 255, 255, 0.98); padding: 20px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 100; }
+        #control-panel { bottom: 20px; left: 20px; width: 340px; max-height: 90vh; overflow-y: auto; }
+        #stats-panel { top: 20px; right: 20px; width: 300px; }
+        h1, h2 { color: #1f2937; margin-top: 0; }
+        h1 { font-size: 20px; }
+        h2 { font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; }
+        .parameter-group { margin-bottom: 15px; }
+        .parameter { margin-bottom: 10px; }
+        .parameter label { display: block; font-size: 12px; color: #4b5563; margin-bottom: 4px; font-weight: 600; }
+        .parameter input[type="range"], .parameter select { width: 100%; }
+        .parameter-value { font-size: 12px; color: #6b7280; margin-left: 8px; }
+        .button-group { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
+        .btn { padding: 8px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.2s; flex-grow: 1; }
+        .btn:hover { background: #2563eb; }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #4b5563; }
+        .stat-item { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; }
+        .stat-label { color: #4b5563; }
+        .stat-value { font-weight: 700; color: #1f2937; }
+        .legend { position: absolute; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.98); padding: 15px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 100; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 12px; }
+        .legend-color { width: 15px; height: 15px; margin-right: 8px; border-radius: 3px; }
     </style>
 </head>
 <body>
-    <div id="canvas-container">
-        <div class="legend">
-            <h2 style="margin-top: 0; font-size: 14px;">資源の発展段階</h2>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #8b5cf6;"></div>
-                <span>純粋探索</span>
+    <div id="canvas-container"></div>
+    <div id="legend-panel" class="panel legend">
+        <h2 style="font-size: 14px;">資源の発展段階</h2>
+        <div class="legend-item"><div class="legend-color" style="background: #8b5cf6;"></div><span>純粋探索</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div><span>移行期</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #f97316;"></div><span>応用開発</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div><span>市場活用</span></div>
+    </div>
+    <div id="stats-panel" class="panel">
+        <h2>リアルタイム指標</h2>
+        <div class="stat-item"><span class="stat-label">シミュレーション時間:</span><span class="stat-value" id="sim-time">0.0年</span></div>
+        <div class="stat-item"><span class="stat-label">市場化成功数:</span><span class="stat-value" id="success-count">0</span></div>
+        <div class="stat-item"><span class="stat-label">成功率:</span><span class="stat-value" id="success-rate">0.0%</span></div>
+        <div class="stat-item"><span class="stat-label">活性資源数:</span><span class="stat-value" id="active-particles">0</span></div>
+        <div class="stat-item"><span class="stat-label">累計投入資源:</span><span class="stat-value" id="total-spawned">0</span></div>
+    </div>
+    <div id="control-panel" class="panel">
+        <h1>TRT・PRA 戦略シミュレータ v5.1</h1>
+        <div class="parameter-group">
+            <h2>戦略的初期配置</h2>
+            <div class="parameter">
+                <label for="initialPlacementStrategy">初期配置戦略</label>
+                <select id="initialPlacementStrategy" onchange="updateParameters()">
+                    <option value="random">ランダム</option>
+                    <option value="focused">集中型</option>
+                    <option value="diversified">分散型</option>
+                    <option value="clustered">クラスター型</option>
+                    <option value="edge">エッジ探索型</option>
+                </select>
             </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #ef4444;"></div>
-                <span>移行期</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #f97316;"></div>
-                <span>応用開発</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #10b981;"></div>
-                <span>市場活用</span>
-            </div>
-            <h2 style="font-size: 14px; margin-top: 15px;">資源タイプ</h2>
-            <div class="legend-item">
-                <div class="legend-shape" style="border-radius: 50%;">●</div>
-                <span>標準資源</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-shape">▲</div>
-                <span>探索特化型</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-shape">■</div>
-                <span>活用特化型</span>
-            </div>
-        </div>
-        <div class="stats-panel">
-            <h2 style="margin-top: 0; font-size: 16px;">リアルタイム指標</h2>
-            <div class="stat-highlight">
-                <div class="stat-item">
-                    <span class="stat-label">シミュレーション時間:</span>
-                    <span class="stat-value" id="sim-time">0.0年</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">市場化成功数:</span>
-                    <span class="stat-value" id="success-count">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">成功率:</span>
-                    <span class="stat-value" id="success-rate">0.0%</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">活性資源数:</span>
-                <span class="stat-value" id="active-particles">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">累計投入資源:</span>
-                <span class="stat-value" id="total-spawned">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">平均TRT進行度:</span>
-                <span class="stat-value" id="avg-trt">0.000</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">PRA分散度:</span>
-                <span class="stat-value" id="pra-dispersion">0.000</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">資源多様性指数:</span>
-                <span class="stat-value" id="diversity-index">0.000</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">クラスター数:</span>
-                <span class="stat-value" id="cluster-count">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">重力源数:</span>
-                <span class="stat-value" id="gravity-sources">1</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">頂点混雑度:</span>
-                <span class="stat-value" id="vertex-congestion">0%</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">待機中資源数:</span>
-                <span class="stat-value" id="queued-particles">0</span>
+            <div class="parameter">
+                <label for="initialParticles">初期資源数<span class="parameter-value" id="initialParticles-value">20</span></label>
+                <input type="range" id="initialParticles" min="1" max="100" value="20" step="1" oninput="updateParameters()">
             </div>
         </div>
-
-        <div id="control-panel">
-            <div class="panel-header">
-                <h1>TRT・PRA 戦略シミュレータ v4.0</h1>
-                <button class="collapse-button" onclick="togglePanel()">▼</button>
+        <div class="parameter-group">
+            <h2>シミュレーション制御</h2>
+            <div class="parameter">
+                <label for="timeScale">時間スケール<span class="parameter-value" id="timeScale-value">0.1</span></label>
+                <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01" oninput="updateParameters()">
             </div>
-            <div class="panel-content">
-                <div class="warning-box">
-                    <strong>v4.0 革新的機能：</strong>多重重力源モデル - 中央戦略、クラスター、プロジェクト間の複雑な引力相互作用を実装
-                </div>
-                <div class="mode-selector">
-                    <button class="mode-button active" onclick="setMode('single', this)">単独シミュレーション</button>
-                    <button class="mode-button" onclick="setMode('comparison', this)">比較分析モード <span style="font-size: 10px;">(開発中)</span></button>
-                </div>
-                <div class="time-controls">
-                    <h2>時間シミュレーション</h2>
-                    <div class="parameter">
-                        <label>時間スケール（1秒 = X年）<span class="parameter-value" id="timeScale-value">0.100</span></label>
-                        <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01">
-                    </div>
-                    <div class="parameter">
-                        <label>資源投入間隔（年）<span class="parameter-value" id="spawnInterval-value">0.500</span></label>
-                        <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>バッチサイズ（同時投入数）<span class="parameter-value" id="batchSize-value">3</span></label>
-                        <input type="range" id="batchSize" min="1" max="10" value="3" step="1">
-                    </div>
-                    <div class="simulation-controls">
-                        <button class="control-button" onclick="startSimulation()">開始</button>
-                        <button class="control-button" onclick="pauseSimulation()">一時停止</button>
-                        <button class="control-button" onclick="resetSimulation()">リセット</button>
-                    </div>
-                </div>
-                <div class="preset-buttons">
-                    <button class="preset-button" onclick="loadPreset('centralized', this)">中央集権型</button>
-                    <button class="preset-button" onclick="loadPreset('distributed', this)">分散自律型</button>
-                    <button class="preset-button" onclick="loadPreset('hybrid', this)">ハイブリッド型</button>
-                    <button class="preset-button" onclick="loadPreset('emergent', this)">創発重視型</button>
-                </div>
-                <div class="parameter-group">
-                    <h2>資源特性</h2>
-                    <div class="parameter">
-                        <label>資源異質性<span class="parameter-value" id="heterogeneity-value">0.500</span></label>
-                        <input type="range" id="heterogeneity" min="0" max="1.0" value="0.5" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>資源寿命変動<span class="parameter-value" id="lifespanVariance-value">0.300</span></label>
-                        <input type="range" id="lifespanVariance" min="0" max="1.0" value="0.3" step="0.1">
-                    </div>
-                </div>
-                <div class="parameter-group">
-                    <h2>TRT（時間軸的資源移行）
-                        <span class="tooltip-container">
-                            <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">探索から活用への段階的な移行を表します。<br>垂直推進力：研究開発から市場投入への移行速度<br>上昇加速度：成熟段階での成長加速度<br>ティッピングポイント：急成長が始まる臨界点</span>
-                        </span>
-                    </h2>
-                    <div class="parameter">
-                        <label>垂直推進力<span class="parameter-value" id="trtForce-value">0.015</span></label>
-                        <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001">
-                    </div>
-                    <div class="parameter">
-                        <label>上昇加速度<span class="parameter-value" id="trtAcceleration-value">1.000</span></label>
-                        <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>ティッピングポイント<span class="parameter-value" id="tippingPoint-value">0.700</span></label>
-                        <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05">
-                    </div>
-                </div>
-                <div class="parameter-group">
-                    <h2>PRA（並列的資源配分）
-                        <span class="tooltip-container">
-                            <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">多様な研究プロジェクトへの同時的な資源配分を表します。<br>水平拡散力：プロジェクト間の資源分散度<br>多様性維持係数：ポートフォリオの多様性を保つ強さ</span>
-                        </span>
-                    </h2>
-                    <div class="parameter">
-                        <label>水平拡散力<span class="parameter-value" id="praForce-value">0.020</span></label>
-                        <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001">
-                    </div>
-                    <div class="parameter">
-                        <label>多様性維持係数<span class="parameter-value" id="praDiversity-value">1.000</span></label>
-                        <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1">
-                    </div>
-                </div>
-                <div class="parameter-group" style="background: #f0fdf4; border-color: #86efac;">
-                    <h2>多重重力源ダイナミクス【NEW】
-                        <span class="tooltip-container">
-                            <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">組織内の多層的な引力構造を表現します。<br>中央収束力：本社・経営陣の戦略的統制力<br>クラスター収束力：部門間の協働の強さ<br>クラスター慣性：過度な内部結束による市場化阻害<br>市場引力：市場ニーズによる牽引力<br>粒子間引力：個人/プロジェクト間の自発的協力</span>
-                        </span>
-                    </h2>
-                    <div class="parameter">
-                        <label>中央収束力<span class="parameter-value" id="centralConvergence-value">0.030</span></label>
-                        <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>クラスター内収束力<span class="parameter-value" id="clusterConvergence-value">0.020</span></label>
-                        <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.02" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>クラスター慣性【NEW】<span class="parameter-value" id="clusterInertia-value">0.015</span></label>
-                        <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>市場引力【NEW】<span class="parameter-value" id="marketPull-value">0.020</span></label>
-                        <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>クラスター透過性【NEW】<span class="parameter-value" id="clusterPermeability-value">0.800</span></label>
-                        <input type="range" id="clusterPermeability" min="0" max="1.0" value="0.8" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>粒子間引力<span class="parameter-value" id="peerAttraction-value">0.010</span></label>
-                        <input type="range" id="peerAttraction" min="0" max="0.05" value="0.01" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>引力作用範囲<span class="parameter-value" id="attractionRange-value">5</span></label>
-                        <input type="range" id="attractionRange" min="2" max="10" value="5" step="1">
-                    </div>
-                    <div class="parameter">
-                        <label>クラスター形成閾値<span class="parameter-value" id="clusterThreshold-value">3</span></label>
-                        <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1">
-                    </div>
-                </div>
-                <div class="parameter-group">
-                    <h2>収束ダイナミクス</h2>
-                    <div class="parameter">
-                        <label>成功閾値（高さ）<span class="parameter-value" id="successThreshold-value">38.000</span></label>
-                        <input type="range" id="successThreshold" min="35" max="39.5" value="38" step="0.5">
-                    </div>
-                </div>
-                <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
-                    <h2>産業特性と資源再利用【NEW】
-                        <span class="tooltip-container">
-                            <span class="tooltip-icon">?</span>
-                            <span class="tooltip-content">産業による成功率の違いと失敗資源の扱いを設定します。<br>バイオ：低成功率・高知識価値<br>ソフトウェア：高成功率・渋滞発生<br>消費財：中成功率・中程度の再利用</span>
-                        </span>
-                    </h2>
-                    <div class="parameter">
-                        <label>産業プロファイル<span class="parameter-value" id="industryProfile-value">hybrid</span></label>
-                        <select id="industryProfile" style="width: 100%; padding: 4px; font-size: 11px;">
-                            <option value="biotech">バイオテクノロジー</option>
-                            <option value="software">ソフトウェア・IT</option>
-                            <option value="consumer">消費財・製造業</option>
-                            <option value="hybrid" selected>ハイブリッド型</option>
-                        </select>
-                    </div>
-                    <div class="parameter">
-                        <label>資源リサイクル率<span class="parameter-value" id="resourceRecycleRate-value">0.700</span></label>
-                        <input type="range" id="resourceRecycleRate" min="0" max="1.0" value="0.7" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>知識継承率<span class="parameter-value" id="knowledgeTransferRate-value">0.300</span></label>
-                        <input type="range" id="knowledgeTransferRate" min="0" max="1.0" value="0.3" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>自然減衰率<span class="parameter-value" id="attritionRate-value">0.020</span></label>
-                        <input type="range" id="attritionRate" min="0" max="0.1" value="0.02" step="0.01">
-                    </div>
-                </div>
-                <div class="parameter-group" style="background: #fef3c7; border-color: #fbbf24;">
-                    <h2>頂点容量制限</h2>
-                    <div class="parameter">
-                        <label>頂点最大容量<span class="parameter-value" id="vertexCapacity-value">5</span></label>
-                        <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1">
-                    </div>
-                    <div class="parameter">
-                        <label>容量制限半径<span class="parameter-value" id="capacityRadius-value">2.000</span></label>
-                        <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5">
-                    </div>
-                    <div class="parameter">
-                        <label>混雑効果係数<span class="parameter-value" id="congestionEffect-value">0.800</span></label>
-                        <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05">
-                    </div>
-                    <div class="parameter">
-                        <label>待機行動<span class="parameter-value" id="queueingBehavior-value">priority</span></label>
-                        <select id="queueingBehavior" style="width: 100%; padding: 4px; font-size: 11px;">
-                            <option value="priority">優先順位</option>
-                            <option value="random">ランダム</option>
-                            <option value="pushback">押し戻し</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="parameter-group" style="background: #e0f2fe; border-color: #0284c7;">
-                    <h2>環境バイアス【新機能】</h2>
-                    <div class="parameter">
-                        <label>円錐傾斜X軸（度）<span class="parameter-value" id="coneTiltX-value">0</span></label>
-                        <input type="range" id="coneTiltX" min="-30" max="30" value="0" step="5">
-                    </div>
-                    <div class="parameter">
-                        <label>円錐傾斜Z軸（度）<span class="parameter-value" id="coneTiltZ-value">0</span></label>
-                        <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5">
-                    </div>
-                    <div class="parameter">
-                        <label>断面非対称性X<span class="parameter-value" id="asymmetryX-value">1.000</span></label>
-                        <input type="range" id="asymmetryX" min="0.5" max="2.0" value="1.0" step="0.1">
-                    </div>
-                    <div class="parameter">
-                        <label>断面非対称性Z<span class="parameter-value" id="asymmetryZ-value">1.000</span></label>
-                        <input type="range" id="asymmetryZ" min="0.5" max="2.0" value="1.0" step="0.1">
-                    </div>
-                </div>
-                <div class="parameter-group" style="background: #f0fdf4; border-color: #16a34a;">
-                    <h2>経路記憶システム【新機能】</h2>
-                    <div class="parameter">
-                        <label>経路記憶<span class="parameter-value" id="pathMemoryEnabled-value">有効</span></label>
-                        <input type="checkbox" id="pathMemoryEnabled" checked style="width: auto;">
-                    </div>
-                    <div class="parameter">
-                        <label>記憶強度<span class="parameter-value" id="pathMemoryStrength-value">0.020</span></label>
-                        <input type="range" id="pathMemoryStrength" min="0" max="0.1" value="0.02" step="0.005">
-                    </div>
-                    <div class="parameter">
-                        <label>記憶持続性<span class="parameter-value" id="pathMemoryPersistence-value">0.005</span></label>
-                        <input type="range" id="pathMemoryPersistence" min="0" max="0.02" value="0.005" step="0.001">
-                    </div>
-                </div>
-                <div class="toggle-buttons">
-                    <button class="toggle-button active" id="toggleCone" onclick="toggleElement('cone')">円錐</button>
-                    <button class="toggle-button active" id="toggleSections" onclick="toggleElement('sections')">断面</button>
-                    <button class="toggle-button active" id="toggleSpiral" onclick="toggleElement('spiral')">螺旋</button>
-                    <button class="toggle-button active" id="toggleSuccess" onclick="toggleElement('success')">成功表示</button>
-                    <button class="toggle-button" id="toggleTrails" onclick="toggleElement('trails')">軌跡</button>
-                    <button class="toggle-button active" id="toggleClusters" onclick="toggleElement('clusters')">クラスター</button>
-                    <button class="toggle-button" id="toggleGravity" onclick="toggleElement('gravity')" style="opacity: 0.5; cursor: not-allowed;" disabled title="重力場表示機能は開発中です">重力場 (開発中)</button>
-                    <button class="toggle-button" id="togglePathMemory" onclick="toggleElement('pathMemory')">経路記憶</button>
-                </div>
-                <div class="success-counter" id="period-stats" style="display: none;">
-                    <div>5年間：<span id="five-year-stats">0/0 (0%)</span></div>
-                    <div>10年間：<span id="ten-year-stats">0/0 (0%)</span></div>
-                </div>
+            <div class="parameter">
+                <label for="spawnInterval">資源投入間隔 (年)<span class="parameter-value" id="spawnInterval-value">0.5</span></label>
+                <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1" oninput="updateParameters()">
+            </div>
+            <div class="parameter">
+                <label for="batchSize">投入バッチサイズ<span class="parameter-value" id="batchSize-value">3</span></label>
+                <input type="range" id="batchSize" min="1" max="10" value="3" step="1" oninput="updateParameters()">
+            </div>
+            <div class="button-group">
+                <button class="btn" onclick="startSimulation()">開始</button>
+                <button class="btn btn-secondary" onclick="pauseSimulation()">一時停止</button>
+                <button class="btn btn-secondary" onclick="resetSimulation()">リセット</button>
             </div>
         </div>
-        <div class="cluster-visualization" id="cluster-vis" style="display: none;">
-            <h2 style="margin-top: 0; font-size: 14px;">活性クラスター</h2>
-            <div id="cluster-list"></div>
+        <div class="parameter-group">
+            <h2>物理パラメータ</h2>
+            <div class="parameter">
+                <label for="trtForce">垂直推進力<span class="parameter-value" id="trtForce-value">0.015</span></label>
+                <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001" oninput="updateParameters()">
+            </div>
+            <div class="parameter">
+                <label for="praForce">水平拡散力<span class="parameter-value" id="praForce-value">0.02</span></label>
+                <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001" oninput="updateParameters()">
+            </div>
+            <div class="parameter">
+                <label for="centralConvergence">中央収束力<span class="parameter-value" id="centralConvergence-value">0.03</span></label>
+                <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005" oninput="updateParameters()">
+            </div>
         </div>
-        <div id="comparison-panel" class="comparison-panel">
-            <div class="comparison-header">
-                <h2 style="margin: 0; font-size: 16px;">シナリオ比較分析</h2>
-                <button class="comparison-collapse-btn" onclick="toggleComparisonPanel()">▼</button>
-            </div>
-            <div id="comparison-content">
-                <div id="scenario-list"></div>
-                <button class="control-button" onclick="addScenario()" style="width: 100%; margin: 10px 0;">＋ シナリオ追加</button>
-                <div class="parameter">
-                    <label>分析期間（年）<span class="parameter-value" id="analysisYears-value">10</span></label>
-                    <input type="range" id="analysisYears" min="5" max="30" value="10" step="5">
-                </div>
-                <button class="control-button" onclick="runComparison()" style="width: 100%; margin: 10px 0; background: #9ca3af; cursor: not-allowed;" disabled>比較分析実行（開発中）</button>
-                <div id="comparison-results" style="display: none;">
-                    <h2 style="font-size: 14px;">分析結果</h2>
-                    <div id="success-rate-chart" class="comparison-chart"></div>
-                    <div id="efficiency-chart" class="comparison-chart"></div>
-                </div>
-            </div>
+        <div class="button-group">
+             <button class="btn" onclick="exportData()">データ出力 (CSV)</button>
         </div>
     </div>
-
+    
     <script>
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf8f8f8);
-        scene.fog = new THREE.Fog(0xf8f8f8, 100, 300);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(50, 40, 60);
-        camera.lookAt(0, 20, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(50, 100, 50);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshPhongMaterial({ color: 0xe0e0e0, side: THREE.DoubleSide });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        const parameters = {
-            initialParticles: 20,
-            simulationSpeed: 1.0,
-            trtForce: 0.015,
-            trtAcceleration: 1.0,
-            tippingPoint: 0.7,
-            praForce: 0.02,
-            praDiversity: 1.0,
-            centralConvergence: 0.03,
-            clusterConvergence: 0.02,
-            clusterInertia: 0.015,
-            marketPull: 0.02,
-            clusterPermeability: 0.8,
-            peerAttraction: 0.01,
-            attractionRange: 5,
-            clusterThreshold: 3,
-            successThreshold: 38,
-            timeScale: 0.1,
-            spawnInterval: 0.5,
-            batchSize: 3,
-            heterogeneity: 0.5,
-            lifespanVariance: 0.3,
-            vertexCapacity: 5,
-            capacityRadius: 2,
-            congestionEffect: 0.8,
-            queueingBehavior: 'priority',
-            coneTiltX: 0,
-            coneTiltZ: 0,
-            asymmetryX: 1.0,
-            asymmetryZ: 1.0,
-            pathMemoryEnabled: true,
-            pathMemoryStrength: 0.02,
-            pathMemoryPersistence: 0.005,
-            pathMemoryResolution: 20,
-            resourceRecycleRate: 0.7,
-            knowledgeTransferRate: 0.3,
-            attritionRate: 0.02,
-            industryProfile: 'hybrid'
-        };
-
+        // === グローバル変数・設定 ===
+        let scene, camera, renderer, particles = [], coneGroup, controls;
+        let animationFrameId;
+        const parameters = {};
         const simulationState = {
             isRunning: false,
             isPaused: false,
@@ -908,423 +120,290 @@
             lastSpawnTime: 0,
             totalSpawned: 0,
             successCount: 0,
-            mode: 'single',
-            clusters: []
+            log: []
         };
-        
-        const visibility = { cone: true, sections: true, spiral: true, success: true, trails: false, clusters: true, gravity: false, pathMemory: false };
-
-        const coneGroup = new THREE.Group();
-        const sectionsGroup = new THREE.Group();
-        const spiralGroup = new THREE.Group();
-        const particlesGroup = new THREE.Group();
-        const successGroup = new THREE.Group();
-        const trailsGroup = new THREE.Group();
-        const clustersGroup = new THREE.Group();
-        const gravityGroup = new THREE.Group();
-        const pathMemoryGroup = new THREE.Group();
-        scene.add(coneGroup, sectionsGroup, spiralGroup, particlesGroup, successGroup, trailsGroup, clustersGroup, gravityGroup, pathMemoryGroup);
-
         const coneHeight = 40;
         const coneRadius = 20;
 
-        const ParticleType = { STANDARD: 'standard', EXPLORER: 'explorer', EXPLOITER: 'exploiter' };
+        // === 初期化処理 ===
+        function init() {
+            // シーン設定
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(40, 40, 40);
+            camera.lookAt(0, 10, 0);
 
-        class PathMemory {
-            constructor(resolution = 20) {
-                this.resolution = resolution;
-                this.grid = Array.from({ length: resolution }, () => Array.from({ length: resolution }, () => Array(resolution).fill(0)));
-                this.maxValue = 0;
-            }
-            worldToGrid(position) {
-                const x = Math.floor((position.x / coneRadius + 1) * 0.5 * this.resolution);
-                const y = Math.floor(position.y / coneHeight * this.resolution);
-                const z = Math.floor((position.z / coneRadius + 1) * 0.5 * this.resolution);
-                return {
-                    x: Math.max(0, Math.min(this.resolution - 1, x)),
-                    y: Math.max(0, Math.min(this.resolution - 1, y)),
-                    z: Math.max(0, Math.min(this.resolution - 1, z))
-                };
-            }
-            addMemory(position, strength = 1.0) {
-                const coords = this.worldToGrid(position);
-                for (let dx = -2; dx <= 2; dx++) {
-                    for (let dy = -2; dy <= 2; dy++) {
-                        for (let dz = -2; dz <= 2; dz++) {
-                            const x = coords.x + dx, y = coords.y + dy, z = coords.z + dz;
-                            if (x >= 0 && x < this.resolution && y >= 0 && y < this.resolution && z >= 0 && z < this.resolution) {
-                                this.grid[x][y][z] += strength * Math.exp(-Math.sqrt(dx*dx + dy*dy + dz*dz) * 0.5);
-                                this.maxValue = Math.max(this.maxValue, this.grid[x][y][z]);
-                            }
-                        }
-                    }
-                }
-            }
-            getMemoryAt(position) {
-                const { x, y, z } = this.worldToGrid(position);
-                return this.grid[x][y][z] / (this.maxValue + 0.01);
-            }
-            decay(factor) {
-                for (let x = 0; x < this.resolution; x++) {
-                    for (let y = 0; y < this.resolution; y++) {
-                        for (let z = 0; z < this.resolution; z++) {
-                            this.grid[x][y][z] *= factor;
-                        }
-                    }
-                }
-                this.maxValue *= factor;
-            }
-        }
-        const pathMemory = new PathMemory();
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // ライト
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            scene.add(dirLight);
 
-        class Cluster {
-            constructor(id, center, members) {
-                this.id = id;
-                this.center = center.clone();
-                this.members = new Set(members);
-                this.color = new THREE.Color(Math.random() * 0xffffff);
-                this.createVisual();
-            }
-            createVisual() {
-                const geometry = new THREE.SphereGeometry(1, 16, 16);
-                const material = new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.3 });
-                this.mesh = new THREE.Mesh(geometry, material);
-                clustersGroup.add(this.mesh);
-            }
-            update(particles) {
-                const memberParticles = particles.filter(p => this.members.has(p.id));
-                if (memberParticles.length > 0) {
-                    this.center.set(0, 0, 0);
-                    memberParticles.forEach(p => this.center.add(p.position));
-                    this.center.divideScalar(memberParticles.length);
-                    this.mesh.position.copy(this.center);
-                }
-            }
-            remove() {
-                clustersGroup.remove(this.mesh);
-            }
-        }
+            // 地面と円錐
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshPhongMaterial({ color: 0xe0e0e0 }));
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
 
-        function createCone() {
-            while(coneGroup.children.length > 0) coneGroup.remove(coneGroup.children[0]);
-            coneGroup.rotation.set(parameters.coneTiltX * Math.PI / 180, 0, parameters.coneTiltZ * Math.PI / 180);
-            const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
-            const positions = coneGeometry.attributes.position;
-            for (let i = 0; i < positions.count; i++) {
-                positions.setX(i, positions.getX(i) * parameters.asymmetryX);
-                positions.setZ(i, positions.getZ(i) * parameters.asymmetryZ);
-            }
-            positions.needsUpdate = true;
-            const coneMaterial = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
-            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            coneGroup = new THREE.Group();
+            const coneGeom = new THREE.ConeGeometry(coneRadius, coneHeight, 32, 1, true);
+            const coneMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            const cone = new THREE.Mesh(coneGeom, coneMat);
             cone.position.y = coneHeight / 2;
             coneGroup.add(cone);
-        }
+            scene.add(coneGroup);
 
-        function createSections() {
-            while(sectionsGroup.children.length > 0) sectionsGroup.remove(sectionsGroup.children[0]);
-            sectionsGroup.rotation.copy(coneGroup.rotation);
-            const heights = [5, 15, 25, 35];
-            const colors = [0x8b5cf6, 0xef4444, 0xf97316, 0x10b981];
-            heights.forEach((height, index) => {
-                const radius = coneRadius * (1 - height / coneHeight);
-                const curve = new THREE.EllipseCurve(0, 0, radius * parameters.asymmetryX, radius * parameters.asymmetryZ, 0, 2 * Math.PI, false, 0);
-                const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
-                const material = new THREE.LineBasicMaterial({ color: colors[index], transparent: true, opacity: 0.5 });
-                const ellipse = new THREE.Line(geometry, material);
-                ellipse.rotation.x = -Math.PI / 2;
-                ellipse.position.y = height;
-                sectionsGroup.add(ellipse);
-            });
+            // UIの初期化とイベントリスナー設定
+            document.querySelectorAll('input, select').forEach(el => el.dispatchEvent(new Event('input')));
+            window.addEventListener('resize', onWindowResize);
         }
         
-        class SpatialGrid {
-            constructor(size, divisions) {
-                this.cellSize = size / divisions;
-                this.grid = {};
-            }
-            getKey(p) {
-                return `${Math.floor(p.x / this.cellSize)},${Math.floor(p.y / this.cellSize)},${Math.floor(p.z / this.cellSize)}`;
-            }
-            clear() { this.grid = {}; }
-            insert(particle) {
-                const key = this.getKey(particle.position);
-                if (!this.grid[key]) this.grid[key] = [];
-                this.grid[key].push(particle);
-            }
-            getNearbyParticles(position, radius) {
-                const nearby = [];
-                const R = Math.ceil(radius / this.cellSize);
-                const cX = Math.floor(position.x / this.cellSize);
-                const cY = Math.floor(position.y / this.cellSize);
-                const cZ = Math.floor(position.z / this.cellSize);
-                for (let i = cX - R; i <= cX + R; i++) {
-                    for (let j = cY - R; j <= cY + R; j++) {
-                        for (let k = cZ - R; k <= cZ + R; k++) {
-                            const key = `${i},${j},${k}`;
-                            if (this.grid[key]) {
-                                this.grid[key].forEach(p => {
-                                    if (position.distanceTo(p.position) <= radius) nearby.push(p);
-                                });
-                            }
-                        }
-                    }
-                }
-                return nearby;
-            }
-        }
-        const spatialGrid = new SpatialGrid(coneRadius * 4, 20);
-
-        class ResourceParticle {
-            constructor(id) {
+        // === パーティクルクラス ===
+        class Particle {
+            constructor(id, position, velocity) {
                 this.id = id;
+                this.position = position;
+                this.velocity = velocity || new THREE.Vector3((Math.random() - 0.5) * 0.1, Math.random() * 0.05, (Math.random() - 0.5) * 0.1);
                 this.age = 0;
                 this.isActive = true;
-                this.hasSucceeded = false;
-                this.isQueued = false;
-                this.trail = [];
-                this.maxAge = 100 * (1 + (Math.random() - 0.5) * parameters.lifespanVariance);
-                
-                const typeRandom = Math.random();
-                if (typeRandom < parameters.heterogeneity * 0.3) this.type = ParticleType.EXPLORER;
-                else if (typeRandom < parameters.heterogeneity * 0.6) this.type = ParticleType.EXPLOITER;
-                else this.type = ParticleType.STANDARD;
-                this.setAttributesByType();
 
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * coneRadius * 0.8;
-                this.position = new THREE.Vector3(Math.cos(angle) * radius, 0.5, Math.sin(angle) * radius);
-                this.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.05, Math.random() * 0.02 + 0.01, (Math.random() - 0.5) * 0.05);
-                
-                this.createMesh();
-            }
-            setAttributesByType() {
-                switch(this.type) {
-                    case ParticleType.EXPLORER: this.trtAffinity = 0.7; this.praAffinity = 1.3; this.size = 0.35; break;
-                    case ParticleType.EXPLOITER: this.trtAffinity = 1.3; this.praAffinity = 0.7; this.size = 0.4; break;
-                    default: this.trtAffinity = 1.0; this.praAffinity = 1.0; this.size = 0.3;
-                }
-            }
-            createMesh() {
-                let geometry;
-                switch(this.type) {
-                    case ParticleType.EXPLORER: geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4); geometry.rotateZ(Math.PI); break;
-                    case ParticleType.EXPLOITER: geometry = new THREE.BoxGeometry(this.size * 1.5, this.size * 1.5, this.size * 1.5); break;
-                    default: geometry = new THREE.SphereGeometry(this.size, 16, 16);
-                }
-                const material = new THREE.MeshPhongMaterial({ color: this.getColorByHeight(), transparent: true, opacity: 0.9 });
+                const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+                const material = new THREE.MeshPhongMaterial({ color: this.getColor() });
                 this.mesh = new THREE.Mesh(geometry, material);
-                this.mesh.castShadow = true;
-                particlesGroup.add(this.mesh);
+                this.mesh.position.copy(this.position);
+                scene.add(this.mesh);
             }
-            getColorByHeight() {
-                const h = this.position.y;
-                if (h < 10) return 0x8b5cf6; if (h < 20) return 0xef4444; if (h < 30) return 0xf97316; return 0x10b981;
-            }
-            update(deltaTime, allParticles) {
+
+            update(deltaTime) {
                 if (!this.isActive) return;
 
-                this.age += deltaTime * parameters.timeScale;
-                if (this.age > this.maxAge) return this.die();
-
+                // 物理演算
                 const heightRatio = this.position.y / coneHeight;
+                this.velocity.y += parameters.trtForce * (1 - heightRatio) * deltaTime;
+                this.velocity.x += (Math.random() - 0.5) * parameters.praForce * deltaTime;
+                this.velocity.z += (Math.random() - 0.5) * parameters.praForce * deltaTime;
                 
-                // TRT & PRA forces
-                this.velocity.y += parameters.trtForce * (1 - heightRatio) * (heightRatio < parameters.tippingPoint ? 1 : 1.5) * this.trtAffinity * deltaTime;
-                this.velocity.x += (Math.random() - 0.5) * parameters.praForce * this.praAffinity * deltaTime;
-                this.velocity.z += (Math.random() - 0.5) * parameters.praForce * this.praAffinity * deltaTime;
-
-                // Gravity forces
                 const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
                 this.velocity.add(toCenter.multiplyScalar(parameters.centralConvergence * heightRatio * deltaTime));
 
-                const nearby = spatialGrid.getNearbyParticles(this.position, parameters.attractionRange);
-                nearby.forEach(other => {
-                    if (other.id === this.id || !other.isActive) return;
-                    const attraction = new THREE.Vector3().subVectors(other.position, this.position);
-                    this.velocity.add(attraction.normalize().multiplyScalar(parameters.peerAttraction * deltaTime / attraction.lengthSq()));
-                });
-                
-                // Path memory
-                if (parameters.pathMemoryEnabled && pathMemory.getMemoryAt(this.position) > 0.01) {
-                    const gradient = new THREE.Vector3();
-                    const step = 0.5;
-                    gradient.x = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(step, 0, 0))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(step, 0, 0)));
-                    gradient.y = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(0, step, 0))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(0, step, 0)));
-                    gradient.z = pathMemory.getMemoryAt(this.position.clone().add(new THREE.Vector3(0, 0, step))) - pathMemory.getMemoryAt(this.position.clone().sub(new THREE.Vector3(0, 0, step)));
-                    this.velocity.add(gradient.multiplyScalar(parameters.pathMemoryStrength * deltaTime));
+                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * parameters.timeScale * 10));
+
+                // 境界条件
+                const maxRadius = coneRadius * (1 - this.position.y / coneHeight);
+                if (Math.sqrt(this.position.x**2 + this.position.z**2) > maxRadius) {
+                    this.isActive = false; // 外に出たら非アクティブ
                 }
 
-                this.position.add(this.velocity.clone().multiplyScalar(deltaTime * parameters.simulationSpeed));
-
-                // Boundary constraints
-                const localPos = this.position.clone().applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(coneGroup.rotation).invert());
-                const currentRadius = Math.sqrt(Math.pow(localPos.x / parameters.asymmetryX, 2) + Math.pow(localPos.z / parameters.asymmetryZ, 2));
-                const maxRadius = coneRadius * (1 - localPos.y / coneHeight);
-                if (currentRadius > maxRadius) {
-                    const scale = maxRadius / currentRadius * 0.95;
-                    localPos.x *= scale;
-                    localPos.z *= scale;
-                    this.position.copy(localPos.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(coneGroup.rotation)));
+                if (this.position.y >= coneHeight) {
+                    this.succeed();
                 }
 
-                if (this.position.y >= parameters.successThreshold) return this.succeed();
+                if (this.position.y < 0) {
+                     this.isActive = false;
+                }
 
-                this.mesh.position.copy(this.position);
-                this.mesh.material.color.setHex(this.getColorByHeight());
-                this.velocity.multiplyScalar(0.98);
+                if (this.isActive) {
+                    this.mesh.position.copy(this.position);
+                    this.mesh.material.color.set(this.getColor());
+                } else {
+                    this.remove();
+                }
             }
+
+            getColor() {
+                const h = this.position.y / coneHeight;
+                if (h < 0.25) return 0x8b5cf6;
+                if (h < 0.5) return 0xef4444;
+                if (h < 0.75) return 0xf97316;
+                return 0x10b981;
+            }
+
             succeed() {
-                if (!this.isActive) return;
-                this.hasSucceeded = true;
                 simulationState.successCount++;
-                if (parameters.pathMemoryEnabled) {
-                     this.trail.forEach((pos, i) => pathMemory.addMemory(pos, 0.5 + (i / this.trail.length) * 0.5));
-                }
-                this.remove();
-            }
-            die() {
-                this.remove();
-            }
-            remove() {
                 this.isActive = false;
-                particlesGroup.remove(this.mesh);
+                this.remove();
+            }
+            
+            remove() {
+                scene.remove(this.mesh);
             }
         }
 
-        let particles = [];
-        let nextParticleId = 0;
-        function spawnParticles(count) {
-            for (let i = 0; i < count; i++) {
-                particles.push(new ResourceParticle(nextParticleId++));
-                simulationState.totalSpawned++;
-            }
+        // === シミュレーション制御 ===
+        function startSimulation() {
+            if (simulationState.isRunning) resetSimulation();
+            simulationState.isRunning = true;
+            simulationState.isPaused = false;
+            animate();
         }
-        function createInitialParticles() {
-            particles.forEach(p => p.remove());
-            particles = [];
-            nextParticleId = 0;
-            if (simulationState.mode === 'single') spawnParticles(parameters.initialParticles);
+        function pauseSimulation() {
+            simulationState.isPaused = !simulationState.isPaused;
         }
-
-        createCone();
-        createSections();
-        createInitialParticles();
-
-        function setMode(mode, button) {
-            simulationState.mode = mode;
-            document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
-            if (button) button.classList.add('active');
-            resetSimulation();
-        }
-
-        function updateAllParameters() {
-             Object.keys(parameters).forEach(key => {
-                const input = document.getElementById(key);
-                if(input) {
-                    const value = input.type === 'checkbox' ? input.checked : (input.type === 'range' ? parseFloat(input.value) : input.value);
-                    parameters[key] = value;
-                    const valueElem = document.getElementById(`${key}-value`);
-                    if(valueElem) {
-                        if (input.type === 'checkbox') valueElem.textContent = value ? '有効' : '無効';
-                        else if (typeof value === 'number' && !Number.isInteger(value)) valueElem.textContent = value.toFixed(3);
-                        else valueElem.textContent = value;
-                    }
-                }
-            });
-            createCone();
-            createSections();
-        }
-        document.querySelectorAll('input, select').forEach(input => input.addEventListener('input', updateAllParameters));
-
-        function togglePanel() {
-            document.getElementById('control-panel').classList.toggle('collapsed');
-        }
-
-        function toggleElement(element) {
-            visibility[element] = !visibility[element];
-            const groups = { cone: coneGroup, sections: sectionsGroup, particles: particlesGroup };
-            if(groups[element]) groups[element].visible = visibility[element];
-            document.getElementById(`toggle${element.charAt(0).toUpperCase() + element.slice(1)}`).classList.toggle('active', visibility[element]);
-        }
-        function loadPreset(preset) {
-            const presets = {
-                centralized: { trtForce: 0.015, praForce: 0.015, centralConvergence: 0.05, peerAttraction: 0.005 },
-                distributed: { trtForce: 0.012, praForce: 0.025, centralConvergence: 0.015, peerAttraction: 0.02 },
-                hybrid: { trtForce: 0.015, praForce: 0.02, centralConvergence: 0.03, peerAttraction: 0.01 },
-                emergent: { trtForce: 0.010, praForce: 0.03, centralConvergence: 0.01, peerAttraction: 0.025 }
-            };
-            const selected = presets[preset] || presets.hybrid;
-            Object.keys(selected).forEach(key => {
-                const input = document.getElementById(key);
-                if (input) {
-                    parameters[key] = selected[key];
-                    input.value = selected[key];
-                }
-            });
-            updateAllParameters();
-            document.querySelectorAll('.preset-button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-        function startSimulation() { simulationState.isRunning = true; simulationState.isPaused = false; }
-        function pauseSimulation() { simulationState.isPaused = !simulationState.isPaused; }
         function resetSimulation() {
+            cancelAnimationFrame(animationFrameId);
             simulationState.isRunning = false;
             simulationState.isPaused = false;
             simulationState.elapsedTime = 0;
+            simulationState.lastSpawnTime = 0;
             simulationState.totalSpawned = 0;
             simulationState.successCount = 0;
+            simulationState.log = [];
+            
+            particles.forEach(p => p.remove());
+            particles = [];
+            
             createInitialParticles();
             updateStats();
         }
 
-        function updateStats() {
-            const active = particles.filter(p => p.isActive);
-            document.getElementById('active-particles').textContent = active.length;
-            document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
-            document.getElementById('success-count').textContent = simulationState.successCount;
-            document.getElementById('success-rate').textContent = `${(simulationState.totalSpawned > 0 ? (simulationState.successCount / simulationState.totalSpawned) * 100 : 0).toFixed(1)}%`;
-            document.getElementById('sim-time').textContent = `${simulationState.elapsedTime.toFixed(1)}年`;
-            document.getElementById('avg-trt').textContent = (active.length > 0 ? active.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / active.length : 0).toFixed(3);
+        // === 初期配置機能 ===
+        function createInitialParticles() {
+            const count = parameters.initialParticles;
+            let particleId = 0;
+            
+            switch (parameters.initialPlacementStrategy) {
+                case 'focused':
+                    const focusPoint = new THREE.Vector3((Math.random() - 0.5) * 10, 1, (Math.random() - 0.5) * 10);
+                    for (let i = 0; i < count; i++) {
+                        const pos = focusPoint.clone().add(new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5));
+                        particles.push(new Particle(particleId++, pos));
+                    }
+                    break;
+                case 'diversified':
+                    for (let i = 0; i < count; i++) {
+                        const angle = (i / count) * Math.PI * 2;
+                        const radius = coneRadius * 0.8;
+                        const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+                        particles.push(new Particle(particleId++, pos));
+                    }
+                    break;
+                case 'clustered':
+                    const numClusters = 3;
+                    for (let i = 0; i < numClusters; i++) {
+                        const angle = (i / numClusters) * Math.PI * 2;
+                        const radius = coneRadius * 0.6;
+                        const clusterCenter = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+                        for (let j = 0; j < Math.floor(count / numClusters); j++) {
+                            const pos = clusterCenter.clone().add(new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).multiplyScalar(4));
+                            particles.push(new Particle(particleId++, pos));
+                        }
+                    }
+                    break;
+                case 'edge':
+                     for (let i = 0; i < count; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = coneRadius * 0.95;
+                        const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+                        particles.push(new Particle(particleId++, pos));
+                    }
+                    break;
+                case 'random':
+                default:
+                    for (let i = 0; i < count; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * coneRadius * 0.9;
+                        const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+                        particles.push(new Particle(particleId++, pos));
+                    }
+                    break;
+            }
+            simulationState.totalSpawned += count;
         }
 
+        function spawnParticles(count) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * coneRadius * 0.9;
+                const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+                particles.push(new Particle(simulationState.totalSpawned + i, pos));
+            }
+            simulationState.totalSpawned += count;
+        }
+
+        // === メインループ ===
         const clock = new THREE.Clock();
         function animate() {
-            requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate);
+            if (!simulationState.isRunning || simulationState.isPaused) return;
+
             const deltaTime = clock.getDelta();
-            
-            if (simulationState.isRunning && !simulationState.isPaused) {
-                simulationState.elapsedTime += deltaTime * parameters.timeScale;
-                
-                if (Math.floor(simulationState.elapsedTime / parameters.spawnInterval) > Math.floor((simulationState.elapsedTime - deltaTime * parameters.timeScale) / parameters.spawnInterval)) {
-                    spawnParticles(parameters.batchSize);
-                }
-                
-                spatialGrid.clear();
-                particles.forEach(p => { if (p.isActive) spatialGrid.insert(p); });
-                
-                particles.forEach(p => p.update(deltaTime, particles));
-                particles = particles.filter(p => p.isActive);
-                
-                if(parameters.pathMemoryEnabled) pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
-                updateStats();
+            simulationState.elapsedTime += deltaTime * parameters.timeScale;
+
+            // スポーン
+            if (simulationState.elapsedTime - simulationState.lastSpawnTime > parameters.spawnInterval) {
+                spawnParticles(parameters.batchSize);
+                simulationState.lastSpawnTime = simulationState.elapsedTime;
             }
             
+            // 更新とログ記録
+            particles.forEach(p => {
+                p.update(deltaTime);
+                if (p.isActive) {
+                    simulationState.log.push({
+                        time: simulationState.elapsedTime.toFixed(2),
+                        id: p.id,
+                        x: p.position.x.toFixed(2),
+                        y: p.position.y.toFixed(2),
+                        z: p.position.z.toFixed(2)
+                    });
+                }
+            });
+            particles = particles.filter(p => p.isActive);
+            
+            updateStats();
             renderer.render(scene, camera);
         }
+
+        // === UI & データ処理 ===
+        function updateParameters() {
+            document.querySelectorAll('input[type="range"], select').forEach(el => {
+                parameters[el.id] = el.type === 'range' ? parseFloat(el.value) : el.value;
+                const valueEl = document.getElementById(`${el.id}-value`);
+                if (valueEl) valueEl.textContent = parameters[el.id];
+            });
+        }
         
-        animate();
+        function updateStats() {
+            document.getElementById('sim-time').textContent = `${simulationState.elapsedTime.toFixed(1)}年`;
+            document.getElementById('success-count').textContent = simulationState.successCount;
+            document.getElementById('active-particles').textContent = particles.length;
+            document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
+            const successRate = simulationState.totalSpawned > 0 ? (simulationState.successCount / simulationState.totalSpawned) * 100 : 0;
+            document.getElementById('success-rate').textContent = `${successRate.toFixed(1)}%`;
+        }
+
+        function exportData() {
+            if (simulationState.log.length === 0) {
+                alert("エクスポートするデータがありません。");
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,time,particle_id,x,y,z\n";
+            simulationState.log.forEach(row => {
+                csvContent += `${row.time},${row.id},${row.x},${row.y},${row.z}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "simulation_data.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         
-        window.addEventListener('resize', () => {
+        function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        }
 
-        // Initialize UI on load
-        updateAllParameters();
-        document.querySelector('.preset-button').click(); // Click the first preset
+        // === 実行開始 ===
+        init();
+        updateParameters();
+        resetSimulation();
     </script>
 </body>
 </html>
