@@ -1434,6 +1434,7 @@
         function getCurrentIndustryProfile() {
             return industryProfiles[parameters.industryProfile] || industryProfiles.hybrid;
         }
+
         class SpatialGrid {
             constructor(size, divisions) {
                 this.size = size;
@@ -2047,6 +2048,8 @@
                     pathMemory.addMemory(this.position, 2.0);
                 }
                 
+                // --- 修正箇所：花火のエフェクトを削除 ---
+                /*
                 // Create fountain effect with multiple particles
                 const particleCount = 20;
                 const fountainParticles = [];
@@ -2123,6 +2126,10 @@
                 setTimeout(() => {
                     this.remove();
                 }, 500);
+                */
+               
+                // --- 修正箇所：パーティクルを即座に削除 ---
+                this.remove();
             }
             
             die(reason = 'natural') {
@@ -2311,7 +2318,7 @@
                         life: 1.0
                     });
                 }
-                
+
                 // Animate the misfire effect
                 const animateMisfire = () => {
                     let allDead = true;
@@ -2929,262 +2936,162 @@
             // Success count and rate
             document.getElementById('success-count').textContent = simulationState.successCount;
             const successRate = simulationState.totalSpawned > 0 ? 
-                (simulationState.successCount / simulationState.totalSpawned * 100).toFixed(1) : '0.0';
-            document.getElementById('success-rate').textContent = successRate + '%';
+                (simulationState.successCount / simulationState.totalSpawned) * 100 : 0;
+            document.getElementById('success-rate').textContent = `${successRate.toFixed(1)}%`;
             
             // Simulation time
-            document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1) + '年';
+            document.getElementById('sim-time').textContent = `${simulationState.elapsedTime.toFixed(1)}年`;
+            
+            // Average TRT (height)
+            const avgTrt = activeParticles.length > 0 ?
+                activeParticles.reduce((sum, p) => sum + p.position.y / coneHeight, 0) / activeParticles.length : 0;
+            document.getElementById('avg-trt').textContent = avgTrt.toFixed(3);
+            
+            // PRA Dispersion (standard deviation of horizontal position)
+            if (activeParticles.length > 1) {
+                const avgX = activeParticles.reduce((sum, p) => sum + p.position.x, 0) / activeParticles.length;
+                const avgZ = activeParticles.reduce((sum, p) => sum + p.position.z, 0) / activeParticles.length;
+                const variance = activeParticles.reduce((sum, p) => 
+                    sum + (p.position.x - avgX)**2 + (p.position.z - avgZ)**2, 0) / activeParticles.length;
+                document.getElementById('pra-dispersion').textContent = Math.sqrt(variance).toFixed(3);
+            } else {
+                document.getElementById('pra-dispersion').textContent = '0.000';
+            }
+            
+            // Diversity Index (based on particle types)
+            const typeCounts = activeParticles.reduce((counts, p) => {
+                counts[p.type] = (counts[p.type] || 0) + 1;
+                return counts;
+            }, {});
+            const total = activeParticles.length;
+            if (total > 0) {
+                const shannonIndex = -Object.values(typeCounts).reduce((sum, count) => {
+                    const p = count / total;
+                    return sum + p * Math.log(p);
+                }, 0);
+                document.getElementById('diversity-index').textContent = shannonIndex.toFixed(3);
+            } else {
+                document.getElementById('diversity-index').textContent = '0.000';
+            }
             
             // Cluster count
             document.getElementById('cluster-count').textContent = simulationState.clusters.length;
             
-            // Gravity sources (central + clusters)
+            // Gravity sources (Central + Clusters)
             document.getElementById('gravity-sources').textContent = 1 + simulationState.clusters.length;
             
-            // === VERTEX CAPACITY STATISTICS === //
-            const nearVertexThreshold = parameters.successThreshold - parameters.capacityRadius;
-            const nearVertexParticles = activeParticles.filter(p => 
-                p.position.y >= nearVertexThreshold && !p.hasSucceeded
+            // Vertex congestion
+            const nearVertexParticles = particles.filter(p => 
+                p.isActive && p.position.y >= parameters.successThreshold - parameters.capacityRadius
             );
-            const queuedParticles = nearVertexParticles.filter(p => p.isQueued);
+            const congestion = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
+            document.getElementById('vertex-congestion').textContent = `${congestion.toFixed(0)}%`;
             
-            // Vertex congestion percentage
-            const congestionRate = Math.min(100, (nearVertexParticles.length / parameters.vertexCapacity) * 100);
-            document.getElementById('vertex-congestion').textContent = congestionRate.toFixed(0) + '%';
-            
-            // Queued particles count
-            document.getElementById('queued-particles').textContent = queuedParticles.length;
-            
-            // Calculate diversity index
-            if (activeParticles.length > 0) {
-                const typeCounts = { standard: 0, explorer: 0, exploiter: 0 };
-                activeParticles.forEach(p => {
-                    typeCounts[p.type]++;
-                });
-                
-                const total = activeParticles.length;
-                const shannon = Object.values(typeCounts).reduce((sum, count) => {
-                    if (count > 0) {
-                        const p = count / total;
-                        return sum - p * Math.log(p);
-                    }
-                    return sum;
-                }, 0);
-                
-                document.getElementById('diversity-index').textContent = shannon.toFixed(3);
-                
-                // Average TRT progress
-                const avgHeight = activeParticles.reduce((sum, p) => sum + p.position.y, 0) / activeParticles.length;
-                const trtProgress = avgHeight / coneHeight;
-                document.getElementById('avg-trt').textContent = trtProgress.toFixed(3);
-                
-                // PRA dispersion
-                const positions = activeParticles.map(p => ({ x: p.position.x, z: p.position.z, y: p.position.y }));
-                const centerX = positions.reduce((sum, p) => sum + p.x, 0) / positions.length;
-                const centerZ = positions.reduce((sum, p) => sum + p.z, 0) / positions.length;
-                
-                let totalDispersion = 0;
-                positions.forEach(p => {
-                    const heightRatio = p.y / coneHeight;
-                    const maxRadius = coneRadius * (1 - heightRatio);
-                    const currentRadius = Math.sqrt((p.x - centerX) ** 2 + (p.z - centerZ) ** 2);
-                    totalDispersion += currentRadius / (maxRadius + 0.01);
-                });
-                const praDispersion = totalDispersion / activeParticles.length;
-                document.getElementById('pra-dispersion').textContent = praDispersion.toFixed(3);
-            } else {
-                document.getElementById('avg-trt').textContent = '0.000';
-                document.getElementById('pra-dispersion').textContent = '0.000';
-                document.getElementById('diversity-index').textContent = '0.000';
-            }
-            
-            // Period stats
-            if (simulationState.elapsedTime >= 5) {
-                const fiveYearRate = simulationState.periodStats.fiveYear.spawned > 0 ?
-                    (simulationState.periodStats.fiveYear.success / simulationState.periodStats.fiveYear.spawned * 100).toFixed(1) : '0.0';
-                document.getElementById('five-year-stats').textContent = 
-                    `${simulationState.periodStats.fiveYear.success}/${simulationState.periodStats.fiveYear.spawned} (${fiveYearRate}%)`;
-            }
-            
-            if (simulationState.elapsedTime >= 10) {
-                const tenYearRate = simulationState.periodStats.tenYear.spawned > 0 ?
-                    (simulationState.periodStats.tenYear.success / simulationState.periodStats.tenYear.spawned * 100).toFixed(1) : '0.0';
-                document.getElementById('ten-year-stats').textContent = 
-                    `${simulationState.periodStats.tenYear.success}/${simulationState.periodStats.tenYear.spawned} (${tenYearRate}%)`;
-            }
+            // Queued particles
+            const queuedParticles = particles.filter(p => p.isQueued).length;
+            document.getElementById('queued-particles').textContent = queuedParticles;
         }
 
-        // Mouse controls
-        let isDragging = false;
-        let previousMouseX = 0, previousMouseY = 0;
+        // Period stats update
+        function updatePeriodStats() {
+            const fiveYearSuccess = simulationState.periodStats.fiveYear.success;
+            const fiveYearSpawned = simulationState.periodStats.fiveYear.spawned;
+            const fiveYearRate = fiveYearSpawned > 0 ? (fiveYearSuccess / fiveYearSpawned) * 100 : 0;
+            document.getElementById('five-year-stats').textContent = 
+                `${fiveYearSuccess}/${fiveYearSpawned} (${fiveYearRate.toFixed(1)}%)`;
+                
+            const tenYearSuccess = simulationState.periodStats.tenYear.success;
+            const tenYearSpawned = simulationState.periodStats.tenYear.spawned;
+            const tenYearRate = tenYearSpawned > 0 ? (tenYearSuccess / tenYearSpawned) * 100 : 0;
+            document.getElementById('ten-year-stats').textContent = 
+                `${tenYearSuccess}/${tenYearSpawned} (${tenYearRate.toFixed(1)}%)`;
+        }
         
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
-                isDragging = true;
-                previousMouseX = e.clientX;
-                previousMouseY = e.clientY;
-            }
-        });
-        
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                const deltaX = e.clientX - previousMouseX;
-                const deltaY = e.clientY - previousMouseY;
-                
-                const angle = Math.atan2(camera.position.z, camera.position.x);
-                const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
-                
-                const newAngle = angle + deltaX * 0.01;
-                camera.position.x = Math.cos(newAngle) * radius;
-                camera.position.z = Math.sin(newAngle) * radius;
-                
-                camera.position.y += deltaY * 0.2;
-                camera.position.y = Math.max(10, Math.min(80, camera.position.y));
-                
-                previousMouseX = e.clientX;
-                previousMouseY = e.clientY;
-            }
-        });
-
-        // Mouse wheel for zoom
-        document.addEventListener('wheel', (e) => {
-            // Check if the mouse is over any control panel or UI element
-            const isOverUI = e.target.closest('#control-panel') || 
-                           e.target.closest('.stats-panel') || 
-                           e.target.closest('.legend') ||
-                           e.target.closest('.cluster-visualization') ||
-                           e.target.closest('.comparison-panel') ||
-                           e.target.tagName === 'INPUT' ||
-                           e.target.tagName === 'SELECT' ||
-                           e.target.tagName === 'BUTTON';
-            
-            // Only zoom if not over UI elements
-            if (!isOverUI) {
-                e.preventDefault(); // Prevent page scroll
-                
-                const zoomSpeed = 0.1;
-                const direction = e.deltaY > 0 ? 1 : -1;
-                
-                const distance = Math.sqrt(
-                    camera.position.x ** 2 + 
-                    camera.position.y ** 2 + 
-                    camera.position.z ** 2
-                );
-                
-                const newDistance = distance * (1 + direction * zoomSpeed);
-                const scale = newDistance / distance;
-                
-                camera.position.x *= scale;
-                camera.position.y *= scale;
-                camera.position.z *= scale;
-            }
-        });
-
         // Animation loop
         const clock = new THREE.Clock();
-        let clusterUpdateCounter = 0;
-        let pathMemoryUpdateCounter = 0;
         
         function animate() {
             requestAnimationFrame(animate);
             
             const deltaTime = clock.getDelta();
             
-            // Update simulation time
             if (simulationState.isRunning && !simulationState.isPaused) {
                 simulationState.elapsedTime += deltaTime * parameters.timeScale;
                 
-                // Check for spawning new particles
+                // Spawn new particles periodically
                 if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
                     spawnParticles(parameters.batchSize);
                     simulationState.lastSpawnTime = simulationState.elapsedTime;
                 }
                 
-                // Track period success
+                // Rebuild spatial grid before updating particles
+                spatialGrid.clear();
                 particles.forEach(p => {
-                    if (p.hasSucceeded && !p.periodTracked) {
-                        if (p.spawnTime <= 5) {
-                            simulationState.periodStats.fiveYear.success++;
-                        }
-                        if (p.spawnTime <= 10) {
-                            simulationState.periodStats.tenYear.success++;
-                        }
-                        p.periodTracked = true;
+                    if (p.isActive) spatialGrid.insert(p);
+                });
+                
+                // Update particles
+                particles.forEach(p => p.update(deltaTime, particles, parameters));
+                
+                // Remove dead particles
+                particles = particles.filter(p => p.isActive);
+                
+                // Update clusters
+                updateClusters(particles);
+                simulationState.clusters.forEach(c => c.update(particles));
+                
+                // Update gravity field visualization if active
+                if (visibility.gravity) {
+                    updateGravityFieldVisualization();
+                }
+                
+                // Update path memory
+                if (parameters.pathMemoryEnabled && pathMemory) {
+                    pathMemory.decay(1 - parameters.pathMemoryPersistence * deltaTime);
+                    if (visibility.pathMemory) {
+                        pathMemory.updateVisual();
+                    }
+                }
+                
+                // Update statistics
+                updateStats();
+                updatePeriodStats();
+            }
+            
+            // Update trails
+            if (visibility.trails) {
+                while(trailsGroup.children.length > 0) {
+                    trailsGroup.remove(trailsGroup.children[0]);
+                }
+                
+                particles.forEach(p => {
+                    if (p.trail.length > 1) {
+                        const geometry = new THREE.BufferGeometry().setFromPoints(p.trail);
+                        const material = new THREE.LineBasicMaterial({
+                            color: p.getColorByHeight(),
+                            transparent: true,
+                            opacity: 0.3
+                        });
+                        const trailLine = new THREE.Line(geometry, material);
+                        trailsGroup.add(trailLine);
                     }
                 });
             }
             
-            // Update particles
-            const activeParticles = particles.filter(p => p.isActive);
-            
-            // Rebuild spatial grid each frame
-            spatialGrid.clear();
-            activeParticles.forEach(p => spatialGrid.insert(p));
-            
-            activeParticles.forEach(particle => {
-                particle.update(deltaTime * 10, activeParticles, parameters, spatialGrid);
-            });
-            
-            // Update clusters periodically (not every frame for performance)
-            clusterUpdateCounter++;
-            if (clusterUpdateCounter % 30 === 0) {  // Update every 30 frames
-                updateClusters(activeParticles);
-                
-                // Update existing clusters
-                simulationState.clusters.forEach(cluster => {
-                    cluster.update(activeParticles);
-                });
-                
-                // Update gravity field visualization if enabled
-                if (visibility.gravity) {
-                    updateGravityFieldVisualization();
-                }
-            }
-            
-            // Update path memory visualization and decay
-            pathMemoryUpdateCounter++;
-            if (pathMemoryUpdateCounter % 60 === 0 && parameters.pathMemoryEnabled) {  // Update every 60 frames
-                // Apply decay - higher persistence = slower decay (more intuitive)
-                // persistence = 0 → decay rate = 0.99 (fast decay)
-                // persistence = 0.02 → decay rate = 0.9999 (very slow decay)
-                const decayRate = 1 - Math.exp(-parameters.pathMemoryPersistence * 100);
-                pathMemory.decay(1 - decayRate);
-                
-                // Update visual representation if visible
-                if (visibility.pathMemory) {
-                    pathMemory.updateVisual();
-                }
-            }
-            
-            // Clean up inactive particles
-            particles = particles.filter(p => p.isActive || p.hasSucceeded);
-            
-            // Update stats
-            updateStats();
-            
-            // Rotate scene elements slowly
-            coneGroup.rotation.y += 0.0005 * parameters.simulationSpeed;
-            spiralGroup.rotation.y += 0.0003 * parameters.simulationSpeed;
-            
-            // Camera look at center
-            camera.lookAt(0, 20, 0);
-            
             renderer.render(scene, camera);
         }
-
-        // Start animation
+        
         animate();
-
-        // Window resize handler
+        
+        // Handle window resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        }, false);
+
+        // Initial preset load
+        loadPreset('hybrid');
     </script>
 </body>
 </html>
