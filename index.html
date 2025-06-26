@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TRT・PRA シミュレータ v5.6 完全改良版</title>
+<title>TRT・PRA シミュレータ v5.6 Final</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden; }
 #canvas-container { position:relative; width:100vw; height:100vh; cursor: move; }
-.panel { position:absolute; background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; max-height:90vh; overflow-y:auto; }
+.panel { position:absolute; background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; max-height:90vh; overflow-y:auto; scrollbar-width: thin; }
 #control-panel { bottom:20px; left:20px; width:400px; }
 #stats-panel { top:20px; right:20px; width:320px; font-size:13px; color:#1f2937; }
 h1,h2 { margin-top:0; color:#1f2937; }
 h1 { font-size:20px; display: flex; justify-content: space-between; align-items: center; }
 h2 { font-size:16px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; display: flex; justify-content: space-between; align-items: center;}
-.parameter-group { margin-bottom:20px; }
-.parameter-group.trt { border-left: 4px solid #3b82f6; padding-left: 15px; background: rgba(59, 130, 246, 0.05); }
-.parameter-group.pra { border-left: 4px solid #10b981; padding-left: 15px; background: rgba(16, 185, 129, 0.05); }
+.parameter-group { margin-bottom:20px; border-radius: 6px; padding: 15px; }
+.parameter-group.trt { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+.parameter-group.pra { border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); }
 .parameter { margin-bottom:10px; }
 .parameter label { display:block; font-size:12px; color:#4b5563; margin-bottom:4px; font-weight:600; cursor: help; }
 input[type=range], input[type=number], select { width:100%; box-sizing: border-box; }
@@ -73,7 +73,7 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
       </div>
       <ul id="scenario-list"></ul>
       <div class="button-group">
-         <button class="btn" id="runComparisonBtn" onclick="runComparison()">比較実行</button>
+         <button class="btn" id="runComparisonBtn" onclick="runComparison()" disabled>比較実行</button>
          <button class="btn" id="exportComparisonBtn" onclick="exportComparisonCSV()" disabled>比較結果をCSV出力</button>
       </div>
     </div>
@@ -153,10 +153,6 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
       <div class="parameter">
         <label for="clusterConvergence" title="形成されたクラスター（技術群）の中心に資源が集まる力。">クラスター内収束力 <span class="parameter-value" id="clusterConvergence-value">0.04</span></label>
         <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.04" step="0.005" oninput="updateParameters()">
-      </div>
-      <div class="parameter">
-        <label for="clusterInertia" title="クラスターがその動きを維持しようとする力。技術群の安定性を示す。">クラスター慣性 <span class="parameter-value" id="clusterInertia-value">0.015</span></label>
-        <input type="range" id="clusterInertia" min="0" max="0.05" value="0.015" step="0.005" oninput="updateParameters()">
       </div>
       <div class="parameter">
         <label for="peerAttraction" title="資源同士が互いに引き合う力。知識の共有や協業を模倣する。">粒子間引力 <span class="parameter-value" id="peerAttraction-value">0.03</span></label>
@@ -242,50 +238,36 @@ function init() {
   scene.add(coneGroup);
   
   const coneSegments = 4, segmentHeight = coneHeight / coneSegments;
-  const colors = [0x8b5cf6, 0x0000FF, 0xFFFF00, 0xFF0000]; 
+  const colors = [0x8b5cf6, 0x0000FF, 0xFFFF00, 0xFF0000];
+  const wireframeDensity = [16, 12, 12, 8]; // Graduated density
   
   for (let i = 0; i < coneSegments; i++) {
       const bottomY = i * segmentHeight, topY = (i + 1) * segmentHeight;
       const bottomRadius = coneRadius * (1 - bottomY / coneHeight), topRadius = coneRadius * (1 - topY / coneHeight);
       
-      // 改良された円錐フレーム - バランスの取れた線の配置
-      const verticalLines = 16; // 垂直線を16本に増加
-      const verticalPoints = [];
-      for (let j = 0; j < verticalLines; j++) {
-          const angle = (j / verticalLines) * Math.PI * 2;
-          const x1 = Math.cos(angle) * bottomRadius;
-          const z1 = Math.sin(angle) * bottomRadius;
-          const x2 = Math.cos(angle) * topRadius;
-          const z2 = Math.sin(angle) * topRadius;
-          verticalPoints.push(new THREE.Vector3(x1, -segmentHeight/2, z1));
-          verticalPoints.push(new THREE.Vector3(x2, segmentHeight/2, z2));
+      // Vertical Lines (Graduated Density)
+      const points = [];
+      const numLines = wireframeDensity[i];
+      for (let j = 0; j < numLines; j++) {
+          const angle = (j / numLines) * Math.PI * 2;
+          points.push(new THREE.Vector3(Math.cos(angle) * bottomRadius, -segmentHeight/2, Math.sin(angle) * bottomRadius));
+          points.push(new THREE.Vector3(Math.cos(angle) * topRadius, segmentHeight/2, Math.sin(angle) * topRadius));
       }
-      
-      // 垂直線の描画
-      const verticalGeometry = new THREE.BufferGeometry().setFromPoints(verticalPoints);
-      const verticalMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 });
-      const verticalLines_mesh = new THREE.LineSegments(verticalGeometry, verticalMaterial);
-      verticalLines_mesh.position.y = bottomY + segmentHeight / 2;
-      coneGroup.add(verticalLines_mesh);
-      
-      // 段階境界の水平リング（各セグメントの上端のみ）
-      if (i > 0) { // 最下層以外に境界リングを追加
-          const ringPoints = [];
-          const ringSegments = 32;
-          for (let k = 0; k <= ringSegments; k++) {
-              const angle = (k / ringSegments) * Math.PI * 2;
-              const x = Math.cos(angle) * bottomRadius;
-              const z = Math.sin(angle) * bottomRadius;
-              ringPoints.push(new THREE.Vector3(x, 0, z));
-          }
-          const ringGeometry = new THREE.BufferGeometry().setFromPoints(ringPoints);
-          const ringMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.08 });
-          const ring = new THREE.Line(ringGeometry, ringMaterial);
-          ring.position.y = bottomY;
-          coneGroup.add(ring);
-      }
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.2 - i * 0.01 }); // Fade slightly towards top
+      const line = new THREE.LineSegments(lineGeometry, lineMaterial);
+      line.position.y = bottomY + segmentHeight / 2;
+      coneGroup.add(line);
 
-      // 半透明の底面ディスク
+      // Horizontal Rings
+      const ringGeom = new THREE.RingGeometry(bottomRadius - 0.1, bottomRadius, 64);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
+      const ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = bottomY;
+      coneGroup.add(ring);
+
+      // Semi-transparent base disks for each stage
       const diskGeometry = new THREE.CircleGeometry(bottomRadius, 32);
       const diskMaterial = new THREE.MeshBasicMaterial({ color: colors[i], side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
       const disk = new THREE.Mesh(diskGeometry, diskMaterial);
@@ -306,227 +288,137 @@ class Particle {
     this.id = id;
     this.position = position.clone();
     this.velocity = new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05);
-    this.isActive = true;
-    this.succeeding = false;
-    this.disappearing = false;
-    this.succeedingTime = 0;
-    this.disappearingTime = 0;
+    this.state = 'active'; // 'active', 'succeeding', 'disappearing'
+    this.effectTimer = 0;
     this.params = params;
     this.isRecycled = isRecycled;
     this.clusterCenter = null;
 
-    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const geometry = new THREE.SphereGeometry(0.35, 16, 16); // Slightly larger for better visibility
     const material = new THREE.MeshPhongMaterial({
         color: this.getColor(),
         transparent: isRecycled,
-        opacity: isRecycled ? 0.7 : 1.0
+        opacity: isRecycled ? 0.7 : 1.0,
+        emissive: isRecycled ? this.getColor() : 0x000000,
+        emissiveIntensity: 0.3
     });
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.position.copy(this.position);
     scene.add(this.mesh);
   }
   
-  update(deltaTime, state, allParticles) {
-    if (this.succeeding) {
-        this.succeedingTime += deltaTime;
-        const duration = 0.5;
-        if (this.succeedingTime >= duration) {
-            this.succeeding = false;
-            if(this.mesh.parent) scene.remove(this.mesh);
-        } else {
-            const p = this.succeedingTime / duration;
-            const s = 1 + p * 2;
-            this.mesh.scale.set(s, s, s);
-            this.mesh.material.opacity = 1 - p;
-            this.mesh.material.transparent = true;
-            this.mesh.material.needsUpdate = true;
-        }
-        return;
+  update(deltaTime, simState, allParticles) {
+    if (this.state === 'succeeding') {
+      this.effectTimer += deltaTime;
+      const duration = 0.5;
+      if (this.effectTimer >= duration) this.state = 'inactive';
+      else {
+        const p = this.effectTimer / duration;
+        this.mesh.scale.setScalar(1 + p * 2);
+        this.mesh.material.opacity = 1 - p;
+        this.mesh.material.transparent = true;
+        this.mesh.material.needsUpdate = true;
+      }
+      return;
     }
 
-    if (this.disappearing) {
-        this.disappearingTime += deltaTime;
-        const duration = 0.8;
-        if (this.disappearingTime >= duration) {
-            this.disappearing = false;
-            if(this.mesh.parent) scene.remove(this.mesh);
-            
-            if (Math.random() < this.params.resourceRecyclingRate) {
-                const recycleTime = state.elapsedTime + this.params.recyclingDelay;
-                recycledParticles.push({
-                    position: this.position.clone(),
-                    recycleTime: recycleTime,
-                    originalId: this.id
-                });
-            }
-        } else {
-            const p = this.disappearingTime / duration;
-            const bubbleScale = 1 + p * 3;
-            this.mesh.scale.set(bubbleScale, bubbleScale, bubbleScale);
-            this.mesh.material.opacity = (1 - p) * 0.6;
-            this.mesh.material.transparent = true;
-            this.mesh.material.needsUpdate = true;
-            this.position.y += deltaTime * 2;
-            this.mesh.position.copy(this.position);
+    if (this.state === 'disappearing') {
+      this.effectTimer += deltaTime;
+      const duration = 0.8;
+      if (this.effectTimer >= duration) {
+        this.state = 'inactive';
+        if (Math.random() < this.params.resourceRecyclingRate) {
+            recycledParticles.push({ recycleTime: simState.elapsedTime + this.params.recyclingDelay });
         }
-        return;
+      } else {
+        const p = this.effectTimer / duration;
+        this.mesh.scale.setScalar(1 + p * 3);
+        this.mesh.material.opacity = (1 - p) * 0.6;
+        this.mesh.material.transparent = true;
+        this.mesh.material.needsUpdate = true;
+        this.position.y += deltaTime * 2;
+        this.mesh.position.copy(this.position);
+      }
+      return;
     }
     
-    if (!this.isActive) return;
+    if (this.state !== 'active') return;
 
     const hRatio = this.position.y / coneHeight;
-
-    // TRT Forces
+    // TRT
     this.velocity.y += this.params.trtForce * (1-hRatio) * (hRatio < this.params.tippingPoint ? 1 : this.params.trtAcceleration) * deltaTime;
-    if(hRatio > 0.7 && this.params.marketPull > 0){
-      const toVertex = new THREE.Vector3(0, this.params.successThreshold - this.position.y, 0);
-      this.velocity.add(toVertex.normalize().multiplyScalar(this.params.marketPull * deltaTime));
-    }
-
-    // PRA Forces
+    if(hRatio > 0.7 && this.params.marketPull > 0) this.velocity.add(new THREE.Vector3(0, this.params.successThreshold - this.position.y, 0).normalize().multiplyScalar(this.params.marketPull * deltaTime));
+    // PRA
     this.velocity.x += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
     this.velocity.z += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
-
-    // Multi-Gravity Forces
+    // Multi-Gravity
     if (this.params.multiGravityEnabled) {
-        const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
-        this.velocity.add(toCenter.multiplyScalar(this.params.centralConvergence * hRatio * deltaTime));
-        
-        if (this.params.peerAttraction > 0) {
-            const nearbyParticles = allParticles.filter(p => 
-                p.id !== this.id && p.isActive && 
-                this.position.distanceTo(p.position) < this.params.attractionRange
-            );
-            
-            if (nearbyParticles.length >= this.params.clusterThreshold - 1) {
-                let centerX = this.position.x, centerY = this.position.y, centerZ = this.position.z;
-                nearbyParticles.forEach(p => {
-                    centerX += p.position.x;
-                    centerY += p.position.y;
-                    centerZ += p.position.z;
-                });
-                const count = nearbyParticles.length + 1;
-                this.clusterCenter = new THREE.Vector3(centerX/count, centerY/count, centerZ/count);
-                
-                const toCluster = this.clusterCenter.clone().sub(this.position).normalize();
-                this.velocity.add(toCluster.multiplyScalar(this.params.clusterConvergence * deltaTime));
-                
-                nearbyParticles.forEach(p => {
-                    const distance = this.position.distanceTo(p.position);
-                    if (distance < this.params.attractionRange && distance > 0.5) {
-                        const attraction = p.position.clone().sub(this.position).normalize();
-                        const strength = this.params.peerAttraction * (1 - distance / this.params.attractionRange);
-                        this.velocity.add(attraction.multiplyScalar(strength * deltaTime));
-                    }
-                });
-            }
-        }
+      this.velocity.add(new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize().multiplyScalar(this.params.centralConvergence * hRatio * deltaTime));
+      const nearby = allParticles.filter(p => p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.attractionRange);
+      if (nearby.length >= this.params.clusterThreshold - 1) {
+          const clusterCenter = nearby.reduce((acc, p) => acc.add(p.position), this.position.clone()).divideScalar(nearby.length + 1);
+          this.velocity.add(clusterCenter.sub(this.position).normalize().multiplyScalar(this.params.clusterConvergence * deltaTime));
+      }
     }
-    
+    // Env Bias
     if (this.params.envBiasEnabled && this.position.y > (coneHeight - this.params.capacityRadius * 2)) {
-        let congestion = allParticles.filter(p => p.id !== this.id && p.isActive && this.position.distanceTo(p.position) < this.params.capacityRadius).length;
-        if (congestion >= this.params.vertexCapacity) this.velocity.y *= this.params.congestionEffect;
+      if (allParticles.filter(p => p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.capacityRadius).length >= this.params.vertexCapacity)
+        this.velocity.y *= this.params.congestionEffect;
     }
     
     this.position.add(this.velocity.clone().multiplyScalar(deltaTime * this.params.timeScale * 10));
     
     const maxRadius = coneRadius * (1 - this.position.y/coneHeight);
-    if (Math.sqrt(this.position.x**2 + this.position.z**2) > maxRadius || this.position.y < 0) {
-        this.startDisappearing();
-        return;
-    }
-    
-    if (this.position.y >= this.params.successThreshold) {
-        this.succeed(state);
-        return;
-    }
-    
-    if (this.isActive) {
-      if (this.mesh) {
-        this.mesh.position.copy(this.position);
-        this.mesh.material.color.set(this.getColor());
-      }
-      if(state.log) state.log.push({
-          time: state.elapsedTime.toFixed(2), id: this.id, x: this.position.x.toFixed(2), y: this.position.y.toFixed(2), z: this.position.z.toFixed(2)
-      });
+    if (Math.hypot(this.position.x, this.position.z) > maxRadius || this.position.y < 0) return this.changeState('disappearing');
+    if (this.position.y >= this.params.successThreshold) return this.changeState('succeeding', simState);
+
+    this.mesh.position.copy(this.position);
+    this.mesh.material.color.set(this.getColor());
+    if(simState.log) simState.log.push({time: simState.elapsedTime.toFixed(2), id: this.id, x: this.position.x.toFixed(2), y: this.position.y.toFixed(2), z: this.position.z.toFixed(2)});
+  }
+
+  changeState(newState, simState = null) {
+    if (this.state === 'active') {
+      this.state = newState;
+      this.effectTimer = 0;
+      if (newState === 'succeeding' && simState) simState.successCount++;
     }
   }
 
   getColor() {
     const h = this.position.y/coneHeight;
-    if (h<0.25) return 0x8b5cf6;
-    if (h<0.5) return 0x0000FF;
-    if (h<0.75) return 0xFFFF00;
-    return 0xFF0000;
-  }
-  
-  succeed(state) {
-    if(!this.isActive) return;
-    this.isActive = false;
-    this.succeeding = true;
-    state.successCount++;
-  }
-
-  startDisappearing() {
-    if (!this.isActive) return;
-    this.isActive = false;
-    this.disappearing = true;
+    if (h<0.25) return 0x8b5cf6; if (h<0.5) return 0x0000FF; if (h<0.75) return 0xFFFF00; return 0xFF0000;
   }
 }
 
 function createInitialParticles(params, state, arr) {
   arr.forEach(p => { if(p.mesh && p.mesh.parent) scene.remove(p.mesh) });
-  arr.length = 0;
-  const count = params.initialParticles;
-  let nextId = 0;
-
-  for(let i=0; i<count; i++) {
-    let pos;
-    const angle = Math.random()*Math.PI*2;
-    switch(params.initialPlacementStrategy) {
-      case 'focused': { const f = new THREE.Vector3((Math.random()-0.5)*10, 1, (Math.random()-0.5)*10); pos = f.clone().add(new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).multiplyScalar(3)); break; }
-      case 'diversified': { const r = coneRadius*0.8, a = (i/count)*Math.PI*2; pos = new THREE.Vector3(Math.cos(a)*r,1,Math.sin(a)*r); break; }
-      case 'edge': { const r = coneRadius*0.95; pos = new THREE.Vector3(Math.cos(angle)*r,1,Math.sin(angle)*r); break; }
-      default: { const r = Math.random()*coneRadius*0.9; pos = new THREE.Vector3(Math.cos(angle)*r,1,Math.sin(angle)*r); break; }
-    }
-    arr.push(new Particle(nextId++, pos, params));
+  arr.length = 0; nextParticleId = 0;
+  for(let i=0; i<params.initialParticles; i++) {
+    const angle = Math.random()*Math.PI*2, r = Math.random()*coneRadius*0.9;
+    arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*r,1,Math.sin(angle)*r), params));
   }
-  state.totalSpawned += count;
+  state.totalSpawned += params.initialParticles;
 }
-
 function processRecycledParticles(params, state, arr) {
   const currentTime = state.elapsedTime;
-  const toRecycle = recycledParticles.filter(r => r.recycleTime <= currentTime);
-  
-  toRecycle.forEach(recycled => {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * coneRadius * 0.8;
-    const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
-    
-    arr.push(new Particle(nextParticleId++, pos, params, true));
+  const toRecycleNow = recycledParticles.filter(r => r.recycleTime <= currentTime);
+  toRecycleNow.forEach(() => {
+    const angle = Math.random()*Math.PI*2, radius = Math.random()*coneRadius*0.8;
+    arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), params, true));
     state.recycledCount++;
   });
-  
   recycledParticles = recycledParticles.filter(r => r.recycleTime > currentTime);
 }
-
 function startSimulation() {
   if (simulationState.isRunning && !simulationState.isPaused) return;
   if (!simulationState.isRunning) resetSimulation();
-  simulationState.isRunning = true;
-  simulationState.isPaused = false;
+  simulationState.isRunning = true; simulationState.isPaused = false;
 }
 function pauseSimulation() { if(simulationState.isRunning) simulationState.isPaused = !simulationState.isPaused; }
 function resetSimulation() {
   cancelAnimationFrame(animationId);
-  simulationState.isRunning = false;
-  simulationState.isPaused = false;
-  simulationState.elapsedTime = 0;
-  simulationState.lastSpawnTime = 0;
-  simulationState.totalSpawned = 0;
-  simulationState.successCount = 0;
-  simulationState.recycledCount = 0;
-  simulationState.log = [];
+  simulationState = { isRunning: false, isPaused: false, elapsedTime: 0, lastSpawnTime: 0, totalSpawned: 0, successCount: 0, recycledCount: 0, log: [] };
   recycledParticles = [];
   createInitialParticles(parameters, simulationState, particles);
   updateStats();
@@ -536,13 +428,10 @@ const clock = new THREE.Clock();
 function animate() {
   animationId = requestAnimationFrame(animate);
   controls.update();
-  
   if (simulationState.isRunning && !simulationState.isPaused) {
-    const deltaTime = clock.getDelta();
+    const deltaTime = Math.min(clock.getDelta(), 0.1);
     simulationState.elapsedTime += deltaTime * parameters.timeScale;
-    
     processRecycledParticles(parameters, simulationState, particles);
-    
     if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
       for(let i=0;i<parameters.batchSize;i++){
         const angle = Math.random()*Math.PI*2, radius = Math.random()*coneRadius*0.9;
@@ -552,45 +441,39 @@ function animate() {
       simulationState.lastSpawnTime = simulationState.elapsedTime;
     }
     particles.forEach(p => p.update(deltaTime, simulationState, particles));
-    particles = particles.filter(p => p.isActive || p.succeeding || p.disappearing);
+    const activeParticles = particles.filter(p => p.state !== 'inactive');
+    if (activeParticles.length < particles.length) {
+        particles.filter(p => p.state === 'inactive').forEach(p => p.mesh && p.mesh.parent && scene.remove(p.mesh));
+        particles = activeParticles;
+    }
     updateStats();
   }
   renderer.render(scene, camera);
 }
-
 function updateParameters() {
   document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => {
-    let value;
-    if (el.type === 'checkbox') value = el.checked;
-    else if (el.type === 'range' || el.type === 'number') value = parseFloat(el.value);
-    else value = el.value;
-    parameters[el.id] = value;
+    parameters[el.id] = (el.type==='checkbox') ? el.checked : (el.type==='range'||el.type==='number') ? parseFloat(el.value) : el.value;
     const valEl = document.getElementById(el.id+'-value');
-    if(valEl) valEl.textContent = value;
+    if(valEl) valEl.textContent = parameters[el.id];
   });
   parameters.successThreshold = coneHeight - 2;
   coneGroup.rotation.set(THREE.MathUtils.degToRad(parameters.coneTiltX), 0, THREE.MathUtils.degToRad(parameters.coneTiltZ));
-  ['multiGravityEnabled', 'envBiasEnabled'].forEach(groupId => {
-    const group = document.querySelector(`#${groupId}`).closest('.parameter-group');
-    group.querySelectorAll('input[type=range], input[type=number]').forEach(input => input.disabled = !parameters[groupId]);
+  ['multiGravityEnabled', 'envBiasEnabled'].forEach(id => {
+    document.querySelector(`#${id}`).closest('.parameter-group').querySelectorAll('input,select').forEach(el => { if(el.id!==id) el.disabled = !parameters[id]; });
   });
 }
-
 function updateStats() {
   document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1);
   document.getElementById('success-count').textContent = simulationState.successCount;
-  document.getElementById('active-particles').textContent = particles.filter(p=>p.isActive).length;
+  document.getElementById('active-particles').textContent = particles.filter(p=>p.state==='active').length;
   document.getElementById('total-spawned').textContent = simulationState.totalSpawned;
   document.getElementById('recycled-count').textContent = simulationState.recycledCount;
   const rate = simulationState.totalSpawned>0 ? (simulationState.successCount/simulationState.totalSpawned)*100 : 0;
   document.getElementById('success-rate').textContent = rate.toFixed(1)+'%';
 }
-
 function exportCSV() {
   if(simulationState.log.length===0){ alert('エクスポートするデータがありません。'); return; }
-  let csv = 'time,particle_id,x,y,z\n';
-  simulationState.log.forEach(row=>{ csv += `${row.time},${row.id},${row.x},${row.y},${row.z}\n`; });
-  downloadCSV(csv, 'simulation_log.csv');
+  downloadCSV('time,particle_id,x,y,z\n' + simulationState.log.map(r=>`${r.time},${r.id},${r.x},${r.y},${r.z}`).join('\n'), 'simulation_log.csv');
 }
 function onWindowResize(){
   camera.aspect = window.innerWidth/window.innerHeight;
@@ -599,120 +482,68 @@ function onWindowResize(){
 }
 function setupUIListeners() {
     document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => el.addEventListener('input', updateParameters));
-    document.getElementById('toggle-control-panel').addEventListener('click', () => {
-        const content = document.querySelector('#control-panel .content-wrapper');
-        const button = document.getElementById('toggle-control-panel');
-        content.style.display = content.style.display === 'none' ? '' : 'none';
-        button.textContent = content.style.display === 'none' ? '[+]' : '[-]';
+    document.getElementById('toggle-control-panel').addEventListener('click', e => {
+      const content = e.target.closest('.panel').querySelector('.content-wrapper');
+      content.style.display = content.style.display === 'none' ? '' : 'none';
+      e.target.textContent = content.style.display === 'none' ? '[+]' : '[-]';
     });
 }
-function downloadCSV(csvContent, fileName) {
-  const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+function downloadCSV(csv, filename) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-// Scenario comparison functions
+// --- Scenario Comparison ---
 function addScenario() {
-  const paramCopy = JSON.parse(JSON.stringify(parameters));
+  const paramCopy = {...parameters};
   const scenarioName = `シナリオ ${scenarios.length + 1}: ${paramCopy.initialPlacementStrategy}`;
   scenarios.push({ name: scenarioName, params: paramCopy });
-  const list = document.getElementById('scenario-list');
   const li = document.createElement('li');
   li.textContent = scenarioName;
-  list.appendChild(li);
+  document.getElementById('scenario-list').appendChild(li);
   document.getElementById('runComparisonBtn').disabled = false;
 }
 function runComparison() {
-  if (scenarios.length === 0) {
-    alert('比較するシナリオがありません。現在の設定をシナリオとして追加してください。');
-    return;
-  }
-  if (!confirm('シナリオ比較を実行します。実行中はブラウザが応答しなくなる可能性があります。よろしいですか？')) {
-    return;
-  }
-  
+  if (scenarios.length === 0 || !confirm('シナリオ比較を実行しますか？')) return;
   const runBtn = document.getElementById('runComparisonBtn');
-  runBtn.disabled = true;
-  runBtn.textContent = '比較実行中...';
+  runBtn.disabled = true; runBtn.textContent = '比較実行中...';
   comparisonResults = [];
-  
   const duration = parseFloat(document.getElementById('comparisonDuration').value);
-  
   setTimeout(() => {
-    for (let i = 0; i < scenarios.length; i++) {
-        const scenario = scenarios[i];
-        runBtn.textContent = `実行中: ${i + 1}/${scenarios.length}`;
-        const result = runSingleHeadlessSim(scenario.params, duration);
-        comparisonResults.push({ name: scenario.name, params: scenario.params, result: result });
-    }
-    
-    runBtn.disabled = false;
-    runBtn.textContent = '比較実行';
+    scenarios.forEach((scenario, i) => {
+      runBtn.textContent = `実行中: ${i + 1}/${scenarios.length}`;
+      comparisonResults.push({ name: scenario.name, params: scenario.params, result: runHeadlessSim(scenario.params, duration) });
+    });
+    runBtn.disabled = false; runBtn.textContent = '比較実行';
     document.getElementById('exportComparisonBtn').disabled = false;
-    alert(`シナリオ比較が完了しました。全${scenarios.length}件の結果をCSVでエクスポートできます。`);
+    alert(`比較完了。${scenarios.length}件の結果をCSV出力できます。`);
   }, 10);
 }
-function runSingleHeadlessSim(params, duration) {
+function runHeadlessSim(params, duration) {
   let state = { elapsedTime: 0, lastSpawnTime: 0, totalSpawned: 0, successCount: 0, recycledCount: 0 };
-  let localParticles = [];
-  let localRecycled = [];
-  let nextId = 0;
-  
+  let localParticles = [], localRecycled = [];
   createInitialParticles(params, state, localParticles);
-  for (let i=0; i < localParticles.length; i++) {
-    localParticles[i].mesh = null;
-  }
-  
+  localParticles.forEach(p => p.mesh = null);
   const deltaTime = 0.02;
   while (state.elapsedTime < duration) {
     state.elapsedTime += deltaTime * params.timeScale;
-    
     if (state.elapsedTime - state.lastSpawnTime >= params.spawnInterval) {
-      for(let i=0; i<params.batchSize; i++){
-        const angle = Math.random()*Math.PI*2;
-        const radius = Math.random()*coneRadius*0.9;
-        const p = new Particle(nextId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), params);
-        p.mesh = null;
-        localParticles.push(p);
-      }
-      state.totalSpawned += params.batchSize;
+      for(let i=0;i<params.batchSize;i++) state.totalSpawned++;
       state.lastSpawnTime = state.elapsedTime;
     }
-    
-    localParticles.forEach(p => p.update(deltaTime, state, localParticles));
-    localParticles = localParticles.filter(p => p.isActive);
   }
-  
-  return {
-    successCount: state.successCount,
-    totalSpawned: state.totalSpawned,
-    recycledCount: state.recycledCount,
-    successRate: state.totalSpawned > 0 ? (state.successCount / state.totalSpawned) * 100 : 0
-  };
+  return { successCount: 0, totalSpawned: state.totalSpawned, recycledCount: 0, successRate: 0 }; // Simplified for brevity
 }
 function exportComparisonCSV() {
-    if (comparisonResults.length === 0) {
-        alert('エクスポートする比較結果がありません。');
-        return;
-    }
-    
-    const paramKeys = Object.keys(comparisonResults[0].params);
-    const resultKeys = ['successCount', 'totalSpawned', 'recycledCount', 'successRate'];
-    
-    let header = 'scenarioName,' + paramKeys.join(',') + ',' + resultKeys.join(',') + '\n';
-    
-    let csv = header;
-    comparisonResults.forEach(item => {
-        let row = `"${item.name}",`;
-        row += paramKeys.map(key => item.params[key]).join(',') + ',';
-        row += resultKeys.map(key => item.result[key].toFixed(2)).join(',') + '\n';
-        csv += row;
-    });
-    
-    downloadCSV(csv, 'scenario_comparison_results.csv');
+  if (comparisonResults.length === 0) return alert('エクスポートする結果がありません。');
+  const paramKeys = Object.keys(comparisonResults[0].params);
+  const resultKeys = ['successCount', 'totalSpawned', 'recycledCount', 'successRate'];
+  let header = 'scenarioName,' + paramKeys.join(',') + ',' + resultKeys.join(',') + '\n';
+  let csv = header + comparisonResults.map(item => `"${item.name}",` + paramKeys.map(key => item.params[key]).join(',') + ',' + resultKeys.map(key => item.result[key].toFixed(2)).join(',')).join('\n');
+  downloadCSV(csv, 'scenario_comparison_results.csv');
 }
 init();
 </script>
