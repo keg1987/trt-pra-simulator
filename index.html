@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TRT・PRA シミュレータ v5.3 完全統合版</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden; }
 #canvas-container { position:relative; width:100vw; height:100vh; }
@@ -37,9 +38,9 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
 <div id="legend-panel" class="legend">
   <h2>資源の発展段階</h2>
   <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>純粋探索</div>
-  <div class="legend-item"><div class="legend-color" style="background:#ef4444"></div>移行期</div>
-  <div class="legend-item"><div class="legend-color" style="background:#f97316"></div>応用開発</div>
-  <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>市場活用</div>
+  <div class="legend-item"><div class="legend-color" style="background:#0000FF"></div>移行期</div>
+  <div class="legend-item"><div class="legend-color" style="background:#FFFF00"></div>応用開発</div>
+  <div class="legend-item"><div class="legend-color" style="background:#FF0000"></div>市場活用</div>
 </div>
 <div id="stats-panel" class="panel">
   <h2>リアルタイム指標</h2>
@@ -170,7 +171,7 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
   </div>
 </div>
 <script>
-let scene, camera, renderer, coneGroup;
+let scene, camera, renderer, coneGroup, controls;
 let particles = [], nextParticleId = 0;
 let animationId;
 let simulationState = {
@@ -217,27 +218,38 @@ function init() {
   scene.background = new THREE.Color(0xf0f0f0);
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(40, 40, 40);
-  camera.lookAt(0, 10, 0);
   renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // OrbitControlsの初期化
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, coneHeight / 2, 0); // 円錐の中心を注視
+  controls.enableDamping = true; // 滑らかな動き
+  controls.dampingFactor = 0.25;
+  controls.screenSpacePanning = false;
+  controls.maxPolarAngle = Math.PI / 2; // 真下からの視点を制限
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(50, 100, 50);
   scene.add(dirLight);
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshPhongMaterial({color:0xe0e0e0}));
-  ground.rotation.x = -Math.PI/2;
-  scene.add(ground);
+  // 地面を削除し、円錐の底面のグリッドを作成
+  const gridHelper = new THREE.GridHelper(coneRadius * 2, 20, 0x888888, 0xcccccc);
+  gridHelper.position.y = 0;
+  gridHelper.material.opacity = 0.2;
+  gridHelper.material.transparent = true;
+  scene.add(gridHelper);
 
   coneGroup = new THREE.Group();
   scene.add(coneGroup);
   
-  // Create sectioned cone
+  // 円錐セグメントの底面ディスクとワイヤーフレームの追加
   const coneSegments = 4;
   const segmentHeight = coneHeight / coneSegments;
-  const colors = [0x8b5cf6, 0xef4444, 0xf97316, 0x10b981]; // Pure Exp, Transition, Applied Dev, Market Util
+  // 純粋探索: そのまま, 移行期: 青, 応用開発: 黄, 市場活用: 赤
+  const colors = [0x8b5cf6, 0x0000FF, 0xFFFF00, 0xFF0000]; 
   
   for (let i = 0; i < coneSegments; i++) {
       const bottomY = i * segmentHeight;
@@ -245,22 +257,40 @@ function init() {
       const bottomRadius = coneRadius * (1 - bottomY / coneHeight);
       const topRadius = coneRadius * (1 - topY / coneHeight);
       
+      // 円錐の透明な部分
       const segmentGeom = new THREE.CylinderGeometry(topRadius, bottomRadius, segmentHeight, 32, 1, true);
       const segmentMat = new THREE.MeshPhongMaterial({
-          color: colors[i],
+          color: 0xcccccc, // 円錐自体は薄いグレーまたは透明に
           transparent: true,
-          opacity: 0.2,
+          opacity: 0.05, // 非常に低い透明度
           side: THREE.DoubleSide
       });
       const segment = new THREE.Mesh(segmentGeom, segmentMat);
       segment.position.y = bottomY + segmentHeight / 2;
       coneGroup.add(segment);
+
+      // 円錐のワイヤーフレーム
+      const wireframe = new THREE.WireframeGeometry(segmentGeom);
+      const line = new THREE.LineSegments(wireframe, new THREE.LineBasicMaterial({ color: 0x000000 }));
+      line.position.y = bottomY + segmentHeight / 2;
+      coneGroup.add(line);
+
+      // 各段階の底面ディスク
+      if (i < coneSegments) { // 最後のセグメントの頂点を除く
+        const diskGeometry = new THREE.CircleGeometry(bottomRadius, 32);
+        const diskMaterial = new THREE.MeshBasicMaterial({ color: colors[i], side: THREE.DoubleSide });
+        const disk = new THREE.Mesh(diskGeometry, diskMaterial);
+        disk.rotation.x = -Math.PI / 2;
+        disk.position.y = bottomY;
+        coneGroup.add(disk);
+      }
   }
 
   window.addEventListener('resize', onWindowResize);
   setupUIListeners();
   updateParameters();
   resetSimulation();
+  animate(); // OrbitControlsを使うため、必ずアニメーションループを開始
 }
 
 class Particle {
@@ -360,10 +390,11 @@ class Particle {
 
   getColor() {
     const h = this.position.y/coneHeight;
-    if (h<0.25) return 0x8b5cf6;
-    if (h<0.5) return 0xef4444;
-    if (h<0.75) return 0xf97316;
-    return 0x10b981;
+    // 純粋探索: そのまま, 移行期: 青, 応用開発: 黄, 市場活用: 赤
+    if (h<0.25) return 0x8b5cf6; // Pure Exp
+    if (h<0.5) return 0x0000FF; // Transition (Blue)
+    if (h<0.75) return 0xFFFF00; // Applied Dev (Yellow)
+    return 0xFF0000; // Market Util (Red)
   }
   
   succeed() {
@@ -409,11 +440,9 @@ function startSimulation() {
   }
   simulationState.isRunning = true;
   simulationState.isPaused = false;
-  animate();
 }
 function pauseSimulation() { if(simulationState.isRunning) simulationState.isPaused = !simulationState.isPaused; }
 function resetSimulation() {
-  cancelAnimationFrame(animationId);
   simulationState.isRunning = false;
   simulationState.isPaused = false;
   simulationState.elapsedTime = 0;
@@ -429,22 +458,24 @@ function resetSimulation() {
 const clock = new THREE.Clock();
 function animate() {
   animationId = requestAnimationFrame(animate);
-  if(!simulationState.isRunning || simulationState.isPaused) {
-    clock.getDelta(); // keep clock ticking
-    return;
-  }
-  const deltaTime = clock.getDelta();
-  simulationState.elapsedTime += deltaTime * parameters.timeScale;
-  if(simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
-    for(let i=0;i<parameters.batchSize;i++){
-      const angle = Math.random()*Math.PI*2; const radius = Math.random()*coneRadius*0.9; const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius); particles.push(new Particle(nextParticleId++, pos));
+  controls.update(); // OrbitControlsを毎フレーム更新
+  
+  if(simulationState.isRunning && !simulationState.isPaused) {
+    const deltaTime = clock.getDelta();
+    simulationState.elapsedTime += deltaTime * parameters.timeScale;
+    if(simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
+      for(let i=0;i<parameters.batchSize;i++){
+        const angle = Math.random()*Math.PI*2; const radius = Math.random()*coneRadius*0.9; const pos = new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius); particles.push(new Particle(nextParticleId++, pos));
+      }
+      simulationState.totalSpawned += parameters.batchSize;
+      simulationState.lastSpawnTime = simulationState.elapsedTime;
     }
-    simulationState.totalSpawned += parameters.batchSize;
-    simulationState.lastSpawnTime = simulationState.elapsedTime;
+    particles.forEach(p => p.update(deltaTime));
+    particles = particles.filter(p => p.isActive || p.succeeding);
+    updateStats();
+  } else {
+    clock.getDelta(); // keep clock ticking even when paused/stopped
   }
-  particles.forEach(p => p.update(deltaTime));
-  particles = particles.filter(p => p.isActive || p.succeeding);
-  updateStats();
   renderer.render(scene, camera);
 }
 function updateParameters() {
