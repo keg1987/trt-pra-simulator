@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TRT・PRA シミュレータ v5.5 完全改良版</title>
+<title>TRT・PRA シミュレータ v5.6 完全改良版</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
@@ -60,7 +60,7 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
   <div>再利用資源数: <span id="recycled-count">0</span></div>
 </div>
 <div id="control-panel" class="panel">
-  <h1>TRT・PRA シミュレータ v5.5<button id="toggle-control-panel">[-]</button></h1>
+  <h1>TRT・PRA シミュレータ v5.6<button id="toggle-control-panel">[-]</button></h1>
   <div class="content-wrapper">
     <div class="parameter-group">
       <h2>シナリオ比較</h2>
@@ -248,24 +248,42 @@ function init() {
       const bottomY = i * segmentHeight, topY = (i + 1) * segmentHeight;
       const bottomRadius = coneRadius * (1 - bottomY / coneHeight), topRadius = coneRadius * (1 - topY / coneHeight);
       
-      const segmentGeom = new THREE.CylinderGeometry(topRadius, bottomRadius, segmentHeight, 32, 1, true);
-      
-      // 最小限の輪郭線のみ - 垂直線だけ
-      const points = [];
-      for (let j = 0; j < 8; j++) { // 8本の垂直線のみ
-          const angle = (j / 8) * Math.PI * 2;
+      // 改良された円錐フレーム - バランスの取れた線の配置
+      const verticalLines = 16; // 垂直線を16本に増加
+      const verticalPoints = [];
+      for (let j = 0; j < verticalLines; j++) {
+          const angle = (j / verticalLines) * Math.PI * 2;
           const x1 = Math.cos(angle) * bottomRadius;
           const z1 = Math.sin(angle) * bottomRadius;
           const x2 = Math.cos(angle) * topRadius;
           const z2 = Math.sin(angle) * topRadius;
-          points.push(new THREE.Vector3(x1, -segmentHeight/2, z1));
-          points.push(new THREE.Vector3(x2, segmentHeight/2, z2));
+          verticalPoints.push(new THREE.Vector3(x1, -segmentHeight/2, z1));
+          verticalPoints.push(new THREE.Vector3(x2, segmentHeight/2, z2));
       }
-      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
-      const line = new THREE.LineSegments(lineGeometry, lineMaterial);
-      line.position.y = bottomY + segmentHeight / 2;
-      coneGroup.add(line);
+      
+      // 垂直線の描画
+      const verticalGeometry = new THREE.BufferGeometry().setFromPoints(verticalPoints);
+      const verticalMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 });
+      const verticalLines_mesh = new THREE.LineSegments(verticalGeometry, verticalMaterial);
+      verticalLines_mesh.position.y = bottomY + segmentHeight / 2;
+      coneGroup.add(verticalLines_mesh);
+      
+      // 段階境界の水平リング（各セグメントの上端のみ）
+      if (i > 0) { // 最下層以外に境界リングを追加
+          const ringPoints = [];
+          const ringSegments = 32;
+          for (let k = 0; k <= ringSegments; k++) {
+              const angle = (k / ringSegments) * Math.PI * 2;
+              const x = Math.cos(angle) * bottomRadius;
+              const z = Math.sin(angle) * bottomRadius;
+              ringPoints.push(new THREE.Vector3(x, 0, z));
+          }
+          const ringGeometry = new THREE.BufferGeometry().setFromPoints(ringPoints);
+          const ringMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.08 });
+          const ring = new THREE.Line(ringGeometry, ringMaterial);
+          ring.position.y = bottomY;
+          coneGroup.add(ring);
+      }
 
       // 半透明の底面ディスク
       const diskGeometry = new THREE.CircleGeometry(bottomRadius, 32);
@@ -328,12 +346,11 @@ class Particle {
 
     if (this.disappearing) {
         this.disappearingTime += deltaTime;
-        const duration = 0.8; // Longer bubble effect
+        const duration = 0.8;
         if (this.disappearingTime >= duration) {
             this.disappearing = false;
             if(this.mesh.parent) scene.remove(this.mesh);
             
-            // Check for recycling
             if (Math.random() < this.params.resourceRecyclingRate) {
                 const recycleTime = state.elapsedTime + this.params.recyclingDelay;
                 recycledParticles.push({
@@ -344,14 +361,11 @@ class Particle {
             }
         } else {
             const p = this.disappearingTime / duration;
-            // Bubble effect: expand and fade
             const bubbleScale = 1 + p * 3;
             this.mesh.scale.set(bubbleScale, bubbleScale, bubbleScale);
             this.mesh.material.opacity = (1 - p) * 0.6;
             this.mesh.material.transparent = true;
             this.mesh.material.needsUpdate = true;
-            
-            // Add slight upward drift
             this.position.y += deltaTime * 2;
             this.mesh.position.copy(this.position);
         }
@@ -378,7 +392,6 @@ class Particle {
         const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
         this.velocity.add(toCenter.multiplyScalar(this.params.centralConvergence * hRatio * deltaTime));
         
-        // Enhanced cluster attraction with visible cohesion
         if (this.params.peerAttraction > 0) {
             const nearbyParticles = allParticles.filter(p => 
                 p.id !== this.id && p.isActive && 
@@ -386,7 +399,6 @@ class Particle {
             );
             
             if (nearbyParticles.length >= this.params.clusterThreshold - 1) {
-                // Calculate cluster center
                 let centerX = this.position.x, centerY = this.position.y, centerZ = this.position.z;
                 nearbyParticles.forEach(p => {
                     centerX += p.position.x;
@@ -396,11 +408,9 @@ class Particle {
                 const count = nearbyParticles.length + 1;
                 this.clusterCenter = new THREE.Vector3(centerX/count, centerY/count, centerZ/count);
                 
-                // Strong attraction to cluster center
                 const toCluster = this.clusterCenter.clone().sub(this.position).normalize();
                 this.velocity.add(toCluster.multiplyScalar(this.params.clusterConvergence * deltaTime));
                 
-                // Individual peer attractions for cohesive movement
                 nearbyParticles.forEach(p => {
                     const distance = this.position.distanceTo(p.position);
                     if (distance < this.params.attractionRange && distance > 0.5) {
@@ -489,7 +499,6 @@ function processRecycledParticles(params, state, arr) {
   const toRecycle = recycledParticles.filter(r => r.recycleTime <= currentTime);
   
   toRecycle.forEach(recycled => {
-    // Place recycled particle at bottom with slight randomization
     const angle = Math.random() * Math.PI * 2;
     const radius = Math.random() * coneRadius * 0.8;
     const pos = new THREE.Vector3(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
@@ -532,7 +541,6 @@ function animate() {
     const deltaTime = clock.getDelta();
     simulationState.elapsedTime += deltaTime * parameters.timeScale;
     
-    // Process recycled particles
     processRecycledParticles(parameters, simulationState, particles);
     
     if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
