@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TRT・PRA シミュレータ Final Version</title>
+<title>TRT・PRA シミュレータ 修正版</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden; }
 #canvas-container { position:relative; width:100vw; height:100vh; cursor: move; }
@@ -34,11 +33,14 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
 .legend-item { display:flex; align-items:center; margin-bottom:5px; }
 .legend-color { width:15px; height:15px; margin-right:8px; border-radius:3px; }
 #scenario-list { list-style-type: none; padding-left: 0; font-size: 12px; max-height: 100px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 10px; }
-#scenario-list li { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; }
+#scenario-list li { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; cursor: pointer; }
 #scenario-list li:last-child { border-bottom: none; }
+#scenario-list li:hover { background: #e5e7eb; }
 .theory-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 8px; }
 .theory-badge.trt { background: #3b82f6; color: white; }
 .theory-badge.pra { background: #10b981; color: white; }
+.error-message { background: #fee; border: 1px solid #fcc; color: #c33; padding: 10px; border-radius: 6px; margin: 10px 0; }
+.success-message { background: #efe; border: 1px solid #cfc; color: #363; padding: 10px; border-radius: 6px; margin: 10px 0; }
 </style>
 </head>
 <body>
@@ -62,6 +64,8 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
 <div id="control-panel" class="panel">
   <h1>TRT・PRA シミュレータ<button id="toggle-control-panel">[-]</button></h1>
   <div class="content-wrapper">
+    <div id="message-area"></div>
+    
     <div class="parameter-group">
       <h2>シナリオ比較</h2>
        <div class="parameter">
@@ -77,17 +81,25 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
          <button class="btn" id="exportComparisonBtn" onclick="exportComparisonCSV()" disabled>比較結果をCSV出力</button>
       </div>
     </div>
+    
     <div class="parameter-group">
       <h2>戦略的初期配置</h2>
       <div class="parameter">
         <label for="initialPlacementStrategy">初期配置戦略</label>
-        <select id="initialPlacementStrategy" onchange="updateParameters()"><option value="random">ランダム</option><option value="focused">集中型</option><option value="diversified">分散型</option><option value="clustered">クラスター型</option><option value="edge">エッジ探索型</option></select>
+        <select id="initialPlacementStrategy" onchange="updateParameters()">
+          <option value="random">ランダム</option>
+          <option value="focused">集中型</option>
+          <option value="diversified">分散型</option>
+          <option value="clustered">クラスター型</option>
+          <option value="edge">エッジ探索型</option>
+        </select>
       </div>
       <div class="parameter">
         <label for="initialParticles">初期資源数 <span class="parameter-value" id="initialParticles-value">20</span></label>
         <input type="range" id="initialParticles" min="1" max="100" value="20" step="1" oninput="updateParameters()">
       </div>
     </div>
+    
     <div class="parameter-group">
       <h2>シミュレーション制御</h2>
       <div class="parameter">
@@ -167,6 +179,7 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
         <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1" oninput="updateParameters()">
       </div>
     </div>
+    
     <div class="parameter-group">
       <h2>環境バイアス・頂点容量制限 <input type="checkbox" id="envBiasEnabled" checked onchange="updateParameters()"></h2>
       <div class="parameter">
@@ -190,6 +203,7 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
         <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05" oninput="updateParameters()">
       </div>
     </div>
+    
     <div class="button-group">
       <button class="btn" onclick="startSimulation()">開始</button>
       <button class="btn btn-secondary" onclick="pauseSimulation()">一時停止</button>
@@ -198,7 +212,62 @@ h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: poin
     </div>
   </div>
 </div>
+
 <script>
+// OrbitControls implementation (since we can't use external CDN for examples)
+THREE.OrbitControls = function(object, domElement) {
+  this.object = object;
+  this.domElement = domElement || document;
+  this.target = new THREE.Vector3();
+  this.enableDamping = false;
+  
+  let scope = this;
+  let isMouseDown = false;
+  let lastMouse = new THREE.Vector2();
+  let spherical = new THREE.Spherical();
+  let sphericalDelta = new THREE.Spherical();
+  
+  function onMouseDown(event) {
+    isMouseDown = true;
+    lastMouse.set(event.clientX, event.clientY);
+  }
+  
+  function onMouseMove(event) {
+    if (!isMouseDown) return;
+    let deltaX = event.clientX - lastMouse.x;
+    let deltaY = event.clientY - lastMouse.y;
+    sphericalDelta.theta -= deltaX * 0.01;
+    sphericalDelta.phi -= deltaY * 0.01;
+    lastMouse.set(event.clientX, event.clientY);
+  }
+  
+  function onMouseUp(event) {
+    isMouseDown = false;
+  }
+  
+  this.update = function() {
+    let offset = new THREE.Vector3();
+    offset.copy(scope.object.position).sub(scope.target);
+    spherical.setFromVector3(offset);
+    spherical.theta += sphericalDelta.theta;
+    spherical.phi += sphericalDelta.phi;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+    offset.setFromSpherical(spherical);
+    scope.object.position.copy(scope.target).add(offset);
+    scope.object.lookAt(scope.target);
+    if (scope.enableDamping) {
+      sphericalDelta.theta *= 0.95;
+      sphericalDelta.phi *= 0.95;
+    } else {
+      sphericalDelta.set(0, 0, 0);
+    }
+  };
+  
+  domElement.addEventListener('mousedown', onMouseDown);
+  domElement.addEventListener('mousemove', onMouseMove);
+  domElement.addEventListener('mouseup', onMouseUp);
+};
+
 let scene, camera, renderer, coneGroup, controls;
 let particles = [], nextParticleId = 0, recycledParticles = [];
 let animationId;
@@ -215,36 +284,60 @@ let parameters = {};
 const colorStops = {
     green: new THREE.Color(0x00ff00),
     yellow: new THREE.Color(0xffff00),
-    pink: new THREE.Color(0xff69b4), // HotPink
+    pink: new THREE.Color(0xff69b4),
     red: new THREE.Color(0xff0000)
 };
 
+function showMessage(text, type = 'info') {
+  const messageArea = document.getElementById('message-area');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+  messageDiv.textContent = text;
+  messageArea.appendChild(messageDiv);
+  setTimeout(() => messageDiv.remove(), 5000);
+}
+
 function init() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f0);
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(40, 40, 40);
-  renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.getElementById('canvas-container').appendChild(renderer.domElement);
+  try {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(40, 40, 40);
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, coneHeight/2, 0);
-  controls.enableDamping = true;
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, coneHeight/2, 0);
+    controls.enableDamping = true;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  dirLight.position.set(50, 100, 50);
-  scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(50, 100, 50);
+    scene.add(dirLight);
 
-  const gridHelper = new THREE.GridHelper(coneRadius * 2, 20, 0x888888, 0xcccccc);
-  gridHelper.material.opacity = 0.15;
-  gridHelper.material.transparent = true;
-  scene.add(gridHelper);
+    const gridHelper = new THREE.GridHelper(coneRadius * 2, 20, 0x888888, 0xcccccc);
+    gridHelper.material.opacity = 0.15;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
 
-  coneGroup = new THREE.Group();
-  scene.add(coneGroup);
-  
+    coneGroup = new THREE.Group();
+    scene.add(coneGroup);
+    
+    createConeGeometry();
+    
+    window.addEventListener('resize', onWindowResize);
+    setupUIListeners();
+    updateParameters();
+    resetSimulation();
+    animate();
+  } catch (error) {
+    showMessage('初期化エラー: ' + error.message, 'error');
+    console.error('Initialization error:', error);
+  }
+}
+
+function createConeGeometry() {
   const coneSegments = 4, segmentHeight = coneHeight / coneSegments;
   const coneWallColor = new THREE.Color(0xA0C0E0);
   const wireframeDensity = [16, 12, 12, 8];
@@ -285,12 +378,6 @@ function init() {
       ring.position.y = bottomY;
       coneGroup.add(ring);
   }
-
-  window.addEventListener('resize', onWindowResize);
-  setupUIListeners();
-  updateParameters();
-  resetSimulation();
-  animate();
 }
 
 class Particle {
@@ -301,6 +388,7 @@ class Particle {
     this.state = 'active';
     this.effectTimer = 0;
     this.params = params;
+    this.birthTime = params.currentTime || 0;
 
     const geometry = new THREE.SphereGeometry(0.35, 16, 16);
     const material = new THREE.MeshPhongMaterial({
@@ -322,7 +410,9 @@ class Particle {
         const duration = isSucceeding ? 0.5 : 0.8;
         if (this.effectTimer >= duration) {
             this.state = 'inactive';
-            if (!isSucceeding && Math.random() < this.params.resourceRecyclingRate) recycledParticles.push({ recycleTime: simState.elapsedTime + this.params.recyclingDelay });
+            if (!isSucceeding && Math.random() < this.params.resourceRecyclingRate) {
+              recycledParticles.push({ recycleTime: simState.elapsedTime + this.params.recyclingDelay });
+            }
         } else {
             const p = this.effectTimer / duration;
             this.mesh.scale.setScalar(1 + p * (isSucceeding ? 2 : 3));
@@ -334,45 +424,75 @@ class Particle {
     }
     if (this.state !== 'active') return;
 
-    // Physics update logic... (omitted for brevity, same as previous version)
+    // Physics update
     const hRatio = this.position.y / coneHeight;
     this.velocity.y += this.params.trtForce * (1-hRatio) * (hRatio < this.params.tippingPoint ? 1 : this.params.trtAcceleration) * deltaTime;
-    if(hRatio > 0.7 && this.params.marketPull > 0) this.velocity.add(new THREE.Vector3(0, this.params.successThreshold - this.position.y, 0).normalize().multiplyScalar(this.params.marketPull * deltaTime));
+    
+    if(hRatio > 0.7 && this.params.marketPull > 0) {
+      this.velocity.add(new THREE.Vector3(0, this.params.successThreshold - this.position.y, 0).normalize().multiplyScalar(this.params.marketPull * deltaTime));
+    }
+    
     this.velocity.x += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
     this.velocity.z += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
+    
     if (this.params.multiGravityEnabled) {
       this.velocity.add(new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize().multiplyScalar(this.params.centralConvergence * hRatio * deltaTime));
+      
       const nearby = allParticles.filter(p => p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.attractionRange);
       if (nearby.length >= this.params.clusterThreshold - 1) {
           const clusterCenter = nearby.reduce((acc, p) => acc.add(p.position), this.position.clone()).divideScalar(nearby.length + 1);
           this.velocity.add(clusterCenter.sub(this.position).normalize().multiplyScalar(this.params.clusterConvergence * deltaTime));
       }
     }
+    
     if (this.params.envBiasEnabled && this.position.y > (coneHeight - this.params.capacityRadius * 2)) {
-      if (allParticles.filter(p => p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.capacityRadius).length >= this.params.vertexCapacity)
+      const nearbyCount = allParticles.filter(p => p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.capacityRadius).length;
+      if (nearbyCount >= this.params.vertexCapacity) {
         this.velocity.y *= this.params.congestionEffect;
+      }
     }
+    
     this.position.add(this.velocity.clone().multiplyScalar(deltaTime * this.params.timeScale * 10));
+    
+    // Log particle position
+    if (simState.log.length < 10000 && Math.random() < 0.1) { // Sample 10% of updates to prevent memory issues
+      simState.log.push({
+        time: simState.elapsedTime,
+        id: this.id,
+        x: this.position.x.toFixed(2),
+        y: this.position.y.toFixed(2),
+        z: this.position.z.toFixed(2)
+      });
+    }
     
     // Boundary checks
     const maxRadius = coneRadius * (1 - this.position.y/coneHeight);
-    if (Math.hypot(this.position.x, this.position.z) > maxRadius || this.position.y < 0) return this.changeState('disappearing', simState);
-    if (this.position.y >= this.params.successThreshold) return this.changeState('succeeding', simState);
+    if (Math.hypot(this.position.x, this.position.z) > maxRadius || this.position.y < 0) {
+      return this.changeState('disappearing', simState);
+    }
+    if (this.position.y >= this.params.successThreshold) {
+      return this.changeState('succeeding', simState);
+    }
 
     this.mesh.position.copy(this.position);
     this.mesh.material.color = this.getColor();
-    this.mesh.material.opacity = 0.6 + 0.4 * hRatio; // Increase opacity with height
+    this.mesh.material.opacity = 0.6 + 0.4 * hRatio;
   }
 
   changeState(newState, simState = null) {
-    if (this.state === 'active') { this.state = newState; this.effectTimer = 0; if (newState === 'succeeding' && simState) simState.successCount++; }
+    if (this.state === 'active') { 
+      this.state = newState; 
+      this.effectTimer = 0; 
+      if (newState === 'succeeding' && simState) {
+        simState.successCount++;
+      }
+    }
   }
 
   getColor() {
     const hRatio = this.position.y / coneHeight;
     let color = new THREE.Color();
     
-    // Interpolate hue
     if (hRatio < 0.33) {
       color.lerpColors(colorStops.green, colorStops.yellow, hRatio / 0.33);
     } else if (hRatio < 0.66) {
@@ -381,74 +501,379 @@ class Particle {
       color.lerpColors(colorStops.pink, colorStops.red, (hRatio - 0.66) / 0.34);
     }
     
-    // Interpolate saturation and lightness for "pale to deep" effect
     let hsl = {};
     color.getHSL(hsl);
-    hsl.s = 0.6 + 0.4 * hRatio; // Saturation from 60% to 100%
-    hsl.l = 0.7 - 0.2 * hRatio; // Lightness from 70% to 50%
+    hsl.s = 0.6 + 0.4 * hRatio;
+    hsl.l = 0.7 - 0.2 * hRatio;
     color.setHSL(hsl.h, hsl.s, hsl.l);
     
     return color;
   }
   
-  removeMesh() { if (this.mesh && this.mesh.parent) { scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mesh.material.dispose(); this.mesh = null; } }
+  removeMesh() { 
+    if (this.mesh && this.mesh.parent) { 
+      scene.remove(this.mesh); 
+      if (this.mesh.geometry) this.mesh.geometry.dispose(); 
+      if (this.mesh.material) this.mesh.material.dispose(); 
+      this.mesh = null; 
+    } 
+  }
 }
 
-// Control functions (start, pause, reset)
-function startSimulation() { simulationState.isRunning = true; simulationState.isPaused = false; }
-function pauseSimulation() { if (simulationState.isRunning) simulationState.isPaused = true; }
+function getInitialPosition(strategy, index, total) {
+  const angle = (index / total) * Math.PI * 2;
+  const baseRadius = coneRadius * 0.9;
+  
+  switch (strategy) {
+    case 'focused':
+      // Concentrate in center
+      return new THREE.Vector3(
+        Math.cos(angle) * baseRadius * 0.3,
+        1,
+        Math.sin(angle) * baseRadius * 0.3
+      );
+    case 'diversified':
+      // Spread evenly across base
+      return new THREE.Vector3(
+        Math.cos(angle) * (0.3 + Math.random() * 0.6) * baseRadius,
+        1,
+        Math.sin(angle) * (0.3 + Math.random() * 0.6) * baseRadius
+      );
+    case 'clustered':
+      // Create 3-4 clusters
+      const clusterAngle = Math.floor(index / (total / 4)) * Math.PI / 2;
+      const clusterRadius = baseRadius * 0.5;
+      return new THREE.Vector3(
+        Math.cos(clusterAngle) * clusterRadius + (Math.random() - 0.5) * 3,
+        1,
+        Math.sin(clusterAngle) * clusterRadius + (Math.random() - 0.5) * 3
+      );
+    case 'edge':
+      // Place near the edge
+      return new THREE.Vector3(
+        Math.cos(angle) * baseRadius * (0.8 + Math.random() * 0.2),
+        1,
+        Math.sin(angle) * baseRadius * (0.8 + Math.random() * 0.2)
+      );
+    default: // random
+      return new THREE.Vector3(
+        Math.cos(angle) * Math.random() * baseRadius,
+        1,
+        Math.sin(angle) * Math.random() * baseRadius
+      );
+  }
+}
+
+function createInitialParticles(params, state, arr) { 
+  arr.forEach(p => p.removeMesh()); 
+  arr.length = 0; 
+  nextParticleId = 0; 
+  state.totalSpawned = 0; 
+  
+  for(let i = 0; i < params.initialParticles; i++) {
+    const position = getInitialPosition(params.initialPlacementStrategy, i, params.initialParticles);
+    arr.push(new Particle(nextParticleId++, position, params)); 
+  } 
+  state.totalSpawned += params.initialParticles; 
+}
+
+function processRecycledParticles(params, state, arr) { 
+  const currentTime = state.elapsedTime; 
+  const toRecycleNow = recycledParticles.filter(r => r.recycleTime <= currentTime); 
+  toRecycleNow.forEach(() => { 
+    const angle = Math.random()*Math.PI*2, radius = Math.random()*coneRadius*0.8; 
+    arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), params, true)); 
+    state.recycledCount++; 
+  }); 
+  recycledParticles = recycledParticles.filter(r => r.recycleTime > currentTime); 
+}
+
+function updateParameters() { 
+  document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => { 
+    parameters[el.id] = (el.type==='checkbox') ? el.checked : (el.type==='range'||el.type==='number') ? parseFloat(el.value) : el.value; 
+    const valEl = document.getElementById(el.id+'-value'); 
+    if(valEl) valEl.textContent = parameters[el.id]; 
+  }); 
+  parameters.successThreshold = coneHeight - 2; 
+  parameters.currentTime = simulationState.elapsedTime;
+  
+  if (coneGroup) {
+    coneGroup.rotation.set(THREE.MathUtils.degToRad(parameters.coneTiltX || 0), 0, THREE.MathUtils.degToRad(parameters.coneTiltZ || 0));
+  }
+  
+  ['multiGravityEnabled', 'envBiasEnabled'].forEach(id => { 
+    const group = document.querySelector(`#${id}`).closest('.parameter-group');
+    if (group) {
+      group.querySelectorAll('input,select').forEach(el => { 
+        if(el.id !== id) el.disabled = !parameters[id]; 
+      }); 
+    }
+  }); 
+}
+
+function updateStats() { 
+  document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1); 
+  document.getElementById('success-count').textContent = simulationState.successCount; 
+  document.getElementById('active-particles').textContent = particles.filter(p=>p.state==='active').length; 
+  document.getElementById('total-spawned').textContent = simulationState.totalSpawned; 
+  document.getElementById('recycled-count').textContent = simulationState.recycledCount; 
+  const rate = simulationState.totalSpawned>0 ? (simulationState.successCount/simulationState.totalSpawned)*100 : 0; 
+  document.getElementById('success-rate').textContent = rate.toFixed(1)+'%'; 
+}
+
+function exportCSV() { 
+  if(simulationState.log.length === 0){ 
+    showMessage('エクスポートするデータがありません。', 'error'); 
+    return; 
+  } 
+  const csv = 'time,particle_id,x,y,z\n' + simulationState.log.map(r=>`${r.time},${r.id},${r.x},${r.y},${r.z}`).join('\n');
+  downloadCSV(csv, 'simulation_log.csv'); 
+  showMessage('CSVファイルをダウンロードしました。', 'success');
+}
+
+function addScenario() { 
+  const paramCopy = {...parameters}; 
+  const scenarioName = `シナリオ ${scenarios.length + 1}: ${paramCopy.initialPlacementStrategy}`; 
+  scenarios.push({ name: scenarioName, params: paramCopy }); 
+  const li = document.createElement('li'); 
+  li.textContent = scenarioName;
+  li.onclick = () => showMessage(`シナリオ設定: ${scenarioName}`, 'info');
+  document.getElementById('scenario-list').appendChild(li); 
+  document.getElementById('runComparisonBtn').disabled = false; 
+  showMessage('シナリオを追加しました。', 'success');
+}
+
+function runComparison() {
+  if (scenarios.length < 2) {
+    showMessage('比較には少なくとも2つのシナリオが必要です。', 'error');
+    return;
+  }
+  
+  showMessage('シナリオ比較を実行中...', 'info');
+  document.getElementById('runComparisonBtn').disabled = true;
+  
+  comparisonResults = [];
+  const duration = parseFloat(document.getElementById('comparisonDuration').value);
+  
+  // Run each scenario
+  scenarios.forEach((scenario, index) => {
+    const result = runHeadlessSim(scenario.params, duration);
+    comparisonResults.push({
+      scenario: scenario.name,
+      ...result
+    });
+  });
+  
+  // Display results
+  let resultText = 'シナリオ比較結果:\n';
+  comparisonResults.forEach(result => {
+    resultText += `${result.scenario}: 成功率 ${result.successRate.toFixed(1)}%, 成功数 ${result.successCount}\n`;
+  });
+  
+  showMessage(resultText, 'success');
+  document.getElementById('exportComparisonBtn').disabled = false;
+  document.getElementById('runComparisonBtn').disabled = false;
+}
+
+function runHeadlessSim(params, duration) {
+  let simParticles = [];
+  let simNextId = 0;
+  let simRecycled = [];
+  let simState = {
+    elapsedTime: 0,
+    lastSpawnTime: 0,
+    successCount: 0,
+    totalSpawned: 0,
+    recycledCount: 0
+  };
+  
+  // Create initial particles
+  for(let i = 0; i < params.initialParticles; i++) {
+    const position = getInitialPosition(params.initialPlacementStrategy, i, params.initialParticles);
+    simParticles.push({
+      id: simNextId++,
+      position: position.clone(),
+      velocity: new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05),
+      state: 'active'
+    });
+  }
+  simState.totalSpawned = params.initialParticles;
+  
+  const timeStep = 0.1;
+  const steps = Math.floor(duration / timeStep);
+  
+  for (let step = 0; step < steps; step++) {
+    simState.elapsedTime += timeStep;
+    
+    // Spawn new particles
+    if (simState.elapsedTime - simState.lastSpawnTime >= params.spawnInterval) {
+      for(let i = 0; i < params.batchSize; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * coneRadius * 0.9;
+        simParticles.push({
+          id: simNextId++,
+          position: new THREE.Vector3(Math.cos(angle)*radius, 1, Math.sin(angle)*radius),
+          velocity: new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05),
+          state: 'active'
+        });
+      }
+      simState.totalSpawned += params.batchSize;
+      simState.lastSpawnTime = simState.elapsedTime;
+    }
+    
+    // Update particles
+    simParticles = simParticles.filter(p => {
+      if (p.state !== 'active') return false;
+      
+      const hRatio = p.position.y / coneHeight;
+      p.velocity.y += params.trtForce * (1-hRatio) * (hRatio < params.tippingPoint ? 1 : params.trtAcceleration) * timeStep;
+      p.velocity.x += (Math.random()-0.5) * params.praForce * params.praDiversity * timeStep;
+      p.velocity.z += (Math.random()-0.5) * params.praForce * params.praDiversity * timeStep;
+      
+      p.position.add(p.velocity.clone().multiplyScalar(timeStep * params.timeScale * 10));
+      
+      // Check boundaries
+      const maxRadius = coneRadius * (1 - p.position.y/coneHeight);
+      if (Math.hypot(p.position.x, p.position.z) > maxRadius || p.position.y < 0) {
+        return false; // Remove particle
+      }
+      if (p.position.y >= params.successThreshold) {
+        simState.successCount++;
+        return false; // Remove successful particle
+      }
+      
+      return true;
+    });
+  }
+  
+  const successRate = simState.totalSpawned > 0 ? (simState.successCount / simState.totalSpawned) * 100 : 0;
+  return {
+    successCount: simState.successCount,
+    totalSpawned: simState.totalSpawned,
+    successRate: successRate,
+    finalActiveCount: simParticles.length
+  };
+}
+
+function exportComparisonCSV() {
+  if (comparisonResults.length === 0) {
+    showMessage('エクスポートする比較結果がありません。', 'error');
+    return;
+  }
+  
+  const headers = 'scenario,success_count,total_spawned,success_rate,final_active_count\n';
+  const csv = headers + comparisonResults.map(r => 
+    `"${r.scenario}",${r.successCount},${r.totalSpawned},${r.successRate.toFixed(2)},${r.finalActiveCount}`
+  ).join('\n');
+  
+  downloadCSV(csv, 'scenario_comparison.csv');
+  showMessage('比較結果をCSVでダウンロードしました。', 'success');
+}
+
+function startSimulation() { 
+  simulationState.isRunning = true; 
+  simulationState.isPaused = false; 
+  showMessage('シミュレーションを開始しました。', 'success');
+}
+
+function pauseSimulation() { 
+  if (simulationState.isRunning) {
+    simulationState.isPaused = true; 
+    showMessage('シミュレーションを一時停止しました。', 'info');
+  }
+}
+
 function resetSimulation() {
-  simulationState.isRunning = false; simulationState.isPaused = true;
-  simulationState.elapsedTime = 0; simulationState.lastSpawnTime = 0;
-  simulationState.successCount = 0; simulationState.recycledCount = 0;
-  simulationState.log = []; recycledParticles = [];
+  simulationState.isRunning = false; 
+  simulationState.isPaused = true;
+  simulationState.elapsedTime = 0; 
+  simulationState.lastSpawnTime = 0;
+  simulationState.successCount = 0; 
+  simulationState.recycledCount = 0;
+  simulationState.log = []; 
+  recycledParticles = [];
   createInitialParticles(parameters, simulationState, particles);
   updateStats();
+  showMessage('シミュレーションをリセットしました。', 'info');
 }
 
-// Core animation loop
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
-  if (!simulationState.isPaused) {
+  
+  if (controls) controls.update();
+  
+  if (!simulationState.isPaused && simulationState.isRunning) {
     const deltaTime = Math.min(clock.getDelta(), 0.1);
-    if(simulationState.isRunning){
-      simulationState.elapsedTime += deltaTime * parameters.timeScale;
-      processRecycledParticles(parameters, simulationState, particles);
-      if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
-        for(let i=0;i<parameters.batchSize;i++){
-          const angle = Math.random()*Math.PI*2, radius = Math.random()*coneRadius*0.9;
-          particles.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), parameters));
-        }
-        simulationState.totalSpawned += parameters.batchSize;
-        simulationState.lastSpawnTime = simulationState.elapsedTime;
+    simulationState.elapsedTime += deltaTime * parameters.timeScale;
+    
+    processRecycledParticles(parameters, simulationState, particles);
+    
+    if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
+      for(let i = 0; i < parameters.batchSize; i++){
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * coneRadius * 0.9;
+        particles.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), parameters));
       }
-      particles.forEach(p => p.update(deltaTime, simulationState, particles));
-      const activeParticles = particles.filter(p => p.state !== 'inactive');
-      if (activeParticles.length < particles.length) {
-          particles.filter(p => p.state === 'inactive').forEach(p => p.removeMesh());
-          particles = activeParticles;
-      }
-      updateStats();
+      simulationState.totalSpawned += parameters.batchSize;
+      simulationState.lastSpawnTime = simulationState.elapsedTime;
     }
+    
+    particles.forEach(p => p.update(deltaTime, simulationState, particles));
+    
+    const activeParticles = particles.filter(p => p.state !== 'inactive');
+    if (activeParticles.length < particles.length) {
+        particles.filter(p => p.state === 'inactive').forEach(p => p.removeMesh());
+        particles = activeParticles;
+    }
+    
+    updateStats();
   }
-  renderer.render(scene, camera);
+  
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
 }
 
-// Helper and UI functions
-function createInitialParticles(params, state, arr) { arr.forEach(p => p.removeMesh()); arr.length = 0; nextParticleId = 0; state.totalSpawned = 0; for(let i=0; i<params.initialParticles; i++){ const angle = Math.random()*Math.PI*2, r = Math.random()*coneRadius*0.9; arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*r,1,Math.sin(angle)*r), params)); } state.totalSpawned += params.initialParticles; }
-function processRecycledParticles(params, state, arr) { const currentTime = state.elapsedTime; const toRecycleNow = recycledParticles.filter(r => r.recycleTime <= currentTime); toRecycleNow.forEach(() => { const angle = Math.random()*Math.PI*2, radius = Math.random()*coneRadius*0.8; arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), params, true)); state.recycledCount++; }); recycledParticles = recycledParticles.filter(r => r.recycleTime > currentTime); }
-function updateParameters() { document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => { parameters[el.id] = (el.type==='checkbox') ? el.checked : (el.type==='range'||el.type==='number') ? parseFloat(el.value) : el.value; const valEl = document.getElementById(el.id+'-value'); if(valEl) valEl.textContent = parameters[el.id]; }); parameters.successThreshold = coneHeight - 2; coneGroup.rotation.set(THREE.MathUtils.degToRad(parameters.coneTiltX), 0, THREE.MathUtils.degToRad(parameters.coneTiltZ)); ['multiGravityEnabled', 'envBiasEnabled'].forEach(id => { document.querySelector(`#${id}`).closest('.parameter-group').querySelectorAll('input,select').forEach(el => { if(el.id!==id) el.disabled = !parameters[id]; }); }); }
-function updateStats() { document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1); document.getElementById('success-count').textContent = simulationState.successCount; document.getElementById('active-particles').textContent = particles.filter(p=>p.state==='active').length; document.getElementById('total-spawned').textContent = simulationState.totalSpawned; document.getElementById('recycled-count').textContent = simulationState.recycledCount; const rate = simulationState.totalSpawned>0 ? (simulationState.successCount/simulationState.totalSpawned)*100 : 0; document.getElementById('success-rate').textContent = rate.toFixed(1)+'%'; }
-function exportCSV() { if(simulationState.log.length===0){ alert('エクスポートするデータがありません。'); return; } downloadCSV('time,particle_id,x,y,z\n' + simulationState.log.map(r=>`${r.time},${r.id},${r.x},${r.y},${r.z}`).join('\n'), 'simulation_log.csv'); }
-function onWindowResize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-function setupUIListeners() { document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => el.addEventListener('input', updateParameters)); document.getElementById('toggle-control-panel').addEventListener('click', e => { const content = e.target.closest('.panel').querySelector('.content-wrapper'); content.style.display = content.style.display === 'none' ? '' : 'none'; e.target.textContent = content.style.display === 'none' ? '[+]' : '[-]'; }); }
-function downloadCSV(csv, filename) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
-function addScenario() { const paramCopy = {...parameters}; const scenarioName = `シナリオ ${scenarios.length + 1}: ${paramCopy.initialPlacementStrategy}`; scenarios.push({ name: scenarioName, params: paramCopy }); const li = document.createElement('li'); li.textContent = scenarioName; document.getElementById('scenario-list').appendChild(li); document.getElementById('runComparisonBtn').disabled = false; }
-// Scenario comparison functions are omitted for brevity.
-function runComparison() { /* ... */ } function runHeadlessSim(params, duration) { /* ... */ } function exportComparisonCSV() { /* ... */ }
-init();
+function onWindowResize(){
+  if (camera && renderer) {
+    camera.aspect = window.innerWidth/window.innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(window.innerWidth, window.innerHeight); 
+  }
+}
+
+function setupUIListeners() { 
+  document.querySelectorAll('#control-panel input, #control-panel select').forEach(el => 
+    el.addEventListener('input', updateParameters)
+  ); 
+  
+  const toggleBtn = document.getElementById('toggle-control-panel');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', e => { 
+      const content = e.target.closest('.panel').querySelector('.content-wrapper'); 
+      if (content) {
+        content.style.display = content.style.display === 'none' ? '' : 'none'; 
+        e.target.textContent = content.style.display === 'none' ? '[+]' : '[-]'; 
+      }
+    }); 
+  }
+}
+
+function downloadCSV(csv, filename) { 
+  try {
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); 
+    a.download = filename; 
+    a.click(); 
+    URL.revokeObjectURL(a.href); 
+  } catch (error) {
+    showMessage('CSVダウンロードエラー: ' + error.message, 'error');
+  }
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
