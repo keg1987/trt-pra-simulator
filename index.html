@@ -1,699 +1,1721 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <!--
-  TRT・PRA ABMシミュレータ v6.0 (研究用強化版)
-  目的:
-    - 再現性: 乱数シード固定、実験条件のJSON保存/復元
-    - 観測性: 統計メトリクス(成功率・平均成功時間・分布)のリアルタイム表示とCSV出力
-    - バッチ実行: ヘッドレス・複数試行(並列UI、直列実行)でのパラメータスイープ
-    - 較正下地: 目標KGI(例: 成功率13%)に対する目的関数/誤差の定義、探索ループのフック(※GA本体は別実装想定)
-    - UI/UX: 完全レスポンシブ、アクセシビリティ、ツールチップ、シナリオ管理
-    - 可視化空間: 円錐空間=外形メッシュ(透明)のみ、側線なし、花火エフェクト無し
-
-  ODD要約 (概略):
-    Purpose: バイオベンチャー創薬活動を抽象化し、TRT(縦)×PRA(横)の相互作用と組織形態(中央集権/分散/ハイブリッド)設定が
-             マクロ成果(成功率/時間)に与える影響を検討
-    Entities: 粒子(資源)… type ∈ {standard, explorer, exploiter}, 属性: trtAffinity, praAffinity, age, lifespan
-    Processes: 各タイムステップでTRT上昇力・PRA横移動・中央収束・摩擦など決定論＋確率(シード管理)で更新
-    Design concepts: 自律、相互作用(近接引力)、確率(探索ゆらぎ)、適応(タイプ属性)、集団構造(クラスター仮想)
-    Initialization: シード、初期粒子数、タイプ比率、戦略的初期配置オン/オフ等
-    Input/Output: UI操作、シナリオJSON、ログCSV、バッチ設定JSON
-
-  重要: 本コードは教育・研究用の雛形であり、較正対象データが未接続のため、数値結果は仮のシミュレーション出力として扱うこと(但し書き)。
-  -->
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRT・PRA シミュレータ v6.0 (研究用強化版)</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-  <style>
-    :root {
-      --bg:#f0f2f5; --panel:#fff; --shadow:0 4px 18px rgba(0,0,0,.12);
-      --text:#1f2937; --muted:#6b7280; --accent:#3b82f6; --line:#e5e7eb;
-    }
-    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
-    #app { display:flex; flex-direction:row; height:100%; width:100%; overflow:hidden; }
-    #viewport { flex:1 1 auto; position:relative; min-width:0; }
-    #sidebar { flex:0 0 380px; min-width:300px; max-width:480px; display:flex; flex-direction:column; gap:12px; padding:12px; border-left:1px solid var(--line); background:#f8fafb; overflow:auto; }
-    .panel { background:var(--panel); border-radius:12px; box-shadow:var(--shadow); padding:16px; }
-    h1 { font-size:18px; margin:0 0 8px; }
-    h2 { font-size:14px; margin:14px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
-    .row { display:flex; gap:8px; flex-wrap:wrap; }
-    .btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:600; }
-    .btn.secondary { background:#64748b; }
-    .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .grid { display:grid; grid-template-columns: 1fr 88px; gap:8px 10px; align-items:center; }
-    label { font-size:12px; color:#374151; display:flex; align-items:center; gap:6px; }
-    .value { font-size:12px; color:var(--muted); text-align:right; }
-    input[type="range"]{ width:100%; }
-    input[type="number"], input[type="text"] { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; }
-    .help { font-size:11px; color:var(--muted); }
-    .tooltip { position:relative; cursor:help; }
-    .tooltip .tip {
-      position:absolute; z-index:10; left:50%; transform:translateX(-50%);
-      bottom:125%; background:#111; color:#fff; border-radius:8px; padding:10px 12px;
-      width:280px; font-size:12px; box-shadow:0 6px 20px rgba(0,0,0,.2);
-      opacity:0; visibility:hidden; transition:.2s ease;
-    }
-    .tooltip:hover .tip { opacity:1; visibility:visible; }
-    .stat { display:flex; justify-content:space-between; margin:6px 0; font-size:12px; }
-    .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background:#f3f4f6; border:1px solid var(--line); border-radius:8px; padding:10px; }
-    @media (max-width: 1024px) {
-      #app{flex-direction:column;}
-      #sidebar{order:2; max-height:45vh;}
-      #viewport{order:1; height:55vh;}
-    }
-    @media (max-width: 640px) {
-      #sidebar{max-height:52vh;}
-      .grid{grid-template-columns: 1fr 72px;}
-    }
-    /* a11y focus */
-    .btn:focus, input:focus { outline:2px solid #2563eb; outline-offset:2px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TRT・PRA シミュレータ - 最適化版</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body { margin:0; font-family: Arial,sans-serif; background:#f0f0f0; overflow:hidden; }
+#canvas-container { position:relative; width:100vw; height:100vh; cursor: move; }
+.panel { position:absolute; background:rgba(255,255,255,0.98); padding:20px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; max-height:90vh; overflow-y:auto; scrollbar-width: thin; }
+#control-panel { bottom:20px; left:20px; width:400px; }
+#stats-panel { top:20px; right:20px; width:320px; font-size:13px; color:#1f2937; }
+h1,h2 { margin-top:0; color:#1f2937; }
+h1 { font-size:20px; display: flex; justify-content: space-between; align-items: center; }
+h2 { font-size:16px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; display: flex; justify-content: space-between; align-items: center;}
+.parameter-group { margin-bottom:20px; border-radius: 6px; padding: 15px; }
+.parameter-group.trt { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+.parameter-group.pra { border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); }
+.parameter { margin-bottom:10px; }
+.parameter label { display:block; font-size:12px; color:#4b5563; margin-bottom:4px; font-weight:600; cursor: help; }
+input[type=range], input[type=number], select { width:100%; box-sizing: border-box; }
+input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+.parameter-value { font-size:11px; color:#6b7280; margin-left:8px; float:right; }
+.button-group { display:flex; gap:8px; flex-wrap:wrap; margin-top:15px; }
+button.btn { flex-grow:1; padding:8px 12px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; transition:background 0.2s; }
+button.btn:hover:not(:disabled) { background:#2563eb; }
+button.btn-secondary { background:#6b7280; }
+button.btn-secondary:hover:not(:disabled) { background:#4b5563; }
+#toggle-control-panel { font-size: 14px; background: none; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 2px 8px; font-weight: bold; }
+h2 input[type=checkbox] { margin-left: 10px; transform: scale(1.2); cursor: pointer;}
+.legend { position:absolute; top:20px; left:20px; background:rgba(255,255,255,0.98); padding:15px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.15); z-index:100; font-size:12px; color:#1f2937; }
+.legend-item { display:flex; align-items:center; margin-bottom:5px; }
+.legend-color { width:15px; height:15px; margin-right:8px; border-radius:3px; }
+#scenario-list { list-style-type: none; padding-left: 0; font-size: 12px; max-height: 100px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 10px; }
+#scenario-list li { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; cursor: pointer; }
+#scenario-list li:last-child { border-bottom: none; }
+#scenario-list li:hover { background: #e5e7eb; }
+.theory-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 8px; }
+.theory-badge.trt { background: #3b82f6; color: white; }
+.theory-badge.pra { background: #10b981; color: white; }
+.error-message { background: #fee; border: 1px solid #fcc; color: #c33; padding: 10px; border-radius: 6px; margin: 10px 0; }
+.success-message { background: #efe; border: 1px solid #cfc; color: #363; padding: 10px; border-radius: 6px; margin: 10px 0; }
+</style>
 </head>
 <body>
-<div id="app" role="application" aria-label="TRT・PRA ABMシミュレーション環境">
-  <div id="viewport" aria-label="3D表示領域"></div>
-  <aside id="sidebar" aria-label="操作パネル">
-    <section class="panel">
-      <h1>TRT・PRA シミュレータ v6.0</h1>
-      <div class="help">研究用強化: 再現性(シード)、CSV出力、バッチ、シナリオJSON、レスポンシブ、花火無[1]</div>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" id="btnStart">開始</button>
-        <button class="btn secondary" id="btnPause">一時停止</button>
-        <button class="btn ghost" id="btnReset">リセット</button>
+<div id="canvas-container"></div>
+<div id="legend-panel" class="legend">
+  <h2>資源の発展段階</h2>
+  <div class="legend-item"><div class="legend-color" style="background: linear-gradient(to right, #aaffaa, #66cc66)"></div>純粋探索 (緑)</div>
+  <div class="legend-item"><div class="legend-color" style="background: linear-gradient(to right, #ffffaa, #ffcc00)"></div>移行期 (黄)</div>
+  <div class="legend-item"><div class="legend-color" style="background: linear-gradient(to right, #ffccee, #ff69b4)"></div>応用開発 (ピンク)</div>
+  <div class="legend-item"><div class="legend-color" style="background: linear-gradient(to right, #ffaaaa, #cc0000)"></div>市場活用 (赤)</div>
+</div>
+<div id="stats-panel" class="panel">
+  <h2>リアルタイム指標</h2>
+  <div>シミュレーション時間: <span id="sim-time">0.0</span> 年</div>
+  <div>市場化成功数: <span id="success-count">0</span></div>
+  <div>成功率: <span id="success-rate">0.0%</span></div>
+  <div>活性資源数: <span id="active-particles">0</span></div>
+  <div>累計投入資源: <span id="total-spawned">0</span></div>
+  <div>再利用資源数: <span id="recycled-count">0</span></div>
+  <div>現在のクラスター数: <span id="current-clusters">0</span></div>
+  <div>累計クラスター形成: <span id="total-clusters">0</span></div>
+  <div>最大クラスターサイズ: <span id="max-cluster-size">0</span></div>
+</div>
+<div id="control-panel" class="panel">
+  <h1>TRT・PRA シミュレータ<button id="toggle-control-panel">[-]</button></h1>
+  <div class="content-wrapper">
+    <div id="message-area"></div>
+    
+    <div class="parameter-group">
+      <h2>視覚化強化設定</h2>
+      <div class="parameter">
+        <label for="showTrails">軌跡表示 <input type="checkbox" id="showTrails" checked onchange="updateParameters()"></label>
       </div>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" id="btnExportCSV">CSV出力</button>
-        <button class="btn ghost" id="btnExportJSON">シナリオ保存</button>
-        <label class="btn ghost" for="fileImport" style="display:inline-flex; align-items:center;">シナリオ読込</label>
-        <input id="fileImport" type="file" accept=".json" style="display:none;">
+      <div class="parameter">
+        <label for="trailLength">軌跡長さ <span class="parameter-value" id="trailLength-value">10</span></label>
+        <input type="range" id="trailLength" min="3" max="20" value="10" step="1" oninput="updateParameters()">
       </div>
-    </section>
+      <div class="parameter">
+        <label for="trailOpacity">軌跡濃度 <span class="parameter-value" id="trailOpacity-value">0.8</span></label>
+        <input type="range" id="trailOpacity" min="0.2" max="1.0" value="0.8" step="0.1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="glowIntensity">発光強度 <span class="parameter-value" id="glowIntensity-value">0.5</span></label>
+        <input type="range" id="glowIntensity" min="0" max="1.0" value="0.5" step="0.1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="pulseEffect">パルス効果 <input type="checkbox" id="pulseEffect" checked onchange="updateParameters()"></label>
+      </div>
+      <div class="parameter">
+        <label for="clusterEffect">クラスター形成エフェクト <input type="checkbox" id="clusterEffect" checked onchange="updateParameters()"></label>
+      </div>
+      <div class="parameter">
+        <label for="cameraMode">カメラモード</label>
+        <select id="cameraMode" onchange="updateParameters()">
+          <option value="free">自由視点</option>
+          <option value="side">サイドビュー</option>
+          <option value="tracking">自動追跡</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="parameter-group">
+      <h2>シナリオ比較</h2>
+       <div class="parameter">
+        <label for="comparisonDuration">比較実行時間 (年)</label>
+        <input type="number" id="comparisonDuration" value="20" min="5" max="100" step="1">
+      </div>
+      <div class="button-group">
+        <button class="btn btn-secondary" onclick="addScenario()">現在の設定をシナリオ追加</button>
+      </div>
+      <ul id="scenario-list"></ul>
+      <div class="button-group">
+         <button class="btn" id="runComparisonBtn" onclick="runComparison()" disabled>比較実行</button>
+         <button class="btn" id="exportComparisonBtn" onclick="exportComparisonCSV()" disabled>比較結果をCSV出力</button>
+      </div>
+    </div>
+    
+    <div class="parameter-group">
+      <h2>戦略的初期配置</h2>
+      <div class="parameter">
+        <label for="initialPlacementStrategy">初期配置戦略</label>
+        <select id="initialPlacementStrategy" onchange="updateParameters()">
+          <option value="random">ランダム</option>
+          <option value="focused">集中型</option>
+          <option value="diversified">分散型</option>
+          <option value="clustered">クラスター型</option>
+          <option value="edge">エッジ探索型</option>
+        </select>
+      </div>
+      <div class="parameter">
+        <label for="initialParticles">初期資源数 <span class="parameter-value" id="initialParticles-value">20</span></label>
+        <input type="range" id="initialParticles" min="1" max="100" value="20" step="1" oninput="updateParameters()">
+      </div>
+    </div>
+    
+    <div class="parameter-group">
+      <h2>シミュレーション制御</h2>
+      <div class="parameter">
+        <label for="timeScale">時間スケール <span class="parameter-value" id="timeScale-value">0.1</span></label>
+        <input type="range" id="timeScale" min="0.01" max="1.0" value="0.1" step="0.01" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="spawnInterval">資源投入間隔 (年) <span class="parameter-value" id="spawnInterval-value">0.5</span></label>
+        <input type="range" id="spawnInterval" min="0.1" max="2.0" value="0.5" step="0.1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="batchSize">投入バッチサイズ <span class="parameter-value" id="batchSize-value">3</span></label>
+        <input type="range" id="batchSize" min="1" max="10" value="3" step="1" oninput="updateParameters()">
+      </div>
+    </div>
+    
+    <div class="parameter-group trt">
+      <h2>TRTパラメータ <span class="theory-badge trt">Temporal Resource Transition</span></h2>
+      <div class="parameter">
+        <label for="trtForce" title="資源を円錐の上方向（市場化方向）へ押し上げる基本的な力。">垂直推進力 <span class="parameter-value" id="trtForce-value">0.015</span></label>
+        <input type="range" id="trtForce" min="0" max="0.05" value="0.015" step="0.001" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="trtAcceleration" title="ティッピングポイントを超えた資源の上昇を加速させる度合い。">上昇加速度 <span class="parameter-value" id="trtAcceleration-value">1.0</span></label>
+        <input type="range" id="trtAcceleration" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>再現性・時間</h2>
-      <div class="grid">
-        <label>乱数シード <span class="tooltip">🛈<span class="tip">再現性のため固定シードで全確率過程を制御します[1]</span></span></label>
-        <input type="number" id="seed" value="123456" step="1" min="0">
-        <label>時間スケール</label><div class="value" id="val_timeScale">0.10</div>
-        <input type="range" id="timeScale" min="0.01" max="1.0" step="0.01" value="0.10"><div></div>
-        <label>発生間隔</label><div class="value" id="val_spawnInterval">0.50</div>
-        <input type="range" id="spawnInterval" min="0.1" max="2.0" step="0.1" value="0.50"><div></div>
-        <label>バッチサイズ</label><div class="value" id="val_batchSize">3</div>
-        <input type="range" id="batchSize" min="1" max="20" step="1" value="3"><div></div>
-        <label>初期粒子数</label><div class="value" id="val_initialParticles">20</div>
-        <input type="range" id="initialParticles" min="0" max="200" step="5" value="20"><div></div>
+    <div class="parameter-group pra">
+      <h2>PRAパラメータ <span class="theory-badge pra">Parallel Resource Allocation</span></h2>
+      <div class="parameter">
+        <label for="praForce" title="資源が水平方向にランダムに移動する力。探索範囲の拡大に寄与。">水平拡散力 <span class="parameter-value" id="praForce-value">0.02</span></label>
+        <input type="range" id="praForce" min="0" max="0.05" value="0.02" step="0.001" oninput="updateParameters()">
       </div>
-    </section>
+      <div class="parameter">
+        <label for="praDiversity" title="水平方向への拡散の多様性を維持する係数。">多様性維持係数 <span class="parameter-value" id="praDiversity-value">1.0</span></label>
+        <input type="range" id="praDiversity" min="0.5" max="2.0" value="1.0" step="0.1" oninput="updateParameters()">
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>資源特性・タイプ</h2>
-      <div class="grid">
-        <label>資源異質性</label><div class="value" id="val_heterogeneity">0.50</div>
-        <input type="range" id="heterogeneity" min="0" max="1.0" step="0.05" value="0.50"><div></div>
-        <label>寿命変動</label><div class="value" id="val_lifespanVar">0.30</div>
-        <input type="range" id="lifespanVariance" min="0" max="1.0" step="0.05" value="0.30"><div></div>
-        <label>活用特化 割合</label><div class="value" id="val_exploiter">0.30</div>
-        <input type="range" id="exploiterRatio" min="0" max="1.0" step="0.05" value="0.30"><div></div>
-        <label>探索特化 割合</label><div class="value" id="val_explorer">0.30</div>
-        <input type="range" id="explorerRatio" min="0" max="1.0" step="0.05" value="0.30"><div></div>
-        <label>戦略的初期配置</label>
-        <div><input type="checkbox" id="strategicSpawningEnabled" checked aria-label="戦略的初期配置ON/OFF"></div>
+    <div class="parameter-group">
+      <h2>環境制約パラメータ</h2>
+      <div class="parameter">
+        <label for="tippingPoint" title="上昇加速度が働き始める円錐の高さの閾値。">ティッピングポイント <span class="parameter-value" id="tippingPoint-value">0.7</span></label>
+        <input type="range" id="tippingPoint" min="0.5" max="0.9" value="0.7" step="0.05" oninput="updateParameters()">
       </div>
-    </section>
+      <div class="parameter">
+        <label for="marketPull" title="資源が円錐の頂点（市場化）に引き寄せられる力。市場の魅力を示す。">市場引力 <span class="parameter-value" id="marketPull-value">0.02</span></label>
+        <input type="range" id="marketPull" min="0" max="0.05" value="0.02" step="0.005" oninput="updateParameters()">
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>TRT/PRA 力学</h2>
-      <div class="grid">
-        <label>TRT強度</label><div class="value" id="val_trt">0.015</div>
-        <input type="range" id="trtForce" min="0" max="0.05" step="0.001" value="0.015"><div></div>
-        <label>PRA強度</label><div class="value" id="val_pra">0.020</div>
-        <input type="range" id="praForce" min="0" max="0.05" step="0.001" value="0.020"><div></div>
-        <label>中央収束</label><div class="value" id="val_central">0.030</div>
-        <input type="range" id="centralConvergence" min="0" max="0.10" step="0.001" value="0.030"><div></div>
-        <label>粒子引力</label><div class="value" id="val_peer">0.010</div>
-        <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001" value="0.010"><div></div>
+    <div class="parameter-group">
+      <h2>循環メカニズム</h2>
+      <div class="parameter">
+        <label for="resourceRecyclingRate" title="失敗した資源が再利用される確率。循環型イノベーションを促進する。">資源再利用率 <span class="parameter-value" id="resourceRecyclingRate-value">0.2</span></label>
+        <input type="range" id="resourceRecyclingRate" min="0" max="1.0" value="0.2" step="0.05" oninput="updateParameters()">
       </div>
-      <div class="help">TRT縦移動=決定論(高さで減衰)×個性、PRA横移動=乱数方向×高さ依存強度(シード管理)[1]</div>
-    </section>
+      <div class="parameter">
+        <label for="recyclingDelay" title="資源が再利用されるまでの遅延時間（年）。">再利用遅延時間 <span class="parameter-value" id="recyclingDelay-value">1.0</span></label>
+        <input type="range" id="recyclingDelay" min="0.1" max="5.0" value="1.0" step="0.1" oninput="updateParameters()">
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>環境・成功条件</h2>
-      <div class="grid">
-        <label>成功閾値(高さ)</label><div class="value" id="val_threshold">38</div>
-        <input type="range" id="successThreshold" min="10" max="60" step="1" value="38"><div></div>
-        <label>頂点容量</label><div class="value" id="val_vertexCap">5</div>
-        <input type="range" id="vertexCapacity" min="1" max="50" step="1" value="5"><div></div>
-        <label>減耗率</label><div class="value" id="val_attrition">0.020</div>
-        <input type="range" id="attritionRate" min="0" max="0.1" step="0.001" value="0.020"><div></div>
+    <div class="parameter-group">
+      <h2>多重重力源パラメータ <input type="checkbox" id="multiGravityEnabled" checked onchange="updateParameters()"></h2>
+      <div class="parameter">
+        <label for="centralConvergence" title="資源が円錐の中心に向かう力。開発の方向性を中央に集約させる。">中央収束力 <span class="parameter-value" id="centralConvergence-value">0.03</span></label>
+        <input type="range" id="centralConvergence" min="0" max="0.1" value="0.03" step="0.005" oninput="updateParameters()">
       </div>
-    </section>
-
-    <section class="panel">
-      <h2>比較・バッチ・較正</h2>
-      <div class="grid">
-        <label>ヘッドレス</label>
-        <div><input type="checkbox" id="headless"></div>
-        <label>試行回数</label>
-        <input type="number" id="batchRuns" min="1" max="1000" step="1" value="20">
-        <label>最大時間[s]</label>
-        <input type="number" id="maxSimTime" min="1" max="100000" step="1" value="120">
+      <div class="parameter">
+        <label for="clusterConvergence" title="形成されたクラスター（技術群）の中心に資源が集まる力。">クラスター内収束力 <span class="parameter-value" id="clusterConvergence-value">0.04</span></label>
+        <input type="range" id="clusterConvergence" min="0" max="0.1" value="0.04" step="0.005" oninput="updateParameters()">
       </div>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" id="btnRunBatch">バッチ実行</button>
-        <button class="btn ghost" id="btnExportBatchCSV">バッチCSV</button>
+      <div class="parameter">
+        <label for="peerAttraction" title="資源同士が互いに引き合う力。知識の共有や協業を模倣する。">粒子間引力 <span class="parameter-value" id="peerAttraction-value">0.03</span></label>
+        <input type="range" id="peerAttraction" min="0" max="0.1" value="0.03" step="0.005" oninput="updateParameters()">
       </div>
-      <div class="help">較正の目的関数: |実測KGI-シミュ成功率| 最小化(※GA等の最適化器は外部接続前提のフック提供)[1]</div>
-    </section>
-
-    <section class="panel">
-      <h2>統計</h2>
-      <div class="stat"><span>経過時間[s]</span><strong id="stat_time">0.0</strong></div>
-      <div class="stat"><span>総発生</span><strong id="stat_spawned">0</strong></div>
-      <div class="stat"><span>稼働中</span><strong id="stat_active">0</strong></div>
-      <div class="stat"><span>成功数</span><strong id="stat_success">0</strong></div>
-      <div class="stat"><span>成功率[%]</span><strong id="stat_rate">0.0</strong></div>
-      <div class="stat"><span>平均成功時間[s]</span><strong id="stat_tts">-</strong></div>
-      <div class="help">CSVは時系列/集計の双方を出力、再現性検証と論文図表作成を容易化[1]</div>
-    </section>
-
-    <section class="panel">
-      <h2>組織モデル説明</h2>
-      <div class="code">
-        中央集権型: 上層集中・統一性高、柔軟性低。分散自律型: 現場裁量・適応性高、統一難。ハイブリッド: 方針は中央、実装は現場[1]
+      <div class="parameter">
+        <label for="attractionRange" title="粒子間引力が働く最大の距離。">引力作用範囲 <span class="parameter-value" id="attractionRange-value">6</span></label>
+        <input type="range" id="attractionRange" min="2" max="15" value="6" step="1" oninput="updateParameters()">
       </div>
-    </section>
-  </aside>
+      <div class="parameter">
+        <label for="clusterThreshold" title="クラスターと見なされるために必要な近接資源の最小数。">クラスター形成閾値 <span class="parameter-value" id="clusterThreshold-value">3</span></label>
+        <input type="range" id="clusterThreshold" min="2" max="8" value="3" step="1" oninput="updateParameters()">
+      </div>
+    </div>
+    
+    <div class="parameter-group">
+      <h2>環境バイアス・頂点容量制限 <input type="checkbox" id="envBiasEnabled" checked onchange="updateParameters()"></h2>
+      <div class="parameter">
+        <label for="coneTiltX" title="円錐全体をX軸周りに傾ける。特定分野への技術開発の偏りをシミュレート。">円錐傾斜X軸 <span class="parameter-value" id="coneTiltX-value">0</span></label>
+        <input type="range" id="coneTiltX" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="coneTiltZ" title="円錐全体をZ軸周りに傾ける。特定分野への技術開発の偏りをシミュレート。">円錐傾斜Z軸 <span class="parameter-value" id="coneTiltZ-value">0</span></label>
+        <input type="range" id="coneTiltZ" min="-30" max="30" value="0" step="5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="vertexCapacity" title="円錐の頂点付近（市場）が一度に受け入れられる資源の最大数。">頂点最大容量 <span class="parameter-value" id="vertexCapacity-value">5</span></label>
+        <input type="range" id="vertexCapacity" min="1" max="15" value="5" step="1" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="capacityRadius" title="頂点容量制限が適用される、頂点からの半径。">容量制限半径 <span class="parameter-value" id="capacityRadius-value">2</span></label>
+        <input type="range" id="capacityRadius" min="1" max="5" value="2" step="0.5" oninput="updateParameters()">
+      </div>
+      <div class="parameter">
+        <label for="congestionEffect" title="頂点付近の混雑が資源の上昇を妨げる度合い（1に近いほど妨げない）。">混雑効果係数 <span class="parameter-value" id="congestionEffect-value">0.8</span></label>
+        <input type="range" id="congestionEffect" min="0.3" max="1.0" value="0.8" step="0.05" oninput="updateParameters()">
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button class="btn" onclick="startSimulation()">開始</button>
+      <button class="btn btn-secondary" onclick="pauseSimulation()">一時停止</button>
+      <button class="btn btn-secondary" onclick="resetSimulation()">リセット</button>
+      <button class="btn" onclick="exportCSV()">ログCSV出力</button>
+    </div>
+  </div>
 </div>
 
 <script>
-/* ========= 研究機能ユーティリティ ========= */
-// 乱数(再現性) Mulberry32
-function Mulberry32(seed) {
-  let t = seed >>> 0;
-  return function() {
-    t += 0x6D2B79F5;
-    let r = Math.imul(t ^ (t >>> 15), 1 | t);
-    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+// OrbitControls 簡易実装（Three.js向け）
+THREE.OrbitControls = function(object, domElement) {
+  this.object = object;
+  this.domElement = domElement || document;
+  this.target = new THREE.Vector3();
+  this.enableDamping = false;
+  
+  var scope = this;
+  var isMouseDown = false;
+  var lastMouse = new THREE.Vector2();
+  var spherical = new THREE.Spherical();
+  var sphericalDelta = new THREE.Spherical();
+  
+  function onMouseDown(event) {
+    isMouseDown = true;
+    lastMouse.set(event.clientX, event.clientY);
   }
-}
-function makeRNG(seed) {
-  const base = Mulberry32(seed);
-  return {
-    random: () => base(),
-    range: (min, max) => min + (max - min) * base(),
-    choice: (arr) => arr[Math.floor(base() * arr.length)]
+  
+  function onMouseMove(event) {
+    if (!isMouseDown) return;
+    var deltaX = event.clientX - lastMouse.x;
+    var deltaY = event.clientY - lastMouse.y;
+    sphericalDelta.theta -= deltaX * 0.01;
+    sphericalDelta.phi -= deltaY * 0.01;
+    lastMouse.set(event.clientX, event.clientY);
+  }
+  
+  function onMouseUp(event) {
+    isMouseDown = false;
+  }
+  
+  this.update = function() {
+    var offset = new THREE.Vector3();
+    offset.copy(scope.object.position).sub(scope.target);
+    spherical.setFromVector3(offset);
+    spherical.theta += sphericalDelta.theta;
+    spherical.phi += sphericalDelta.phi;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+    offset.setFromSpherical(spherical);
+    scope.object.position.copy(scope.target).add(offset);
+    scope.object.lookAt(scope.target);
+    if (scope.enableDamping) {
+      sphericalDelta.theta *= 0.95;
+      sphericalDelta.phi *= 0.95;
+    } else {
+      sphericalDelta.set(0, 0, 0);
+    }
   };
-}
-function download(filename, text) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], {type:'text/plain'}));
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-/* ========= 3Dシーン初期化(円錐外形のみ/側線なし/花火なし) ========= */
-const viewport = document.getElementById('viewport');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf5f7fb);
-
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
-camera.position.set(58, 44, 66);
-camera.lookAt(0, 20, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
-viewport.appendChild(renderer.domElement);
-
-const amb = new THREE.AmbientLight(0xffffff, 0.9);
-scene.add(amb);
-const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-dir.position.set(70, 120, 40);
-dir.castShadow = false;
-scene.add(dir);
-
-// 円錐外形(透明メッシュのみ、ワイヤ/側線なし)
-const coneHeight = 40;
-const coneRadius = 20;
-{
-  const geo = new THREE.ConeGeometry(coneRadius, coneHeight, 64, 1, true);
-  const mat = new THREE.MeshPhongMaterial({
-    color: 0x3b82f6, transparent:true, opacity:0.10, depthWrite:false, side:THREE.DoubleSide
-  });
-  const cone = new THREE.Mesh(geo, mat);
-  cone.position.y = coneHeight/2;
-  scene.add(cone);
-
-  // 底面リング(控えめ)
-  const ringGeo = new THREE.RingGeometry(coneRadius*0.98, coneRadius, 64);
-  const ringMat = new THREE.MeshBasicMaterial({ color:0x3b82f6, transparent:true, opacity:0.3, side:THREE.DoubleSide });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = -Math.PI/2;
-  scene.add(ring);
-
-  // 地面の薄いグリッド
-  const grid = new THREE.GridHelper(200, 40, 0xcbd5e1, 0xe2e8f0);
-  scene.add(grid);
-}
-
-function resize() {
-  const w = viewport.clientWidth || window.innerWidth;
-  const h = viewport.clientHeight || window.innerHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w/h;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-resize();
-
-/* ========= パラメータ/状態 ========= */
-const params = {
-  seed: 123456,
-  timeScale: 0.10,
-  spawnInterval: 0.50,
-  batchSize: 3,
-  initialParticles: 20,
-
-  heterogeneity: 0.50,
-  lifespanVariance: 0.30,
-  exploiterRatio: 0.30,
-  explorerRatio: 0.30,
-  strategicSpawningEnabled: true,
-
-  trtForce: 0.015,
-  praForce: 0.020,
-  centralConvergence: 0.030,
-  peerAttraction: 0.010,
-
-  successThreshold: 38,
-  vertexCapacity: 5,
-  attritionRate: 0.020,
-
-  headless: false,
-  batchRuns: 20,
-  maxSimTime: 120
-};
-let RNG = makeRNG(params.seed);
-
-const state = {
-  isRunning:false,
-  isPaused:false,
-  elapsed:0,
-  lastSpawn:0,
-  totalSpawned:0,
-  successCount:0,
-  successTimes:[],
-  particles:[],
-  apexOccupancy:0,
+  
+  domElement.addEventListener('mousedown', onMouseDown);
+  domElement.addEventListener('mousemove', onMouseMove);
+  domElement.addEventListener('mouseup', onMouseUp);
 };
 
-/* ========= 粒子(資源)定義 ========= */
-const PType = { STANDARD:'standard', EXPLORER:'explorer', EXPLOITER:'exploiter' };
+// グローバル変数の宣言（クラスター統計を追加）
+var scene, camera, renderer, coneGroup, controls;
+var particles = [], nextParticleId = 0, recycledParticles = [];
+var animationId;
+var scenarios = [], comparisonResults = [];
+var clusterConnections = []; // クラスター接続線を管理
+var clusterEffects = []; // クラスター形成エフェクトを管理
 
-class Particle {
-  constructor() {
-    this.id = `${Date.now()}_${Math.floor(RNG.random()*1e9)}`;
-    this.type = this.pickType();
-    this.position = new THREE.Vector3(0, 0.6, 0);
-    this.velocity = new THREE.Vector3(RNG.range(-0.02,0.02), RNG.range(0.01,0.03), RNG.range(-0.02,0.02));
-    this.age = 0;
-    this.maxAge = 100 * (1 + (RNG.random()-0.5) * params.lifespanVariance * 2);
-    this.isActive = true;
-    this.hasSucceeded = false;
+// クラスター統計データ
+var clusterStats = {
+  currentClusters: 0,
+  totalClustersFormed: 0,
+  maxClusterSize: 0,
+  lastDetectionTime: 0
+};
 
-    const v = (RNG.random()-0.5)*2*params.heterogeneity;
-    this.trtAffinity = 1 + (this.type===PType.EXPLOITER ? +v : this.type===PType.EXPLORER ? -v : 0);
-    this.praAffinity = 1 + (this.type===PType.EXPLORER ? +v : this.type===PType.EXPLOITER ? -v : 0);
+var simulationState = {
+  isRunning: false, isPaused: true, elapsedTime: 0, lastSpawnTime: 0,
+  totalSpawned: 0, successCount: 0, recycledCount: 0, log: []
+};
 
-    this.initPositionStrategic();
+var coneHeight = 40, coneRadius = 20;
+var parameters = {};
 
-    const mat = new THREE.MeshPhongMaterial({ color: this.colorForType(), shininess:30 });
-    const geom = this.geomForType();
-    this.mesh = new THREE.Mesh(geom, mat);
-    this.mesh.castShadow = false;
-    this.mesh.receiveShadow = false;
-    this.mesh.position.copy(this.position);
-    if (!params.headless) scene.add(this.mesh);
+// カメラ管理変数
+var currentCameraMode = 'free';
+var cameraTarget = null;
+var originalCameraPosition = null;
+
+// 色グラデーション定義
+var colorStops = {
+    green: new THREE.Color(0x00ff00),
+    yellow: new THREE.Color(0xffff00),
+    pink: new THREE.Color(0xff69b4),
+    red: new THREE.Color(0xff0000)
+};
+
+// 強制的なクラスター検出システム - 確実に動作することを確認するためのテスト版
+function detectClusters(allParticles, params) {
+  console.log('🔍 detectClusters関数が実行されました');
+  
+  // 基本的な前提条件のチェック
+  if (!params.clusterEffect) {
+    console.log('❌ clusterEffect が無効です');
+    clusterStats.currentClusters = 0;
+    return [];
   }
-
-  pickType() {
-    const r = RNG.random();
-    if (r < params.exploiterRatio) return PType.EXPLOITER;
-    if (r < params.exploiterRatio + params.explorerRatio) return PType.EXPLORER;
-    return PType.STANDARD;
+  
+  if (!params.multiGravityEnabled) {
+    console.log('❌ multiGravityEnabled が無効です');
+    clusterStats.currentClusters = 0;
+    return [];
   }
-  colorForType() {
-    if (this.type===PType.EXPLOITER) return 0xef4444;
-    if (this.type===PType.EXPLORER)  return 0x10b981;
-    return 0x3b82f6;
+  
+  var activeParticles = allParticles.filter(function(p) { return p.state === 'active'; });
+  console.log('✅ 活性粒子数:', activeParticles.length);
+  
+  if (activeParticles.length < 2) {
+    console.log('❌ 粒子数不足（2個未満）');
+    clusterStats.currentClusters = 0;
+    return [];
   }
-  geomForType() {
-    if (this.type===PType.EXPLORER)  return new THREE.ConeGeometry(0.55, 1.1, 16);
-    if (this.type===PType.EXPLOITER) return new THREE.BoxGeometry(0.8,0.8,0.8);
-    return new THREE.SphereGeometry(0.55, 16, 16);
-  }
-  initPositionStrategic() {
-    if (!params.strategicSpawningEnabled) {
-      const a = RNG.range(0, Math.PI*2);
-      const r = RNG.range(0, coneRadius*0.9);
-      this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
-      return;
-    }
-    switch(this.type){
-      case PType.EXPLOITER:{
-        const a = RNG.range(0, Math.PI*2);
-        const r = RNG.range(0, coneRadius*0.5);
-        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
-        break;
-      }
-      case PType.EXPLORER:{
-        const a = RNG.range(0, Math.PI*2);
-        const r = RNG.range(coneRadius*0.6, coneRadius*0.95);
-        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
-        break;
-      }
-      default:{
-        const a = RNG.range(0, Math.PI*2);
-        const r = RNG.range(0, coneRadius*0.9);
-        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
-      }
-    }
-  }
-
-  update(dt) {
-    if (!this.isActive) return;
-
-    // TRT(縦): 高さ比で減衰、個性で重み
-    const hRatio = this.position.y / coneHeight;
-    this.velocity.y += params.trtForce * (1 - Math.min(1, Math.max(0,hRatio))) * this.trtAffinity * dt;
-
-    // PRA(横): ランダム方向、強さは高さ依存、個性で重み（シードRNGで再現性）
-    const theta = RNG.range(0, Math.PI*2);
-    const praMag = params.praForce * (0.3 + 0.7*hRatio) * this.praAffinity * dt;
-    this.velocity.x += Math.cos(theta) * praMag;
-    this.velocity.z += Math.sin(theta) * praMag;
-
-    // 中央収束(原点へ)
-    const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z);
-    if (toCenter.lengthSq() > 1e-6) {
-      toCenter.normalize().multiplyScalar(params.centralConvergence * dt);
-      this.velocity.add(toCenter);
-    }
-
-    // 摩擦/減衰
-    this.velocity.multiplyScalar(0.985);
-
-    // 位置更新
-    this.position.addScaledVector(this.velocity, dt*10);
-
-    // 円錐境界内へ(半径=線形減衰)
-    const maxR = Math.max(0.1, coneRadius * (1 - Math.min(1, Math.max(0, this.position.y / coneHeight))));
-    const rNow = Math.sqrt(this.position.x*this.position.x + this.position.z*this.position.z);
-    if (rNow > maxR) {
-      const s = maxR / rNow;
-      this.position.x *= s; this.position.z *= s;
-    }
-    if (this.position.y < 0) this.position.y = 0;
-
-    // 成否・寿命
-    this.age += dt;
-    if (this.position.y >= params.successThreshold && !this.hasSucceeded) {
-      if (state.apexOccupancy < params.vertexCapacity) {
-        this.hasSucceeded = true;
-        this.isActive = false;
-        state.apexOccupancy++;
-        state.successCount++;
-        state.successTimes.push(state.elapsed); // 現時点=到達時間
-        if (!params.headless) this.mesh.material.color.set(0x00ff00);
-      }
-    }
-    if (this.age > this.maxAge || RNG.random() < params.attritionRate * dt) {
-      this.dispose();
-      return;
-    }
-
-    if (!params.headless && this.mesh) {
-      this.mesh.position.copy(this.position);
-      // 高さで色明度を変化
-      const lightness = 1.0 - (this.position.y/coneHeight)*0.6;
-      this.mesh.material.color.offsetHSL(0, 0, 0); // no-op placeholder for future mapping
-    }
-  }
-
-  dispose() {
-    this.isActive = false;
-    if (this.hasSucceeded && state.apexOccupancy > 0) state.apexOccupancy--;
-    if (!params.headless && this.mesh) {
-      scene.remove(this.mesh);
-      this.mesh.geometry.dispose();
-      this.mesh.material.dispose();
-      this.mesh = null;
-    }
-  }
-}
-
-/* ========= シミュレーション制御 ========= */
-function resetSimulation(full=true) {
-  // 粒子破棄
-  state.particles.forEach(p=>p.dispose());
-  state.particles.length = 0;
-  Object.assign(state, {
-    isRunning:false, isPaused:false, elapsed:0, lastSpawn:0,
-    totalSpawned:0, successCount:0, successTimes:[], apexOccupancy:0
-  });
-  RNG = makeRNG(params.seed);
-  if (params.initialParticles > 0) spawn(params.initialParticles);
-  updateStats();
-}
-function spawn(n) {
-  for (let i=0;i<n;i++){
-    if (state.particles.length>2000) break;
-    const p = new Particle();
-    state.particles.push(p);
-    state.totalSpawned++;
-  }
-}
-let lastRAF = 0;
-function tick(ts) {
-  const now = ts || performance.now();
-  const dtReal = (now - (lastRAF||now)) / 1000;
-  lastRAF = now;
-  if (state.isRunning && !state.isPaused) {
-    const dt = Math.max(0, Math.min(0.1, dtReal)) * params.timeScale;
-    state.elapsed += dt;
-    if ((state.elapsed - state.lastSpawn) > params.spawnInterval) {
-      spawn(params.batchSize);
-      state.lastSpawn = state.elapsed;
-    }
-    state.particles.forEach(p => p.update(dt));
-    state.particles = state.particles.filter(p => p.isActive);
-    updateStats();
-  }
-  if (!params.headless) renderer.render(scene, camera);
-  requestAnimationFrame(tick);
-}
-
-/* ========= UIバインド ========= */
-function bindRange(id, key, valId, fmt= (v)=>v.toFixed(2)) {
-  const el = document.getElementById(id);
-  const val = document.getElementById(valId);
-  const update = ()=>{
-    params[key] = (el.type==='range' ? parseFloat(el.value) : (el.type==='number'? parseFloat(el.value) : el.value));
-    if (val) val.textContent = fmt(params[key]);
-  };
-  el.addEventListener('input', update);
-  update();
-}
-function bindDirect(id, key) {
-  const el = document.getElementById(id);
-  const update = ()=>{
-    if (el.type==='checkbox') params[key] = el.checked;
-    else if (el.type==='number') params[key] = parseFloat(el.value);
-    else params[key] = el.value;
-  };
-  el.addEventListener('input', update);
-  update();
-}
-function bindUI() {
-  bindDirect('seed','seed');
-  bindRange('timeScale','timeScale','val_timeScale');
-  bindRange('spawnInterval','spawnInterval','val_spawnInterval');
-  bindRange('batchSize','batchSize','val_batchSize',v=>v.toFixed(0));
-  bindRange('initialParticles','initialParticles','val_initialParticles',v=>v.toFixed(0));
-
-  bindRange('heterogeneity','heterogeneity','val_heterogeneity');
-  bindRange('lifespanVariance','lifespanVariance','val_lifespanVar');
-  bindRange('exploiterRatio','exploiterRatio','val_exploiter');
-  bindRange('explorerRatio','explorerRatio','val_explorer');
-  bindDirect('strategicSpawningEnabled','strategicSpawningEnabled');
-
-  bindRange('trtForce','trtForce','val_trt',v=>v.toFixed(3));
-  bindRange('praForce','praForce','val_pra',v=>v.toFixed(3));
-  bindRange('centralConvergence','centralConvergence','val_central',v=>v.toFixed(3));
-  bindRange('peerAttraction','peerAttraction','val_peer',v=>v.toFixed(3));
-
-  bindRange('successThreshold','successThreshold','val_threshold',v=>v.toFixed(0));
-  bindRange('vertexCapacity','vertexCapacity','val_vertexCap',v=>v.toFixed(0));
-  bindRange('attritionRate','attritionRate','val_attrition',v=>v.toFixed(3));
-
-  bindDirect('headless','headless');
-  bindDirect('batchRuns','batchRuns');
-  bindDirect('maxSimTime','maxSimTime');
-
-  document.getElementById('btnStart').addEventListener('click', ()=>{
-    state.isRunning = true; state.isPaused = false;
-  });
-  document.getElementById('btnPause').addEventListener('click', ()=>{
-    state.isPaused = !state.isPaused;
-  });
-  document.getElementById('btnReset').addEventListener('click', ()=>{
-    resetSimulation(true);
-  });
-
-  document.getElementById('btnExportCSV').addEventListener('click', ()=>{
-    const csv = exportCSV();
-    download(`run_${Date.now()}.csv`, csv);
-  });
-  document.getElementById('btnExportJSON').addEventListener('click', ()=>{
-    const txt = JSON.stringify(params, null, 2);
-    download(`scenario_${Date.now()}.json`, txt);
-  });
-  document.getElementById('fileImport').addEventListener('change', (e)=>{
-    const f = e.target.files?.;
-    if (!f) return;
-    const fr = new FileReader();
-    fr.onload = ()=>{
-      try {
-        const obj = JSON.parse(fr.result);
-        Object.assign(params, obj);
-        // 反映
-        for (const [id,key] of [
-          ['seed','seed'], ['timeScale','timeScale'], ['spawnInterval','spawnInterval'],
-          ['batchSize','batchSize'], ['initialParticles','initialParticles'],
-          ['heterogeneity','heterogeneity'], ['lifespanVariance','lifespanVariance'],
-          ['exploiterRatio','exploiterRatio'], ['explorerRatio','explorerRatio'],
-          ['trtForce','trtForce'], ['praForce','praForce'], ['centralConvergence','centralConvergence'],
-          ['peerAttraction','peerAttraction'], ['successThreshold','successThreshold'],
-          ['vertexCapacity','vertexCapacity'], ['attritionRate','attritionRate'],
-          ['batchRuns','batchRuns'], ['maxSimTime','maxSimTime']
-        ]) {
-          const el = document.getElementById(id);
-          if (el) el.value = params[key];
-          const lab = document.querySelector(`#val_${id}`) || document.getElementById(`val_${key}`);
-          if (lab) lab.textContent = (typeof params[key]==='number' ? params[key].toString() : params[key]);
-        }
-        const ck = document.getElementById('strategicSpawningEnabled');
-        if (ck) ck.checked = !!params.strategicSpawningEnabled;
-        const hd = document.getElementById('headless'); if (hd) hd.checked = !!params.headless;
-        resetSimulation(true);
-      } catch(e){ alert('JSON読み込みエラー'); }
+  
+  // テスト用：最初の数個の粒子で強制的にクラスターを作成
+  // これにより、検出アルゴリズムの基本動作を確認
+  var clusters = [];
+  
+  if (activeParticles.length >= 2) {
+    console.log('🧪 テストクラスター作成を試行');
+    
+    // 最初の2-3個の粒子で強制的にクラスター作成
+    var testParticles = activeParticles.slice(0, Math.min(3, activeParticles.length));
+    
+    // 重心を計算
+    var centerPos = new THREE.Vector3();
+    testParticles.forEach(function(p) {
+      centerPos.add(p.position);
+    });
+    centerPos.divideScalar(testParticles.length);
+    
+    var testCluster = {
+      members: testParticles,
+      memberIds: testParticles.map(function(p) { return p.id; }),
+      center: centerPos,
+      intensity: 0.8, // 高い強度で確実に見えるように
+      avgDistance: 2.0
     };
-    fr.readAsText(f);
-  });
-
-  document.getElementById('btnRunBatch').addEventListener('click', async ()=>{
-    const res = await runBatch();
-    alert(`バッチ完了: n=${res.n}, avgSuccess=${(res.avgSuccess*100).toFixed(2)}%, avgTTS=${(res.avgTTS||0).toFixed(2)}s`);
-  });
-  document.getElementById('btnExportBatchCSV').addEventListener('click', ()=>{
-    if (!lastBatch) return alert('先にバッチを実行してください');
-    const csv = exportBatchCSV(lastBatch);
-    download(`batch_${Date.now()}.csv`, csv);
-  });
-}
-
-function updateStats() {
-  document.getElementById('stat_time').textContent = state.elapsed.toFixed(1);
-  document.getElementById('stat_spawned').textContent = state.totalSpawned.toString();
-  const active = state.particles.length;
-  document.getElementById('stat_active').textContent = active.toString();
-  document.getElementById('stat_success').textContent = state.successCount.toString();
-  const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned*100) : 0;
-  document.getElementById('stat_rate').textContent = rate.toFixed(1);
-  const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : NaN;
-  document.getElementById('stat_tts').textContent = isFinite(avgTTS) ? avgTTS.toFixed(2) : '-';
-}
-
-/* ========= CSV出力 ========= */
-function exportCSV() {
-  const header = [
-    'time','totalSpawned','active','success','successRate','avgTTS'
-  ];
-  const lines = [];
-  // スナップショット1行(軽量)
-  const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned) : 0;
-  const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : '';
-  lines.push([state.elapsed.toFixed(3), state.totalSpawned, state.particles.length, state.successCount, rate.toFixed(6), (avgTTS||'')].join(','));
-  return header.join(',') + '\n' + lines.join('\n');
-}
-
-/* ========= バッチ実行(ヘッドレス推奨) ========= */
-let lastBatch = null;
-async function runBatch() {
-  const savedHeadless = params.headless;
-  params.headless = true;
-  // 描画切り替え: オブジェクト再追加を避けるため停止のみ
-  const results = [];
-  const n = Math.max(1, Math.min(10000, parseInt(params.batchRuns)||1));
-  const maxT = Math.max(1, parseFloat(params.maxSimTime)||60);
-
-  for (let i=0;i<n;i++){
-    // 乱数シードをずらす(再現セットを作る場合は固定のままでも良い)
-    params.seed = (params.seed + i*977) >>> 0;
-    resetSimulation(true);
-    state.isRunning = true;
-    state.isPaused = false;
-    // ヘッドレス時間ループ
-    let last = performance.now();
-    while (state.elapsed < maxT) {
-      const now = performance.now();
-      const dtReal = (now - last)/1000;
-      last = now;
-      const dt = Math.min(0.1, dtReal) * params.timeScale;
-      state.elapsed += dt;
-      if ((state.elapsed - state.lastSpawn) > params.spawnInterval) {
-        spawn(params.batchSize);
-        state.lastSpawn = state.elapsed;
-      }
-      state.particles.forEach(p => p.update(dt));
-      state.particles = state.particles.filter(p => p.isActive);
-      // 成功が十分溜まれば早期停止
-      if (state.successCount >= Math.max(1, params.vertexCapacity)) break;
-      // 念のためCPUウェイトを軽減
-      // await new Promise(r=>setTimeout(r,0));
-    }
-    const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned) : 0;
-    const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : NaN;
-    results.push({
-      seed: params.seed, successRate: rate, avgTTS: isFinite(avgTTS)?avgTTS:NaN,
-      totalSpawned: state.totalSpawned, successes: state.successCount
+    
+    clusters.push(testCluster);
+    console.log('✅ テストクラスター作成成功:', {
+      メンバー数: testParticles.length,
+      中心位置: centerPos,
+      強度: testCluster.intensity
     });
   }
-  params.headless = savedHeadless;
-  lastBatch = { n, results };
-  return {
-    n,
-    avgSuccess: results.reduce((a,b)=>a+b.successRate,0)/n,
-    avgTTS: (()=> {
-      const arr = results.map(r=>r.avgTTS).filter(x=>isFinite(x));
-      return arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : NaN;
-    })()
-  };
-}
-function exportBatchCSV(batch) {
-  const header = ['seed','successRate','avgTTS','totalSpawned','successes'];
-  const lines = batch.results.map(r => [r.seed, r.successRate.toFixed(6), isFinite(r.avgTTS)?r.avgTTS.toFixed(4):'', r.totalSpawned, r.successes].join(','));
-  return header.join(',') + '\n' + lines.join('\n');
+  
+  // 通常の検出も並行して実行（デバッグ用）
+  console.log('🔍 通常の検出アルゴリズムも実行中...');
+  var attractionRange = params.attractionRange || 6;
+  var clusterThreshold = params.clusterThreshold || 3;
+  
+  console.log('検出パラメータ:');
+  console.log('- attractionRange:', attractionRange);
+  console.log('- clusterThreshold:', clusterThreshold);
+  
+  var processedIds = new Set();
+  
+  for (var i = 0; i < activeParticles.length && i < 10; i++) { // 最初の10個のみチェック（パフォーマンス）
+    var particle = activeParticles[i];
+    
+    if (processedIds.has(particle.id)) continue;
+    
+    var neighbors = activeParticles.filter(function(p) {
+      var distance = particle.position.distanceTo(p.position);
+      return p.id !== particle.id && 
+             !processedIds.has(p.id) &&
+             distance < attractionRange;
+    });
+    
+    console.log('粒子', particle.id, 'の近傍数:', neighbors.length, '(閾値:', clusterThreshold - 1, ')');
+    
+    if (neighbors.length >= clusterThreshold - 1) {
+      var clusterMembers = [particle].concat(neighbors);
+      var memberIds = clusterMembers.map(function(p) { return p.id; });
+      
+      var centerPos = new THREE.Vector3();
+      clusterMembers.forEach(function(p) {
+        centerPos.add(p.position);
+      });
+      centerPos.divideScalar(clusterMembers.length);
+      
+      var avgDistance = 0;
+      for (var j = 0; j < clusterMembers.length; j++) {
+        avgDistance += centerPos.distanceTo(clusterMembers[j].position);
+      }
+      avgDistance /= clusterMembers.length;
+      
+      var intensity = Math.max(0.2, 1.0 - avgDistance / attractionRange);
+      
+      clusters.push({
+        members: clusterMembers,
+        memberIds: memberIds,
+        center: centerPos,
+        intensity: intensity,
+        avgDistance: avgDistance
+      });
+      
+      memberIds.forEach(function(id) {
+        processedIds.add(id);
+      });
+      
+      console.log('✅ 通常検出でクラスター発見:', {
+        サイズ: clusterMembers.length,
+        中心: centerPos,
+        強度: intensity.toFixed(2)
+      });
+    }
+  }
+  
+  // 統計情報の更新
+  clusterStats.currentClusters = clusters.length;
+  if (clusters.length > 0) {
+    clusterStats.totalClustersFormed += clusters.length;
+    var maxSizeThisTime = Math.max.apply(Math, clusters.map(function(c) { return c.members.length; }));
+    if (maxSizeThisTime > clusterStats.maxClusterSize) {
+      clusterStats.maxClusterSize = maxSizeThisTime;
+    }
+  }
+  clusterStats.lastDetectionTime = simulationState.elapsedTime;
+  
+  console.log('📊 最終結果:');
+  console.log('- 検出クラスター数:', clusters.length);
+  console.log('- 現在のクラスター統計:', clusterStats);
+  
+  return clusters;
 }
 
-/* ========= 初期化 ========= */
-bindUI();
-resetSimulation(true);
-requestAnimationFrame(tick);
+// 強化されたクラスターエフェクト管理システム - 統計機能付き
+function manageClusterEffects(detectedClusters, deltaTime) {
+  console.log('🎬 manageClusterEffects が実行されました');
+  console.log('- 新しいクラスター数:', detectedClusters.length);
+  console.log('- 既存エフェクト数:', clusterEffects.length);
+  
+  // 既存のエフェクトを更新
+  var startCount = clusterEffects.length;
+  clusterEffects = clusterEffects.filter(function(effect) {
+    var stillActive = effect.update(deltaTime);
+    if (!stillActive) {
+      effect.dispose(); // リソースの適切な解放
+      console.log('🎭 クラスターエフェクト終了: 寿命', effect.maxAge, '秒完了');
+    }
+    return stillActive;
+  });
+  
+  var endCount = clusterEffects.length;
+  if (startCount !== endCount) {
+    console.log('📈 エフェクト数変化:', startCount, '→', endCount);
+  }
+  
+  // 新しく検出されたクラスターに対してエフェクトを作成
+  detectedClusters.forEach(function(cluster) {
+    // 同じ位置に既存のエフェクトがないかチェック（より大きな範囲で重複を検出）
+    var existingEffect = clusterEffects.find(function(effect) {
+      return effect.centerPosition.distanceTo(cluster.center) < 8.0; // 範囲を拡大
+    });
+    
+    if (!existingEffect) {
+      // 新しいクラスターエフェクトを作成
+      console.log('🌟 新しいクラスターエフェクト作成中...', {
+        center: cluster.center,
+        memberCount: cluster.memberIds.length,
+        intensity: cluster.intensity
+      });
+      
+      try {
+        var newEffect = new ClusterEffect(cluster.center, cluster.memberIds, cluster.intensity);
+        clusterEffects.push(newEffect);
+        console.log('✅ エフェクト作成成功');
+        
+        // 教育的フィードバック：大規模クラスターの特別な通知
+        if (cluster.members.length >= 4) {
+          var message = '大規模クラスター形成！' + cluster.members.length + '個の粒子が協調';
+          console.log('🎉', message);
+          showMessage(message, 'success');
+        }
+      } catch (error) {
+        console.error('💥 エフェクト作成でエラー:', error);
+      }
+    } else {
+      console.log('⚪ 既存エフェクトと重複のため、新しいエフェクトはスキップ');
+    }
+  });
+  
+  console.log('🎪 現在アクティブなエフェクト数:', clusterEffects.length);
+}
+
+// クラスターエフェクトの最適化版 - 光の柱を削除し、リングを控えめに調整
+function ClusterEffect(centerPos, memberIds, intensity) {
+  this.centerPosition = centerPos.clone();
+  this.memberIds = memberIds; // クラスターを構成する粒子のID配列
+  this.intensity = intensity; // エフェクトの強度
+  this.age = 0; // エフェクトの持続時間
+  this.maxAge = 3.0; // 最大持続時間を延長（より長く観察可能）
+  this.connections = []; // クラスター内接続線の配列
+  this.visualElements = []; // 全ての視覚要素を管理
+  
+  // デバッグ用：エフェクト作成をコンソールに出力
+  console.log('クラスターエフェクト作成（最適化版）:', {
+    center: this.centerPosition,
+    members: this.memberIds.length,
+    intensity: this.intensity
+  });
+  
+  // 軽量化された視覚化システム - 粒子の視認性を重視
+  this.createOptimizedVisualization();
+  
+  return this;
+}
+
+// 最適化された視覚化システム - 粒子を邪魔しない控えめなエフェクト
+ClusterEffect.prototype.createOptimizedVisualization = function() {
+  // 1. 外側の薄いリング（さらに透明度を上げて控えめに）
+  var outerRingGeometry = new THREE.RingGeometry(3, 4, 32); // サイズを少し縮小
+  var outerRingMaterial = new THREE.MeshBasicMaterial({
+    color: 0x888888, // グレー系で粒子の色と競合しない
+    transparent: true,
+    opacity: 0.2, // 透明度を大幅に上げて背景に溶け込むように（元：0.8）
+    side: THREE.DoubleSide
+  });
+  
+  this.outerRing = new THREE.Mesh(outerRingGeometry, outerRingMaterial);
+  this.outerRing.position.copy(this.centerPosition);
+  this.outerRing.rotation.x = -Math.PI / 2; // 水平に配置
+  scene.add(this.outerRing);
+  this.visualElements.push(this.outerRing);
+  
+  // 2. 内側の更に薄いリング
+  var innerRingGeometry = new THREE.RingGeometry(1.5, 2.5, 24);
+  var innerRingMaterial = new THREE.MeshBasicMaterial({
+    color: 0xcccccc, // より薄いグレーで存在感を抑制
+    transparent: true,
+    opacity: 0.15, // 非常に薄く（元：0.6）
+    side: THREE.DoubleSide
+  });
+  
+  this.innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
+  this.innerRing.position.copy(this.centerPosition);
+  this.innerRing.rotation.x = -Math.PI / 2;
+  scene.add(this.innerRing);
+  this.visualElements.push(this.innerRing);
+  
+  // 注意：光の柱（lightPillar）は削除 - パフォーマンス向上と視覚的なノイズ削減
+  
+  // 3. 小さくて控えめなマーカー球（サイズと透明度を調整）
+  var markerGeometry = new THREE.SphereGeometry(0.5, 12, 12); // サイズを半分に縮小
+  var markerMaterial = new THREE.MeshBasicMaterial({
+    color: 0xaaaaaa, // 目立たないグレー（元：ピンク）
+    transparent: true,
+    opacity: 0.4 // 透明度を上げて控えめに（元：0.7）
+  });
+  
+  this.marker = new THREE.Mesh(markerGeometry, markerMaterial);
+  this.marker.position.copy(this.centerPosition);
+  this.marker.position.y += 5; // 高さを半分に（元：10）
+  scene.add(this.marker);
+  this.visualElements.push(this.marker);
+  
+  // 4. クラスター接続線（更に控えめに調整）
+  this.createOptimizedConnections();
+  
+  // デバッグ用：作成された視覚要素数を報告
+  console.log('最適化視覚要素作成完了:', this.visualElements.length + this.connections.length, '個');
+};
+
+// 最適化されたクラスター接続線 - より細く、薄く
+ClusterEffect.prototype.createOptimizedConnections = function() {
+  // クラスター内の粒子同士を結ぶ線を生成（最適化版）
+  for (var i = 0; i < this.memberIds.length && i < 4; i++) { // 接続線数を更に制限
+    for (var j = i + 1; j < this.memberIds.length && j < 4; j++) {
+      var particle1 = particles.find(function(p) { return p.id === this.memberIds[i]; }.bind(this));
+      var particle2 = particles.find(function(p) { return p.id === this.memberIds[j]; }.bind(this));
+      
+      if (particle1 && particle2) {
+        var lineGeometry = new THREE.BufferGeometry();
+        var positions = [
+          particle1.position.x, particle1.position.y, particle1.position.z,
+          particle2.position.x, particle2.position.y, particle2.position.z
+        ];
+        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        
+        // より薄く、目立たない接続線
+        var lineMaterial = new THREE.LineBasicMaterial({
+          color: 0x999999, // グレー系で控えめに（元：シアン）
+          transparent: true,
+          opacity: 0.3, // 透明度を大幅に上げて（元：0.8）
+          linewidth: 1 // 線を細く
+        });
+        
+        var connection = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(connection);
+        this.connections.push(connection);
+      }
+    }
+  }
+};
+
+// エフェクトの更新 - 最適化版（光の柱のアニメーション処理を削除）
+ClusterEffect.prototype.update = function(deltaTime) {
+  this.age += deltaTime;
+  
+  // エフェクトの生存時間に基づく透明度変化（より緩やかに）
+  var lifeRatio = this.age / this.maxAge;
+  var opacity = Math.max(0.05, 1.0 - lifeRatio); // 最低5%の透明度を維持（更に薄く）
+  
+  // 外側リングのアニメーション（より控えめに）
+  if (this.outerRing) {
+    this.outerRing.rotation.z += deltaTime * 0.5; // 回転速度を遅く（元：1.5）
+    this.outerRing.material.opacity = opacity * 0.2; // 基本透明度を下げる（元：0.8）
+    
+    // 脈動効果も控えめに
+    var pulse = 1 + Math.sin(this.age * 2) * 0.1; // 振幅を小さく（元：0.2）
+    this.outerRing.scale.setScalar(pulse);
+  }
+  
+  // 内側リングのアニメーション（逆回転、更に控えめ）
+  if (this.innerRing) {
+    this.innerRing.rotation.z -= deltaTime * 1; // 回転速度を遅く（元：2）
+    this.innerRing.material.opacity = opacity * 0.15; // 基本透明度を下げる（元：0.6）
+    
+    // より穏やかな脈動
+    var fastPulse = 1 + Math.sin(this.age * 3) * 0.15; // 振幅を小さく（元：0.3）
+    this.innerRing.scale.setScalar(fastPulse);
+  }
+  
+  // 注意：光の柱（lightPillar）のアニメーション処理は削除
+  
+  // マーカー球のアニメーション（より控えめに）
+  if (this.marker) {
+    this.marker.material.opacity = opacity * 0.4; // 基本透明度を下げる（元：0.7）
+    
+    // バウンス効果を穏やかに
+    var bounce = Math.sin(this.age * 3) * 1; // 振幅を小さく（元：2）
+    this.marker.position.y = this.centerPosition.y + 5 + bounce; // 基準高度も低く（元：10）
+    
+    // 色の変化も穏やかに（グレー系を維持）
+    var grayIntensity = 0.6 + Math.sin(this.age * 2) * 0.1; // グレーの濃淡変化
+    this.marker.material.color.setRGB(grayIntensity, grayIntensity, grayIntensity);
+  }
+  
+  // 接続線の透明度更新（更に薄く）
+  this.connections.forEach(function(connection) {
+    connection.material.opacity = opacity * 0.3; // 基本透明度を下げる（元：0.8）
+  });
+  
+  // エフェクト終了の判定
+  return this.age < this.maxAge;
+};
+
+// リソースの完全なクリーンアップ（変更なし）
+ClusterEffect.prototype.dispose = function() {
+  console.log('クラスターエフェクト削除:', this.visualElements.length + this.connections.length, '個の要素');
+  
+  // 全ての視覚要素を削除
+  this.visualElements.forEach(function(element) {
+    if (element && element.parent) {
+      scene.remove(element);
+      if (element.geometry) element.geometry.dispose();
+      if (element.material) element.material.dispose();
+    }
+  });
+  
+  // 接続線を削除
+  this.connections.forEach(function(connection) {
+    if (connection && connection.parent) {
+      scene.remove(connection);
+      if (connection.geometry) connection.geometry.dispose();
+      if (connection.material) connection.material.dispose();
+    }
+  });
+  
+  this.visualElements = [];
+  this.connections = [];
+};
+
+function Particle(id, position, params, isRecycled) {
+  // 基本プロパティの初期化
+  this.id = id;
+  this.position = position.clone();
+  this.velocity = new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05);
+  this.state = 'active';
+  this.effectTimer = 0;
+  this.params = params;
+  this.birthTime = params.currentTime || 0;
+  
+  // 視覚効果用のプロパティ
+  this.positionHistory = [position.clone()]; // 軌跡記録用
+  this.maxTrailLength = params.trailLength || 10;
+  this.pulseTimer = Math.random() * Math.PI * 2; // パルス効果用のタイマー
+  
+  // 3Dメッシュの作成
+  var geometry = new THREE.SphereGeometry(0.35, 16, 16);
+  var material = new THREE.MeshPhongMaterial({
+      color: this.getColor(),
+      transparent: true,
+      opacity: isRecycled ? 0.7 : 0.85,
+      emissive: isRecycled ? this.getColor() : 0x000000,
+      emissiveIntensity: 0.3
+  });
+  this.mesh = new THREE.Mesh(geometry, material);
+  this.mesh.position.copy(this.position);
+  scene.add(this.mesh);
+  
+  // トレイルライン用の初期化
+  this.trailLine = null;
+  this.createTrail();
+  
+  return this;
+}
+
+// トレイル作成メソッド - 粒子の軌跡を可視化（大幅改善版）
+Particle.prototype.createTrail = function() {
+  if (this.params.showTrails && !this.trailLine) {
+    var trailGeometry = new THREE.BufferGeometry();
+    // 軌跡の視認性を高めるため、色と透明度を動的に調整
+    var trailMaterial = new THREE.LineBasicMaterial({
+      color: this.getColor(),
+      transparent: true,
+      opacity: this.params.trailOpacity || 0.8,
+      linewidth: 2 // 軌跡を太くして見やすく
+    });
+    this.trailLine = new THREE.Line(trailGeometry, trailMaterial);
+    scene.add(this.trailLine);
+  }
+};
+
+// トレイル更新メソッド - グラデーション効果で時間の流れを表現
+Particle.prototype.updateTrail = function() {
+  if (!this.params.showTrails || !this.trailLine) return;
+  
+  // 履歴の長さを制限
+  if (this.positionHistory.length > this.maxTrailLength) {
+    this.positionHistory.shift();
+  }
+  
+  // 軌跡線の更新（改善されたグラデーション効果付き）
+  if (this.positionHistory.length > 1) {
+    var positions = [];
+    var colors = [];
+    var baseColor = this.getColor();
+    
+    // 各軌跡点に対して、時間に基づくグラデーション効果を適用
+    for (var i = 0; i < this.positionHistory.length; i++) {
+      var pos = this.positionHistory[i];
+      positions.push(pos.x, pos.y, pos.z);
+      
+      // 新しい軌跡点ほど鮮明に、古い点ほど薄く表示
+      // これにより「時間の流れ」が視覚的に理解できる
+      var timeRatio = i / (this.positionHistory.length - 1);
+      var intensity = 0.3 + 0.7 * timeRatio; // 30%から100%まで段階的に濃く
+      colors.push(
+        baseColor.r * intensity, 
+        baseColor.g * intensity, 
+        baseColor.b * intensity
+      );
+    }
+    
+    // ジオメトリの再構築（パフォーマンスを考慮した効率的な更新）
+    this.trailLine.geometry.dispose();
+    this.trailLine.geometry = new THREE.BufferGeometry();
+    this.trailLine.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    this.trailLine.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    
+    // 軌跡の色も粒子の現在の色に連動させる
+    this.trailLine.material.color = baseColor;
+    this.trailLine.material.opacity = this.params.trailOpacity || 0.8;
+  }
+};
+
+// メインの更新メソッド - 物理演算と視覚効果の統合
+Particle.prototype.update = function(deltaTime, simState, allParticles) {
+  // 成功/失敗状態の処理
+  if (this.state === 'succeeding' || this.state === 'disappearing') {
+    this.effectTimer += deltaTime;
+    var isSucceeding = this.state === 'succeeding';
+    var duration = isSucceeding ? 0.5 : 0.8;
+    
+    if (this.effectTimer >= duration) {
+      this.state = 'inactive';
+      if (!isSucceeding && Math.random() < this.params.resourceRecyclingRate) {
+        recycledParticles.push({ recycleTime: simState.elapsedTime + this.params.recyclingDelay });
+      }
+    } else {
+      // エフェクトのアニメーション
+      var progress = this.effectTimer / duration;
+      var scaleMultiplier = isSucceeding ? 3 : 4;
+      this.mesh.scale.setScalar(1 + progress * scaleMultiplier);
+      this.mesh.material.opacity = (isSucceeding ? 1 : 0.6) * (1 - progress);
+      
+      if (isSucceeding) {
+        this.mesh.material.emissiveIntensity = 0.8 * (1 - progress * 0.5);
+      }
+      
+      if (!isSucceeding) this.position.y += deltaTime * 2;
+      this.mesh.position.copy(this.position);
+      this.updateTrail();
+    }
+    return;
+  }
+  
+  if (this.state !== 'active') return;
+
+  // 位置履歴への追加（トレイル用）
+  this.positionHistory.push(this.position.clone());
+
+  // 物理演算の実行
+  var hRatio = this.position.y / coneHeight;
+  
+  // TRT理論に基づく垂直力の計算
+  this.velocity.y += this.params.trtForce * (1-hRatio) * (hRatio < this.params.tippingPoint ? 1 : this.params.trtAcceleration) * deltaTime;
+  
+  // 市場引力の適用
+  if(hRatio > 0.7 && this.params.marketPull > 0) {
+    var marketDirection = new THREE.Vector3(0, this.params.successThreshold - this.position.y, 0).normalize();
+    this.velocity.add(marketDirection.multiplyScalar(this.params.marketPull * deltaTime));
+  }
+  
+  // PRA理論に基づく水平拡散力
+  this.velocity.x += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
+  this.velocity.z += (Math.random()-0.5) * this.params.praForce * this.params.praDiversity * deltaTime;
+  
+  // 多重重力源の効果
+  if (this.params.multiGravityEnabled) {
+    // 中央収束力
+    var centralDirection = new THREE.Vector3(-this.position.x, 0, -this.position.z).normalize();
+    this.velocity.add(centralDirection.multiplyScalar(this.params.centralConvergence * hRatio * deltaTime));
+    
+    // クラスター内収束力
+    var nearby = allParticles.filter(function(p) {
+      return p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.attractionRange;
+    }.bind(this));
+    
+    if (nearby.length >= this.params.clusterThreshold - 1) {
+      var clusterCenter = new THREE.Vector3();
+      for (var i = 0; i < nearby.length; i++) {
+        clusterCenter.add(nearby[i].position);
+      }
+      clusterCenter.add(this.position);
+      clusterCenter.divideScalar(nearby.length + 1);
+      
+      var clusterDirection = clusterCenter.clone().sub(this.position).normalize();
+      this.velocity.add(clusterDirection.multiplyScalar(this.params.clusterConvergence * deltaTime));
+    }
+  }
+  
+  // 頂点容量制限の効果
+  if (this.params.envBiasEnabled && this.position.y > (coneHeight - this.params.capacityRadius * 2)) {
+    var nearbyCount = allParticles.filter(function(p) {
+      return p.id !== this.id && p.state === 'active' && this.position.distanceTo(p.position) < this.params.capacityRadius;
+    }.bind(this)).length;
+    
+    if (nearbyCount >= this.params.vertexCapacity) {
+      this.velocity.y *= this.params.congestionEffect;
+    }
+  }
+  
+  // 位置の更新
+  this.position.add(this.velocity.clone().multiplyScalar(deltaTime * this.params.timeScale * 10));
+  
+  // 視覚効果の更新
+  this.updateVisualEffects(hRatio, deltaTime);
+  
+  // ログ記録（サンプリング）
+  if (simState.log.length < 10000 && Math.random() < 0.1) {
+    simState.log.push({
+      time: simState.elapsedTime,
+      id: this.id,
+      x: this.position.x.toFixed(2),
+      y: this.position.y.toFixed(2),
+      z: this.position.z.toFixed(2)
+    });
+  }
+  
+  // 境界チェック
+  var maxRadius = coneRadius * (1 - this.position.y/coneHeight);
+  if (Math.hypot(this.position.x, this.position.z) > maxRadius || this.position.y < 0) {
+    return this.changeState('disappearing', simState);
+  }
+  if (this.position.y >= this.params.successThreshold) {
+    return this.changeState('succeeding', simState);
+  }
+
+  // メッシュ位置とトレイルの更新
+  this.mesh.position.copy(this.position);
+  this.updateTrail();
+};
+
+// 視覚効果更新メソッド - 高度に応じたグロー、パルス、サイズ変更
+Particle.prototype.updateVisualEffects = function(hRatio, deltaTime) {
+  // 高度に応じた発光強度
+  var glowIntensity = this.params.glowIntensity || 0.5;
+  var heightBasedGlow = hRatio * glowIntensity;
+  this.mesh.material.emissiveIntensity = heightBasedGlow;
+  
+  // パルス効果（高度60%以上で発動）
+  if (this.params.pulseEffect && hRatio > 0.6) {
+    this.pulseTimer += deltaTime * 8;
+    var pulseScale = 1 + Math.sin(this.pulseTimer) * 0.2 * hRatio;
+    this.mesh.scale.setScalar(pulseScale);
+    
+    // 発光強度もパルス
+    this.mesh.material.emissiveIntensity = heightBasedGlow + Math.sin(this.pulseTimer) * 0.3 * hRatio;
+  } else {
+    this.mesh.scale.setScalar(1);
+  }
+  
+  // 色と透明度の動的更新
+  this.mesh.material.color = this.getColor();
+  this.mesh.material.opacity = 0.6 + 0.4 * hRatio;
+  
+  // 重要度に応じたサイズ調整
+  var sizeMultiplier = 1 + hRatio * 0.3;
+  if (!this.params.pulseEffect || hRatio <= 0.6) {
+    this.mesh.scale.setScalar(sizeMultiplier);
+  }
+};
+
+// 状態変更メソッド
+Particle.prototype.changeState = function(newState, simState) {
+  if (this.state === 'active') { 
+    this.state = newState; 
+    this.effectTimer = 0; 
+    if (newState === 'succeeding' && simState) {
+      simState.successCount++;
+    }
+  }
+};
+
+// 色取得メソッド - 高度に基づくグラデーション
+Particle.prototype.getColor = function() {
+  var hRatio = this.position.y / coneHeight;
+  var color = new THREE.Color();
+  
+  // 段階的な色の補間
+  if (hRatio < 0.33) {
+    color.lerpColors(colorStops.green, colorStops.yellow, hRatio / 0.33);
+  } else if (hRatio < 0.66) {
+    color.lerpColors(colorStops.yellow, colorStops.pink, (hRatio - 0.33) / 0.33);
+  } else {
+    color.lerpColors(colorStops.pink, colorStops.red, (hRatio - 0.66) / 0.34);
+  }
+  
+  // 彩度と明度の調整
+  var hsl = {};
+  color.getHSL(hsl);
+  hsl.s = 0.6 + 0.4 * hRatio;
+  hsl.l = 0.7 - 0.2 * hRatio;
+  color.setHSL(hsl.h, hsl.s, hsl.l);
+  
+  return color;
+};
+
+// リソース解放メソッド
+Particle.prototype.removeMesh = function() { 
+  if (this.mesh && this.mesh.parent) { 
+    scene.remove(this.mesh); 
+    if (this.mesh.geometry) this.mesh.geometry.dispose(); 
+    if (this.mesh.material) this.mesh.material.dispose(); 
+    this.mesh = null; 
+  }
+  
+  if (this.trailLine && this.trailLine.parent) {
+    scene.remove(this.trailLine);
+    if (this.trailLine.geometry) this.trailLine.geometry.dispose();
+    if (this.trailLine.material) this.trailLine.material.dispose();
+    this.trailLine = null;
+  }
+};
+
+// メッセージ表示機能
+function showMessage(text, type) {
+  var messageArea = document.getElementById('message-area');
+  var messageDiv = document.createElement('div');
+  messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+  messageDiv.textContent = text;
+  messageArea.appendChild(messageDiv);
+  setTimeout(function() { 
+    if (messageDiv.parentNode) messageDiv.parentNode.removeChild(messageDiv); 
+  }, 5000);
+}
+
+// 初期化関数
+function init() {
+  try {
+    // Three.jsの基本設定
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(40, 40, 40);
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // カメラコントロールの設定
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, coneHeight/2, 0);
+    controls.enableDamping = true;
+
+    // 照明の設定
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(50, 100, 50);
+    scene.add(dirLight);
+
+    // グリッドヘルパーの追加
+    var gridHelper = new THREE.GridHelper(coneRadius * 2, 20, 0x888888, 0xcccccc);
+    gridHelper.material.opacity = 0.15;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // 円錐構造の作成
+    createConeGeometry();
+    
+    // イベントリスナーの設定
+    window.addEventListener('resize', onWindowResize);
+    setupUIListeners();
+    updateParameters();
+    resetSimulation();
+    animate();
+    
+    showMessage('シミュレータが正常に初期化されました（最適化版）', 'success');
+  } catch (error) {
+    showMessage('初期化エラー: ' + error.message, 'error');
+    console.error('初期化エラー:', error);
+  }
+}
+
+// 円錐ジオメトリの作成
+function createConeGeometry() {
+  coneGroup = new THREE.Group();
+  scene.add(coneGroup);
+  
+  var coneSegments = 4;
+  var segmentHeight = coneHeight / coneSegments;
+  var coneWallColor = new THREE.Color(0xA0C0E0);
+  var wireframeDensity = [16, 12, 12, 8];
+  
+  // 透明な円錐壁
+  var fullConeGeom = new THREE.CylinderGeometry(0, coneRadius, coneHeight, 32, 4, true);
+  var fullConeMat = new THREE.MeshPhongMaterial({
+      color: coneWallColor,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide
+  });
+  var fullCone = new THREE.Mesh(fullConeGeom, fullConeMat);
+  fullCone.position.y = coneHeight / 2;
+  coneGroup.add(fullCone);
+  
+  // ワイヤーフレームとリングの追加
+  for (var i = 0; i < coneSegments; i++) {
+      var bottomY = i * segmentHeight;
+      var topY = (i + 1) * segmentHeight;
+      var bottomRadius = coneRadius * (1 - bottomY / coneHeight);
+      var topRadius = coneRadius * (1 - topY / coneHeight);
+      
+      // ワイヤーフレームライン
+      var points = [];
+      var numLines = wireframeDensity[i];
+      for (var j = 0; j < numLines; j++) {
+          var angle = (j / numLines) * Math.PI * 2;
+          points.push(new THREE.Vector3(Math.cos(angle) * bottomRadius, -segmentHeight/2, Math.sin(angle) * bottomRadius));
+          points.push(new THREE.Vector3(Math.cos(angle) * topRadius, segmentHeight/2, Math.sin(angle) * topRadius));
+      }
+      var lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      var lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.2 - i * 0.01 });
+      var line = new THREE.LineSegments(lineGeometry, lineMaterial);
+      line.position.y = bottomY + segmentHeight / 2;
+      coneGroup.add(line);
+
+      // 高さレベルのリング
+      var ringGeom = new THREE.RingGeometry(bottomRadius - 0.1, bottomRadius, 64);
+      var ringMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
+      var ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = bottomY;
+      coneGroup.add(ring);
+  }
+}
+
+// 初期配置戦略に基づく位置計算
+function getInitialPosition(strategy, index, total) {
+  var angle = (index / total) * Math.PI * 2;
+  var baseRadius = coneRadius * 0.9;
+  
+  switch (strategy) {
+    case 'focused':
+      return new THREE.Vector3(
+        Math.cos(angle) * baseRadius * 0.3,
+        1,
+        Math.sin(angle) * baseRadius * 0.3
+      );
+    case 'diversified':
+      return new THREE.Vector3(
+        Math.cos(angle) * (0.3 + Math.random() * 0.6) * baseRadius,
+        1,
+        Math.sin(angle) * (0.3 + Math.random() * 0.6) * baseRadius
+      );
+    case 'clustered':
+      var clusterAngle = Math.floor(index / (total / 4)) * Math.PI / 2;
+      var clusterRadius = baseRadius * 0.5;
+      return new THREE.Vector3(
+        Math.cos(clusterAngle) * clusterRadius + (Math.random() - 0.5) * 3,
+        1,
+        Math.sin(clusterAngle) * clusterRadius + (Math.random() - 0.5) * 3
+      );
+    case 'edge':
+      return new THREE.Vector3(
+        Math.cos(angle) * baseRadius * (0.8 + Math.random() * 0.2),
+        1,
+        Math.sin(angle) * baseRadius * (0.8 + Math.random() * 0.2)
+      );
+    default: // random
+      return new THREE.Vector3(
+        Math.cos(angle) * Math.random() * baseRadius,
+        1,
+        Math.sin(angle) * Math.random() * baseRadius
+      );
+  }
+}
+
+// カメラモード更新
+function updateCameraMode() {
+  if (!camera || !controls) return;
+  
+  var mode = parameters.cameraMode || 'free';
+  
+  if (mode !== currentCameraMode) {
+    currentCameraMode = mode;
+    
+    if (!originalCameraPosition) {
+      originalCameraPosition = camera.position.clone();
+    }
+    
+    switch (mode) {
+      case 'side':
+        camera.position.set(coneRadius * 2.5, coneHeight / 2, 0);
+        controls.target.set(0, coneHeight / 2, 0);
+        break;
+        
+      case 'tracking':
+        var highestParticle = particles
+          .filter(function(p) { return p.state === 'active'; })
+          .sort(function(a, b) { return b.position.y - a.position.y; })[0];
+        
+        if (highestParticle) {
+          cameraTarget = highestParticle;
+        }
+        break;
+        
+      default:
+        camera.position.copy(originalCameraPosition);
+        controls.target.set(0, coneHeight/2, 0);
+        cameraTarget = null;
+        break;
+    }
+  }
+  
+  if (mode === 'tracking' && cameraTarget && cameraTarget.state === 'active') {
+    var targetPos = cameraTarget.position.clone();
+    targetPos.y += 10;
+    camera.position.lerp(targetPos.add(new THREE.Vector3(15, 5, 15)), 0.05);
+    controls.target.copy(cameraTarget.position);
+  }
+}
+
+// 初期粒子の作成
+function createInitialParticles(params, state, arr) { 
+  // 既存粒子のクリーンアップ
+  arr.forEach(function(p) { p.removeMesh(); }); 
+  arr.length = 0; 
+  nextParticleId = 0; 
+  state.totalSpawned = 0; 
+  
+  // 新しい粒子の作成
+  for(var i = 0; i < params.initialParticles; i++) {
+    var position = getInitialPosition(params.initialPlacementStrategy, i, params.initialParticles);
+    arr.push(new Particle(nextParticleId++, position, params)); 
+  } 
+  state.totalSpawned += params.initialParticles; 
+}
+
+// 再利用粒子の処理
+function processRecycledParticles(params, state, arr) { 
+  var currentTime = state.elapsedTime; 
+  var toRecycleNow = recycledParticles.filter(function(r) { return r.recycleTime <= currentTime; }); 
+  toRecycleNow.forEach(function() { 
+    var angle = Math.random()*Math.PI*2;
+    var radius = Math.random()*coneRadius*0.8; 
+    arr.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), params, true)); 
+    state.recycledCount++; 
+  }); 
+  recycledParticles = recycledParticles.filter(function(r) { return r.recycleTime > currentTime; }); 
+}
+
+// パラメータ更新
+function updateParameters() { 
+  var elements = document.querySelectorAll('#control-panel input, #control-panel select');
+  for (var i = 0; i < elements.length; i++) {
+    var el = elements[i];
+    parameters[el.id] = (el.type==='checkbox') ? el.checked : (el.type==='range'||el.type==='number') ? parseFloat(el.value) : el.value; 
+    var valEl = document.getElementById(el.id+'-value'); 
+    if(valEl) valEl.textContent = parameters[el.id]; 
+  }
+  
+  parameters.successThreshold = coneHeight - 2; 
+  parameters.currentTime = simulationState.elapsedTime;
+  
+  if (coneGroup) {
+    coneGroup.rotation.set(
+      THREE.MathUtils.degToRad(parameters.coneTiltX || 0), 
+      0, 
+      THREE.MathUtils.degToRad(parameters.coneTiltZ || 0)
+    );
+  }
+  
+  // 機能のオン/オフ制御
+  var checkboxIds = ['multiGravityEnabled', 'envBiasEnabled'];
+  for (var i = 0; i < checkboxIds.length; i++) {
+    var id = checkboxIds[i];
+    var checkbox = document.querySelector('#' + id);
+    if (checkbox) {
+      var group = checkbox.closest('.parameter-group');
+      if (group) {
+        var inputs = group.querySelectorAll('input,select');
+        for (var j = 0; j < inputs.length; j++) {
+          if (inputs[j].id !== id) {
+            inputs[j].disabled = !parameters[id];
+          }
+        }
+      }
+    }
+  }
+}
+
+// 統計情報の更新（強力なデバッグ機能付き）
+function updateStats() { 
+  document.getElementById('sim-time').textContent = simulationState.elapsedTime.toFixed(1); 
+  document.getElementById('success-count').textContent = simulationState.successCount; 
+  document.getElementById('active-particles').textContent = particles.filter(function(p) { return p.state==='active'; }).length; 
+  document.getElementById('total-spawned').textContent = simulationState.totalSpawned; 
+  document.getElementById('recycled-count').textContent = simulationState.recycledCount; 
+  
+  // クラスター統計の表示（デバッグ情報付き）
+  var currentClusters = clusterStats.currentClusters;
+  var totalClusters = clusterStats.totalClustersFormed;
+  var maxClusterSize = clusterStats.maxClusterSize;
+  
+  document.getElementById('current-clusters').textContent = currentClusters;
+  document.getElementById('total-clusters').textContent = totalClusters;
+  document.getElementById('max-cluster-size').textContent = maxClusterSize;
+  
+  // デバッグ用：統計更新の確認（コンソールに定期的に出力）
+  if (Math.floor(simulationState.elapsedTime) !== Math.floor(simulationState.elapsedTime - 0.1) && simulationState.elapsedTime > 1) {
+    console.log('=== 統計状況レポート（1秒毎） ===');
+    console.log('シミュレーション時間:', simulationState.elapsedTime.toFixed(1), '秒');
+    console.log('活性粒子数:', particles.filter(function(p) { return p.state==='active'; }).length);
+    console.log('現在のクラスター数:', currentClusters);
+    console.log('累計クラスター形成:', totalClusters);
+    console.log('最大クラスターサイズ:', maxClusterSize);
+    console.log('アクティブエフェクト数:', clusterEffects.length);
+    
+    // クラスター検出の必要条件をチェック
+    var activeParticles = particles.filter(function(p) { return p.state === 'active'; }).length;
+    var canDetectClusters = (
+      parameters.clusterEffect && 
+      parameters.multiGravityEnabled && 
+      activeParticles >= parameters.clusterThreshold &&
+      parameters.attractionRange > 0
+    );
+    
+    console.log('クラスター検出可能状態:', canDetectClusters);
+    if (!canDetectClusters) {
+      console.log('検出不可の理由:');
+      if (!parameters.clusterEffect) console.log('- クラスターエフェクトが無効');
+      if (!parameters.multiGravityEnabled) console.log('- 多重重力機能が無効');
+      if (activeParticles < parameters.clusterThreshold) console.log('- 粒子数不足 (', activeParticles, '<', parameters.clusterThreshold, ')');
+      if (parameters.attractionRange <= 0) console.log('- 引力範囲が無効 (', parameters.attractionRange, ')');
+    }
+  }
+  
+  var rate = simulationState.totalSpawned>0 ? (simulationState.successCount/simulationState.totalSpawned)*100 : 0; 
+  document.getElementById('success-rate').textContent = rate.toFixed(1)+'%'; 
+  
+  // 重要：クラスター統計が更新されない場合の警告
+  if (simulationState.elapsedTime > 5 && totalClusters === 0 && particles.filter(function(p) { return p.state==='active'; }).length >= 5) {
+    // 5秒経過して十分な粒子があるのにクラスターが検出されていない場合
+    if (Math.floor(simulationState.elapsedTime) % 3 === 0) { // 3秒毎に警告
+      console.warn('⚠️ クラスター検出異常: 十分な粒子があるのにクラスターが検出されていません');
+      console.log('対処方法：');
+      console.log('1. クラスター形成閾値を下げてみてください（現在:', parameters.clusterThreshold, '）');
+      console.log('2. 引力作用範囲を広げてみてください（現在:', parameters.attractionRange, '）');
+      console.log('3. ブラウザのコンソールでエラーメッセージがないか確認してください');
+    }
+  }
+}
+
+// リセット機能の強化（クラスター統計もリセット）
+function resetSimulation() {
+  simulationState.isRunning = false; 
+  simulationState.isPaused = true;
+  simulationState.elapsedTime = 0; 
+  simulationState.lastSpawnTime = 0;
+  simulationState.successCount = 0; 
+  simulationState.recycledCount = 0;
+  simulationState.log = []; 
+  recycledParticles = [];
+  
+  // クラスター統計のリセット
+  clusterStats.currentClusters = 0;
+  clusterStats.totalClustersFormed = 0;
+  clusterStats.maxClusterSize = 0;
+  clusterStats.lastDetectionTime = 0;
+  
+  // 既存のクラスターエフェクトをクリーンアップ
+  clusterEffects.forEach(function(effect) {
+    effect.dispose();
+  });
+  clusterEffects = [];
+  
+  createInitialParticles(parameters, simulationState, particles);
+  updateStats();
+  showMessage('シミュレーションをリセットしました', 'info');
+  console.log('システム完全リセット：クラスター統計もクリア');
+}
+
+// シミュレーション制御関数
+function startSimulation() { 
+  simulationState.isRunning = true; 
+  simulationState.isPaused = false; 
+  showMessage('シミュレーションを開始しました', 'success');
+}
+
+function pauseSimulation() { 
+  if (simulationState.isRunning) {
+    simulationState.isPaused = true; 
+    showMessage('シミュレーションを一時停止しました', 'info');
+  }
+}
+
+function resetSimulation() {
+  simulationState.isRunning = false; 
+  simulationState.isPaused = true;
+  simulationState.elapsedTime = 0; 
+  simulationState.lastSpawnTime = 0;
+  simulationState.successCount = 0; 
+  simulationState.recycledCount = 0;
+  simulationState.log = []; 
+  recycledParticles = [];
+  createInitialParticles(parameters, simulationState, particles);
+  updateStats();
+  showMessage('シミュレーションをリセットしました', 'info');
+}
+
+// CSV出力機能
+function exportCSV() { 
+  if(simulationState.log.length === 0){ 
+    showMessage('エクスポートするデータがありません', 'error'); 
+    return; 
+  } 
+  var csv = 'time,particle_id,x,y,z\n' + simulationState.log.map(function(r) {
+    return r.time + ',' + r.id + ',' + r.x + ',' + r.y + ',' + r.z;
+  }).join('\n');
+  downloadCSV(csv, 'simulation_log.csv'); 
+  showMessage('CSVファイルをダウンロードしました', 'success');
+}
+
+// シナリオ管理機能
+function addScenario() { 
+  var paramCopy = JSON.parse(JSON.stringify(parameters));
+  var scenarioName = 'シナリオ ' + (scenarios.length + 1) + ': ' + paramCopy.initialPlacementStrategy; 
+  scenarios.push({ name: scenarioName, params: paramCopy }); 
+  var li = document.createElement('li'); 
+  li.textContent = scenarioName;
+  li.onclick = function() { showMessage('シナリオ設定: ' + scenarioName, 'info'); };
+  document.getElementById('scenario-list').appendChild(li); 
+  document.getElementById('runComparisonBtn').disabled = false; 
+  showMessage('シナリオを追加しました', 'success');
+}
+
+function runComparison() {
+  if (scenarios.length < 2) {
+    showMessage('比較には少なくとも2つのシナリオが必要です', 'error');
+    return;
+  }
+  
+  showMessage('シナリオ比較を実行中...', 'info');
+  document.getElementById('runComparisonBtn').disabled = true;
+  
+  comparisonResults = [];
+  var duration = parseFloat(document.getElementById('comparisonDuration').value);
+  
+  for (var i = 0; i < scenarios.length; i++) {
+    var scenario = scenarios[i];
+    var result = runHeadlessSim(scenario.params, duration);
+    comparisonResults.push({
+      scenario: scenario.name,
+      successCount: result.successCount,
+      totalSpawned: result.totalSpawned,
+      successRate: result.successRate,
+      finalActiveCount: result.finalActiveCount
+    });
+  }
+  
+  var resultText = 'シナリオ比較結果:\n';
+  for (var i = 0; i < comparisonResults.length; i++) {
+    var result = comparisonResults[i];
+    resultText += result.scenario + ': 成功率 ' + result.successRate.toFixed(1) + '%, 成功数 ' + result.successCount + '\n';
+  }
+  
+  showMessage(resultText, 'success');
+  document.getElementById('exportComparisonBtn').disabled = false;
+  document.getElementById('runComparisonBtn').disabled = false;
+}
+
+function runHeadlessSim(params, duration) {
+  var simParticles = [];
+  var simNextId = 0;
+  var simState = {
+    elapsedTime: 0,
+    lastSpawnTime: 0,
+    successCount: 0,
+    totalSpawned: 0
+  };
+  
+  // 初期粒子の作成
+  for(var i = 0; i < params.initialParticles; i++) {
+    var position = getInitialPosition(params.initialPlacementStrategy, i, params.initialParticles);
+    simParticles.push({
+      id: simNextId++,
+      position: position.clone(),
+      velocity: new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05),
+      state: 'active'
+    });
+  }
+  simState.totalSpawned = params.initialParticles;
+  
+  var timeStep = 0.1;
+  var steps = Math.floor(duration / timeStep);
+  
+  for (var step = 0; step < steps; step++) {
+    simState.elapsedTime += timeStep;
+    
+    // 新粒子の生成
+    if (simState.elapsedTime - simState.lastSpawnTime >= params.spawnInterval) {
+      for(var i = 0; i < params.batchSize; i++) {
+        var angle = Math.random() * Math.PI * 2;
+        var radius = Math.random() * coneRadius * 0.9;
+        simParticles.push({
+          id: simNextId++,
+          position: new THREE.Vector3(Math.cos(angle)*radius, 1, Math.sin(angle)*radius),
+          velocity: new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.02+0.01, (Math.random()-0.5)*0.05),
+          state: 'active'
+        });
+      }
+      simState.totalSpawned += params.batchSize;
+      simState.lastSpawnTime = simState.elapsedTime;
+    }
+    
+    // 粒子の更新
+    simParticles = simParticles.filter(function(p) {
+      if (p.state !== 'active') return false;
+      
+      var hRatio = p.position.y / coneHeight;
+      p.velocity.y += params.trtForce * (1-hRatio) * (hRatio < params.tippingPoint ? 1 : params.trtAcceleration) * timeStep;
+      p.velocity.x += (Math.random()-0.5) * params.praForce * params.praDiversity * timeStep;
+      p.velocity.z += (Math.random()-0.5) * params.praForce * params.praDiversity * timeStep;
+      
+      p.position.add(p.velocity.clone().multiplyScalar(timeStep * params.timeScale * 10));
+      
+      var maxRadius = coneRadius * (1 - p.position.y/coneHeight);
+      if (Math.hypot(p.position.x, p.position.z) > maxRadius || p.position.y < 0) {
+        return false;
+      }
+      if (p.position.y >= params.successThreshold) {
+        simState.successCount++;
+        return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  var successRate = simState.totalSpawned > 0 ? (simState.successCount / simState.totalSpawned) * 100 : 0;
+  return {
+    successCount: simState.successCount,
+    totalSpawned: simState.totalSpawned,
+    successRate: successRate,
+    finalActiveCount: simParticles.length
+  };
+}
+
+function exportComparisonCSV() {
+  if (comparisonResults.length === 0) {
+    showMessage('エクスポートする比較結果がありません', 'error');
+    return;
+  }
+  
+  var headers = 'scenario,success_count,total_spawned,success_rate,final_active_count\n';
+  var csv = headers + comparisonResults.map(function(r) {
+    return '"' + r.scenario + '",' + r.successCount + ',' + r.totalSpawned + ',' + r.successRate.toFixed(2) + ',' + r.finalActiveCount;
+  }).join('\n');
+  
+  downloadCSV(csv, 'scenario_comparison.csv');
+  showMessage('比較結果をCSVでダウンロードしました', 'success');
+}
+
+// 超シンプル版アニメーションループ - クラスター検出を確実に実行
+var clock = new THREE.Clock();
+var clusterDetectionCounter = 0; // 検出実行回数をカウント
+
+function animate() {
+  requestAnimationFrame(animate);
+  
+  if (controls) controls.update();
+  updateCameraMode();
+  
+  if (!simulationState.isPaused && simulationState.isRunning) {
+    var deltaTime = Math.min(clock.getDelta(), 0.1);
+    simulationState.elapsedTime += deltaTime * parameters.timeScale;
+    
+    processRecycledParticles(parameters, simulationState, particles);
+    
+    // 新しい粒子の生成
+    if (simulationState.elapsedTime - simulationState.lastSpawnTime >= parameters.spawnInterval) {
+      for(var i = 0; i < parameters.batchSize; i++){
+        var angle = Math.random() * Math.PI * 2;
+        var radius = Math.random() * coneRadius * 0.9;
+        particles.push(new Particle(nextParticleId++, new THREE.Vector3(Math.cos(angle)*radius,1,Math.sin(angle)*radius), parameters));
+      }
+      simulationState.totalSpawned += parameters.batchSize;
+      simulationState.lastSpawnTime = simulationState.elapsedTime;
+    }
+    
+    // 粒子の物理演算更新
+    particles.forEach(function(p) { p.update(deltaTime, simulationState, particles); });
+    
+    // 🚨 重要：クラスター検出を大幅に簡素化 🚨
+    // 複雑な条件をすべて削除し、基本的な条件のみでテスト
+    var activeParticles = particles.filter(function(p) { return p.state === 'active'; });
+    
+    // 30フレームに1回（約0.5秒に1回）クラスター検出を実行
+    clusterDetectionCounter++;
+    if (clusterDetectionCounter >= 30 && activeParticles.length >= 2) {
+      clusterDetectionCounter = 0; // カウンターリセット
+      
+      console.log('🔥 === クラスター検出実行 ===');
+      console.log('フレーム:', clusterDetectionCounter, '活性粒子数:', activeParticles.length);
+      console.log('パラメータ状態:');
+      console.log('- clusterEffect:', parameters.clusterEffect);
+      console.log('- multiGravityEnabled:', parameters.multiGravityEnabled);
+      
+      // 強制的に実行（エラーが発生しても続行）
+      try {
+        if (typeof detectClusters === 'function') {
+          console.log('✅ detectClusters関数が利用可能');
+          var detectedClusters = detectClusters(particles, parameters);
+          console.log('🎯 検出結果:', detectedClusters.length, '個のクラスター');
+          
+          if (detectedClusters.length > 0) {
+            console.log('🌟 クラスター発見！エフェクト作成中...');
+            if (typeof manageClusterEffects === 'function') {
+              manageClusterEffects(detectedClusters, deltaTime);
+            } else {
+              console.error('❌ manageClusterEffects関数が見つかりません');
+            }
+          } else {
+            console.log('⚪ この検出サイクルではクラスターなし');
+          }
+        } else {
+          console.error('❌ detectClusters関数が定義されていません');
+        }
+      } catch (error) {
+        console.error('💥 クラスター検出でエラー:', error);
+        console.log('エラー詳細:', error.stack);
+      }
+      
+      // 統計の強制更新（検出とは独立して）
+      console.log('📊 現在の統計状態:');
+      console.log('- clusterStats.currentClusters:', clusterStats.currentClusters);
+      console.log('- clusterStats.totalClustersFormed:', clusterStats.totalClustersFormed);
+      console.log('- clusterStats.maxClusterSize:', clusterStats.maxClusterSize);
+    }
+    
+    // 既存のクラスターエフェクトの更新（常に実行）
+    if (clusterEffects.length > 0) {
+      try {
+        manageClusterEffects([], deltaTime);
+      } catch (error) {
+        console.warn('エフェクト更新エラー:', error);
+      }
+    }
+    
+    // 非アクティブ粒子のクリーンアップ
+    var activeParticlesCleanup = particles.filter(function(p) { return p.state !== 'inactive'; });
+    if (activeParticlesCleanup.length < particles.length) {
+        particles.filter(function(p) { return p.state === 'inactive'; }).forEach(function(p) { 
+          try {
+            p.removeMesh(); 
+          } catch (error) {
+            console.warn('粒子削除エラー:', error);
+          }
+        });
+        particles = activeParticlesCleanup;
+    }
+    
+    updateStats();
+  }
+  
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
+}
+
+// ユーティリティ関数
+function onWindowResize(){
+  if (camera && renderer) {
+    camera.aspect = window.innerWidth/window.innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(window.innerWidth, window.innerHeight); 
+  }
+}
+
+function setupUIListeners() { 
+  var elements = document.querySelectorAll('#control-panel input, #control-panel select');
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].addEventListener('input', updateParameters);
+  }
+  
+  var toggleBtn = document.getElementById('toggle-control-panel');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function(e) { 
+      var content = e.target.closest('.panel').querySelector('.content-wrapper'); 
+      if (content) {
+        content.style.display = content.style.display === 'none' ? '' : 'none'; 
+        e.target.textContent = content.style.display === 'none' ? '[+]' : '[-]'; 
+      }
+    }); 
+  }
+}
+
+function downloadCSV(csv, filename) { 
+  try {
+    var a = document.createElement('a'); 
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); 
+    a.download = filename; 
+    a.click(); 
+    URL.revokeObjectURL(a.href); 
+  } catch (error) {
+    showMessage('CSVダウンロードエラー: ' + error.message, 'error');
+  }
+}
+
+// ページ読み込み完了時の初期化
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
