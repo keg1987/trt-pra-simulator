@@ -1,922 +1,699 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>TRT・PRA ABMシミュレータ v6.0（研究用・単一HTML）</title>
-  <!-- three.js -->
+  <!--
+  TRT・PRA ABMシミュレータ v6.0 (研究用強化版)
+  目的:
+    - 再現性: 乱数シード固定、実験条件のJSON保存/復元
+    - 観測性: 統計メトリクス(成功率・平均成功時間・分布)のリアルタイム表示とCSV出力
+    - バッチ実行: ヘッドレス・複数試行(並列UI、直列実行)でのパラメータスイープ
+    - 較正下地: 目標KGI(例: 成功率13%)に対する目的関数/誤差の定義、探索ループのフック(※GA本体は別実装想定)
+    - UI/UX: 完全レスポンシブ、アクセシビリティ、ツールチップ、シナリオ管理
+    - 可視化空間: 円錐空間=外形メッシュ(透明)のみ、側線なし、花火エフェクト無し
+
+  ODD要約 (概略):
+    Purpose: バイオベンチャー創薬活動を抽象化し、TRT(縦)×PRA(横)の相互作用と組織形態(中央集権/分散/ハイブリッド)設定が
+             マクロ成果(成功率/時間)に与える影響を検討
+    Entities: 粒子(資源)… type ∈ {standard, explorer, exploiter}, 属性: trtAffinity, praAffinity, age, lifespan
+    Processes: 各タイムステップでTRT上昇力・PRA横移動・中央収束・摩擦など決定論＋確率(シード管理)で更新
+    Design concepts: 自律、相互作用(近接引力)、確率(探索ゆらぎ)、適応(タイプ属性)、集団構造(クラスター仮想)
+    Initialization: シード、初期粒子数、タイプ比率、戦略的初期配置オン/オフ等
+    Input/Output: UI操作、シナリオJSON、ログCSV、バッチ設定JSON
+
+  重要: 本コードは教育・研究用の雛形であり、較正対象データが未接続のため、数値結果は仮のシミュレーション出力として扱うこと(但し書き)。
+  -->
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRT・PRA シミュレータ v6.0 (研究用強化版)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
   <style>
     :root {
-      --panel-bg: #ffffff;
-      --panel-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      --panel-radius: 12px;
-      --panel-border: 1px solid #e5e7eb;
-      --text-1: #1f2937;
-      --text-2: #374151;
-      --text-3: #4b5563;
-      --muted:  #6b7280;
-      --brand:  #3b82f6;
-      --brand-2:#2563eb;
-      --bg-1:   #f0f2f5;
-      --bg-2:   #f8fafb;
+      --bg:#f0f2f5; --panel:#fff; --shadow:0 4px 18px rgba(0,0,0,.12);
+      --text:#1f2937; --muted:#6b7280; --accent:#3b82f6; --line:#e5e7eb;
     }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: var(--bg-1);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, system-ui, Arial, sans-serif;
-      color: var(--text-1);
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+    #app { display:flex; flex-direction:row; height:100%; width:100%; overflow:hidden; }
+    #viewport { flex:1 1 auto; position:relative; min-width:0; }
+    #sidebar { flex:0 0 380px; min-width:300px; max-width:480px; display:flex; flex-direction:column; gap:12px; padding:12px; border-left:1px solid var(--line); background:#f8fafb; overflow:auto; }
+    .panel { background:var(--panel); border-radius:12px; box-shadow:var(--shadow); padding:16px; }
+    h1 { font-size:18px; margin:0 0 8px; }
+    h2 { font-size:14px; margin:14px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:600; }
+    .btn.secondary { background:#64748b; }
+    .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .grid { display:grid; grid-template-columns: 1fr 88px; gap:8px 10px; align-items:center; }
+    label { font-size:12px; color:#374151; display:flex; align-items:center; gap:6px; }
+    .value { font-size:12px; color:var(--muted); text-align:right; }
+    input[type="range"]{ width:100%; }
+    input[type="number"], input[type="text"] { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; }
+    .help { font-size:11px; color:var(--muted); }
+    .tooltip { position:relative; cursor:help; }
+    .tooltip .tip {
+      position:absolute; z-index:10; left:50%; transform:translateX(-50%);
+      bottom:125%; background:#111; color:#fff; border-radius:8px; padding:10px 12px;
+      width:280px; font-size:12px; box-shadow:0 6px 20px rgba(0,0,0,.2);
+      opacity:0; visibility:hidden; transition:.2s ease;
     }
-
-    /* 2ペイン・レイアウト（重なり根絶） */
-    #layout {
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      grid-template-rows: 100vh;
-      gap: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
+    .tooltip:hover .tip { opacity:1; visibility:visible; }
+    .stat { display:flex; justify-content:space-between; margin:6px 0; font-size:12px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background:#f3f4f6; border:1px solid var(--line); border-radius:8px; padding:10px; }
+    @media (max-width: 1024px) {
+      #app{flex-direction:column;}
+      #sidebar{order:2; max-height:45vh;}
+      #viewport{order:1; height:55vh;}
     }
-
-    #stage {
-      position: relative;
-      min-width: 0;
-      min-height: 0;
-      background: #f8f8f8;
+    @media (max-width: 640px) {
+      #sidebar{max-height:52vh;}
+      .grid{grid-template-columns: 1fr 72px;}
     }
-
-    #sidebar {
-      display: grid;
-      grid-template-rows: auto auto 1fr;
-      gap: 10px;
-      background: var(--bg-2);
-      border-left: 1px solid #e5e7eb;
-      padding: 10px;
-      overflow: hidden;
-    }
-
-    .panel {
-      background: var(--panel-bg);
-      border-radius: var(--panel-radius);
-      box-shadow: var(--panel-shadow);
-      border: var(--panel-border);
-      padding: 14px;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    .panel h1 { font-size: 18px; margin: 0 0 8px; color: var(--text-1); }
-    .panel h2 { font-size: 14px; margin: 10px 0 8px; color: var(--text-2); border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-
-    .group { background: #ffffff; border: 1px solid #eef0f4; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-    .row   { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 8px 0; font-size: 12px; color: var(--text-3); }
-    .row input[type="range"] { width: 100%; }
-    .val   { font-size: 11px; color: var(--muted); min-width: 48px; text-align: right; }
-    .row input[type="number"] { width: 90px; padding: 4px 6px; }
-
-    .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
-    button {
-      background: var(--brand);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    button.secondary { background: #e5e7eb; color: #111827; }
-    button.warn { background: #ef4444; }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-3);
-    }
-    .stat { background: #fafbfc; border: 1px solid #eef0f4; border-radius: 8px; padding: 8px; display: grid; gap: 4px; }
-    .stat .k { font-size: 11px; color: var(--muted); }
-    .stat .v { font-size: 14px; color: var(--text-1); }
-
-    /* JSONエディタ領域（比較・シナリオ編集） */
-    #editor {
-      height: 100%;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      gap: 8px;
-    }
-    #scenarioArea {
-      width: 100%;
-      height: 100%;
-      resize: none;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-      box-sizing: border-box;
-      background: #ffffff;
-      color: #111827;
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-size: 11px;
-      color: var(--text-3);
-    }
-    .lg { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; border-radius: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-
-    /* ツールチップ */
-    .tip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: #111827; color: #fff; border-radius: 50%; font-size: 11px; cursor: help; margin-left: 6px; }
-    .tip .bubble {
-      position: absolute;
-      left: 50%; bottom: 130%;
-      transform: translateX(-50%);
-      min-width: 260px; max-width: 320px;
-      visibility: hidden; opacity: 0; transition: 0.2s ease;
-      background: #111827; color: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-      padding: 10px; z-index: 1000; font-size: 12px; line-height: 1.5;
-    }
-    .tip:hover .bubble { visibility: visible; opacity: 1; }
-
-    /* レスポンシブ：縦並びで重なりを完全回避 */
-    @media (max-width: 1100px) {
-      #layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: 55vh auto;
-        height: auto;
-      }
-      #stage { height: 55vh; }
-      #sidebar { height: auto; max-height: none; }
-    }
-    @media (max-width: 600px) {
-      #layout { grid-template-rows: 50vh auto; }
-      #stage  { height: 50vh; }
-    }
+    /* a11y focus */
+    .btn:focus, input:focus { outline:2px solid #2563eb; outline-offset:2px; }
   </style>
 </head>
 <body>
-  <div id="layout">
-    <div id="stage">
-      <!-- three.js canvas will be injected here -->
-    </div>
-    <div id="sidebar">
-      <!-- コントロール -->
-      <div class="panel" id="controls">
-        <h1>TRT・PRA ABM シミュレータ</h1>
-
-        <div class="group">
-          <h2>シミュレーション制御</h2>
-          <div class="btns">
-            <button id="btnStart">開始</button>
-            <button id="btnPause" class="secondary">一時停止/再開</button>
-            <button id="btnReset" class="secondary">リセット</button>
-            <button id="btnExport" class="secondary">ログCSV保存</button>
-            <button id="btnHeadless" class="secondary">描画OFF/ON</button>
-          </div>
-          <div class="row">
-            <label>初期粒子数</label>
-            <input id="initialParticles" type="number" min="0" max="1000" step="10" value="50" />
-          </div>
-          <div class="row">
-            <label>最大粒子数</label>
-            <input id="maxParticles" type="number" min="100" max="5000" step="50" value="1000" />
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>時間・発生</h2>
-          <div class="row">
-            <label>時間スケール</label>
-            <span class="val" id="v_timeScale">0.10</span>
-            <input id="timeScale" type="range" min="0.01" max="1.0" step="0.01" value="0.10" />
-          </div>
-          <div class="row">
-            <label>発生間隔[s]</label>
-            <span class="val" id="v_spawnInterval">0.50</span>
-            <input id="spawnInterval" type="range" min="0.05" max="2.0" step="0.05" value="0.50" />
-          </div>
-          <div class="row">
-            <label>バッチサイズ</label>
-            <span class="val" id="v_batchSize">5</span>
-            <input id="batchSize" type="range" min="1" max="50" step="1" value="5" />
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>資源タイプと初期配置
-            <span class="tip">?
-              <span class="bubble">
-                エージェント（資源）は3タイプ：標準・活用特化（Exploiter）・探索特化（Explorer）で生成されます。<br/>
-                「戦略的初期配置」を有効にすると、活用特化は中心や既存クラスター近傍、探索特化は周縁部にスポーンしやすくなります。
-              </span>
-            </span>
-          </h2>
-          <div class="row">
-            <label>活用特化の発生割合</label>
-            <span class="val" id="v_exploiterRatio">0.30</span>
-            <input id="exploiterRatio" type="range" min="0" max="1" step="0.05" value="0.30" />
-          </div>
-          <div class="row">
-            <label>探索特化の発生割合</label>
-            <span class="val" id="v_explorerRatio">0.30</span>
-            <input id="explorerRatio" type="range" min="0" max="1" step="0.05" value="0.30" />
-          </div>
-          <div class="row">
-            <label>戦略的初期配置</label>
-            <input id="strategicSpawn" type="checkbox" checked />
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>TRT（縦推進）・PRA（横探索）
-            <span class="tip">?
-              <span class="bubble">
-                TRTは円錐の高さ方向（成熟方向）への決定論的推進で、低高度ほど強く高高度で弱まります。<br/>
-                PRAは水平方向の確率的探索で、高度に応じて強さをスケーリングします（多様性・再結合のモデル化）。
-              </span>
-            </span>
-          </h2>
-          <div class="row">
-            <label>TRT強度</label>
-            <span class="val" id="v_trtForce">0.015</span>
-            <input id="trtForce" type="range" min="0" max="0.05" step="0.001" value="0.015" />
-          </div>
-          <div class="row">
-            <label>PRA強度</label>
-            <span class="val" id="v_praForce">0.020</span>
-            <input id="praForce" type="range" min="0" max="0.05" step="0.001" value="0.020" />
-          </div>
-          <div class="row">
-            <label>PRA多様性スケール</label>
-            <span class="val" id="v_praDiversity">1.00</span>
-            <input id="praDiversity" type="range" min="0.5" max="2.0" step="0.05" value="1.00" />
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>相互作用・環境
-            <span class="tip">?
-              <span class="bubble">
-                中央収束は組織の求心力、粒子引力は資源間の自発的協調（クラスター形成）を表します。<br/>
-                成功閾値に到達した資源は成功としてカウントされ、減耗率により自然消滅も発生します。
-              </span>
-            </span>
-          </h2>
-          <div class="row">
-            <label>中央収束</label>
-            <span class="val" id="v_centralConv">0.030</span>
-            <input id="centralConv" type="range" min="0" max="0.1" step="0.001" value="0.030" />
-          </div>
-          <div class="row">
-            <label>粒子引力</label>
-            <span class="val" id="v_peerAttr">0.010</span>
-            <input id="peerAttr" type="range" min="0" max="0.05" step="0.001" value="0.010" />
-          </div>
-          <div class="row">
-            <label>成功閾値（高度）</label>
-            <span class="val" id="v_successTh">38</span>
-            <input id="successTh" type="range" min="10" max="60" step="1" value="38" />
-          </div>
-          <div class="row">
-            <label>減耗率</label>
-            <span class="val" id="v_attrition">0.020</span>
-            <input id="attrition" type="range" min="0" max="0.1" step="0.001" value="0.020" />
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>組織モデルの説明
-            <span class="tip">?
-              <span class="bubble">
-                中央集権型：上層で意思決定が集中し、効率と統一性に優れるが創発が抑制されやすい。<br/>
-                分散自律型：現場裁量が大きく創発・適応が起きやすいが統一・調整にコスト。<br/>
-                ハイブリッド：中央の方針＋現場裁量で効率と柔軟性の両立を狙う。
-              </span>
-            </span>
-          </h2>
-          <div class="legend">
-            <span class="lg"><span class="dot" style="background:#3b82f6"></span>標準</span>
-            <span class="lg"><span class="dot" style="background:#ef4444"></span>活用特化</span>
-            <span class="lg"><span class="dot" style="background:#10b981"></span>探索特化</span>
-            <span class="lg"><span class="dot" style="background:#00b300"></span>成功</span>
-          </div>
-        </div>
+<div id="app" role="application" aria-label="TRT・PRA ABMシミュレーション環境">
+  <div id="viewport" aria-label="3D表示領域"></div>
+  <aside id="sidebar" aria-label="操作パネル">
+    <section class="panel">
+      <h1>TRT・PRA シミュレータ v6.0</h1>
+      <div class="help">研究用強化: 再現性(シード)、CSV出力、バッチ、シナリオJSON、レスポンシブ、花火無[1]</div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="btnStart">開始</button>
+        <button class="btn secondary" id="btnPause">一時停止</button>
+        <button class="btn ghost" id="btnReset">リセット</button>
       </div>
-
-      <!-- 統計 -->
-      <div class="panel" id="stats">
-        <h2>統計情報</h2>
-        <div class="stats-grid">
-          <div class="stat"><div class="k">時刻[s]</div><div class="v" id="s_time">0.0</div></div>
-          <div class="stat"><div class="k">総発生</div><div class="v" id="s_spawned">0</div></div>
-          <div class="stat"><div class="k">アクティブ</div><div class="v" id="s_active">0</div></div>
-          <div class="stat"><div class="k">成功数</div><div class="v" id="s_success">0</div></div>
-          <div class="stat"><div class="k">成功率</div><div class="v" id="s_rate">0.0%</div></div>
-          <div class="stat"><div class="k">平均成功時間</div><div class="v" id="s_tmean">-</div></div>
-        </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="btnExportCSV">CSV出力</button>
+        <button class="btn ghost" id="btnExportJSON">シナリオ保存</button>
+        <label class="btn ghost" for="fileImport" style="display:inline-flex; align-items:center;">シナリオ読込</label>
+        <input id="fileImport" type="file" accept=".json" style="display:none;">
       </div>
+    </section>
 
-      <!-- シナリオ編集・比較実行 -->
-      <div class="panel" id="editor">
-        <h2>シナリオ編集・比較（JSON）
-          <span class="tip">?
-            <span class="bubble">
-              複数のシナリオをJSON配列で記述し、連続実行して結果をCSVで保存できます。<br/>
-              各シナリオはパラメータ差分のみでOK（未指定は現行値を継承）。
-            </span>
-          </span>
-        </h2>
-        <textarea id="scenarioArea" spellcheck="false">[
-  {
-    "label": "中央集権強め",
-    "centralConv": 0.05,
-    "peerAttr": 0.005,
-    "exploiterRatio": 0.4,
-    "explorerRatio": 0.2
-  },
-  {
-    "label": "分散自律強め",
-    "centralConv": 0.01,
-    "peerAttr": 0.03,
-    "exploiterRatio": 0.2,
-    "explorerRatio": 0.5
-  },
-  {
-    "label": "ハイブリッド",
-    "centralConv": 0.03,
-    "peerAttr": 0.02,
-    "exploiterRatio": 0.3,
-    "explorerRatio": 0.3
+    <section class="panel">
+      <h2>再現性・時間</h2>
+      <div class="grid">
+        <label>乱数シード <span class="tooltip">🛈<span class="tip">再現性のため固定シードで全確率過程を制御します[1]</span></span></label>
+        <input type="number" id="seed" value="123456" step="1" min="0">
+        <label>時間スケール</label><div class="value" id="val_timeScale">0.10</div>
+        <input type="range" id="timeScale" min="0.01" max="1.0" step="0.01" value="0.10"><div></div>
+        <label>発生間隔</label><div class="value" id="val_spawnInterval">0.50</div>
+        <input type="range" id="spawnInterval" min="0.1" max="2.0" step="0.1" value="0.50"><div></div>
+        <label>バッチサイズ</label><div class="value" id="val_batchSize">3</div>
+        <input type="range" id="batchSize" min="1" max="20" step="1" value="3"><div></div>
+        <label>初期粒子数</label><div class="value" id="val_initialParticles">20</div>
+        <input type="range" id="initialParticles" min="0" max="200" step="5" value="20"><div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>資源特性・タイプ</h2>
+      <div class="grid">
+        <label>資源異質性</label><div class="value" id="val_heterogeneity">0.50</div>
+        <input type="range" id="heterogeneity" min="0" max="1.0" step="0.05" value="0.50"><div></div>
+        <label>寿命変動</label><div class="value" id="val_lifespanVar">0.30</div>
+        <input type="range" id="lifespanVariance" min="0" max="1.0" step="0.05" value="0.30"><div></div>
+        <label>活用特化 割合</label><div class="value" id="val_exploiter">0.30</div>
+        <input type="range" id="exploiterRatio" min="0" max="1.0" step="0.05" value="0.30"><div></div>
+        <label>探索特化 割合</label><div class="value" id="val_explorer">0.30</div>
+        <input type="range" id="explorerRatio" min="0" max="1.0" step="0.05" value="0.30"><div></div>
+        <label>戦略的初期配置</label>
+        <div><input type="checkbox" id="strategicSpawningEnabled" checked aria-label="戦略的初期配置ON/OFF"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>TRT/PRA 力学</h2>
+      <div class="grid">
+        <label>TRT強度</label><div class="value" id="val_trt">0.015</div>
+        <input type="range" id="trtForce" min="0" max="0.05" step="0.001" value="0.015"><div></div>
+        <label>PRA強度</label><div class="value" id="val_pra">0.020</div>
+        <input type="range" id="praForce" min="0" max="0.05" step="0.001" value="0.020"><div></div>
+        <label>中央収束</label><div class="value" id="val_central">0.030</div>
+        <input type="range" id="centralConvergence" min="0" max="0.10" step="0.001" value="0.030"><div></div>
+        <label>粒子引力</label><div class="value" id="val_peer">0.010</div>
+        <input type="range" id="peerAttraction" min="0" max="0.05" step="0.001" value="0.010"><div></div>
+      </div>
+      <div class="help">TRT縦移動=決定論(高さで減衰)×個性、PRA横移動=乱数方向×高さ依存強度(シード管理)[1]</div>
+    </section>
+
+    <section class="panel">
+      <h2>環境・成功条件</h2>
+      <div class="grid">
+        <label>成功閾値(高さ)</label><div class="value" id="val_threshold">38</div>
+        <input type="range" id="successThreshold" min="10" max="60" step="1" value="38"><div></div>
+        <label>頂点容量</label><div class="value" id="val_vertexCap">5</div>
+        <input type="range" id="vertexCapacity" min="1" max="50" step="1" value="5"><div></div>
+        <label>減耗率</label><div class="value" id="val_attrition">0.020</div>
+        <input type="range" id="attritionRate" min="0" max="0.1" step="0.001" value="0.020"><div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>比較・バッチ・較正</h2>
+      <div class="grid">
+        <label>ヘッドレス</label>
+        <div><input type="checkbox" id="headless"></div>
+        <label>試行回数</label>
+        <input type="number" id="batchRuns" min="1" max="1000" step="1" value="20">
+        <label>最大時間[s]</label>
+        <input type="number" id="maxSimTime" min="1" max="100000" step="1" value="120">
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="btnRunBatch">バッチ実行</button>
+        <button class="btn ghost" id="btnExportBatchCSV">バッチCSV</button>
+      </div>
+      <div class="help">較正の目的関数: |実測KGI-シミュ成功率| 最小化(※GA等の最適化器は外部接続前提のフック提供)[1]</div>
+    </section>
+
+    <section class="panel">
+      <h2>統計</h2>
+      <div class="stat"><span>経過時間[s]</span><strong id="stat_time">0.0</strong></div>
+      <div class="stat"><span>総発生</span><strong id="stat_spawned">0</strong></div>
+      <div class="stat"><span>稼働中</span><strong id="stat_active">0</strong></div>
+      <div class="stat"><span>成功数</span><strong id="stat_success">0</strong></div>
+      <div class="stat"><span>成功率[%]</span><strong id="stat_rate">0.0</strong></div>
+      <div class="stat"><span>平均成功時間[s]</span><strong id="stat_tts">-</strong></div>
+      <div class="help">CSVは時系列/集計の双方を出力、再現性検証と論文図表作成を容易化[1]</div>
+    </section>
+
+    <section class="panel">
+      <h2>組織モデル説明</h2>
+      <div class="code">
+        中央集権型: 上層集中・統一性高、柔軟性低。分散自律型: 現場裁量・適応性高、統一難。ハイブリッド: 方針は中央、実装は現場[1]
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+/* ========= 研究機能ユーティリティ ========= */
+// 乱数(再現性) Mulberry32
+function Mulberry32(seed) {
+  let t = seed >>> 0;
+  return function() {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   }
-]</textarea>
-        <div class="btns">
-          <button id="btnScenarioRun">シナリオ連続実行</button>
-          <button id="btnScenarioStop" class="secondary">停止</button>
-          <button id="btnScenarioSave" class="secondary">シナリオ保存</button>
-          <button id="btnScenarioLoad" class="secondary">読込</button>
-        </div>
-      </div>
-    </div>
-  </div>
+}
+function makeRNG(seed) {
+  const base = Mulberry32(seed);
+  return {
+    random: () => base(),
+    range: (min, max) => min + (max - min) * base(),
+    choice: (arr) => arr[Math.floor(base() * arr.length)]
+  };
+}
+function download(filename, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'text/plain'}));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
-  <script>
-    // -----------------------------
-    // 研究水準のABMコア
-    // -----------------------------
+/* ========= 3Dシーン初期化(円錐外形のみ/側線なし/花火なし) ========= */
+const viewport = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf5f7fb);
 
-    // 物理空間（円錐）の仕様
-    const CONE = {
-      radius: 20,
-      height: 40
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
+camera.position.set(58, 44, 66);
+camera.lookAt(0, 20, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+viewport.appendChild(renderer.domElement);
+
+const amb = new THREE.AmbientLight(0xffffff, 0.9);
+scene.add(amb);
+const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+dir.position.set(70, 120, 40);
+dir.castShadow = false;
+scene.add(dir);
+
+// 円錐外形(透明メッシュのみ、ワイヤ/側線なし)
+const coneHeight = 40;
+const coneRadius = 20;
+{
+  const geo = new THREE.ConeGeometry(coneRadius, coneHeight, 64, 1, true);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x3b82f6, transparent:true, opacity:0.10, depthWrite:false, side:THREE.DoubleSide
+  });
+  const cone = new THREE.Mesh(geo, mat);
+  cone.position.y = coneHeight/2;
+  scene.add(cone);
+
+  // 底面リング(控えめ)
+  const ringGeo = new THREE.RingGeometry(coneRadius*0.98, coneRadius, 64);
+  const ringMat = new THREE.MeshBasicMaterial({ color:0x3b82f6, transparent:true, opacity:0.3, side:THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI/2;
+  scene.add(ring);
+
+  // 地面の薄いグリッド
+  const grid = new THREE.GridHelper(200, 40, 0xcbd5e1, 0xe2e8f0);
+  scene.add(grid);
+}
+
+function resize() {
+  const w = viewport.clientWidth || window.innerWidth;
+  const h = viewport.clientHeight || window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ========= パラメータ/状態 ========= */
+const params = {
+  seed: 123456,
+  timeScale: 0.10,
+  spawnInterval: 0.50,
+  batchSize: 3,
+  initialParticles: 20,
+
+  heterogeneity: 0.50,
+  lifespanVariance: 0.30,
+  exploiterRatio: 0.30,
+  explorerRatio: 0.30,
+  strategicSpawningEnabled: true,
+
+  trtForce: 0.015,
+  praForce: 0.020,
+  centralConvergence: 0.030,
+  peerAttraction: 0.010,
+
+  successThreshold: 38,
+  vertexCapacity: 5,
+  attritionRate: 0.020,
+
+  headless: false,
+  batchRuns: 20,
+  maxSimTime: 120
+};
+let RNG = makeRNG(params.seed);
+
+const state = {
+  isRunning:false,
+  isPaused:false,
+  elapsed:0,
+  lastSpawn:0,
+  totalSpawned:0,
+  successCount:0,
+  successTimes:[],
+  particles:[],
+  apexOccupancy:0,
+};
+
+/* ========= 粒子(資源)定義 ========= */
+const PType = { STANDARD:'standard', EXPLORER:'explorer', EXPLOITER:'exploiter' };
+
+class Particle {
+  constructor() {
+    this.id = `${Date.now()}_${Math.floor(RNG.random()*1e9)}`;
+    this.type = this.pickType();
+    this.position = new THREE.Vector3(0, 0.6, 0);
+    this.velocity = new THREE.Vector3(RNG.range(-0.02,0.02), RNG.range(0.01,0.03), RNG.range(-0.02,0.02));
+    this.age = 0;
+    this.maxAge = 100 * (1 + (RNG.random()-0.5) * params.lifespanVariance * 2);
+    this.isActive = true;
+    this.hasSucceeded = false;
+
+    const v = (RNG.random()-0.5)*2*params.heterogeneity;
+    this.trtAffinity = 1 + (this.type===PType.EXPLOITER ? +v : this.type===PType.EXPLORER ? -v : 0);
+    this.praAffinity = 1 + (this.type===PType.EXPLORER ? +v : this.type===PType.EXPLOITER ? -v : 0);
+
+    this.initPositionStrategic();
+
+    const mat = new THREE.MeshPhongMaterial({ color: this.colorForType(), shininess:30 });
+    const geom = this.geomForType();
+    this.mesh = new THREE.Mesh(geom, mat);
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
+    this.mesh.position.copy(this.position);
+    if (!params.headless) scene.add(this.mesh);
+  }
+
+  pickType() {
+    const r = RNG.random();
+    if (r < params.exploiterRatio) return PType.EXPLOITER;
+    if (r < params.exploiterRatio + params.explorerRatio) return PType.EXPLORER;
+    return PType.STANDARD;
+  }
+  colorForType() {
+    if (this.type===PType.EXPLOITER) return 0xef4444;
+    if (this.type===PType.EXPLORER)  return 0x10b981;
+    return 0x3b82f6;
+  }
+  geomForType() {
+    if (this.type===PType.EXPLORER)  return new THREE.ConeGeometry(0.55, 1.1, 16);
+    if (this.type===PType.EXPLOITER) return new THREE.BoxGeometry(0.8,0.8,0.8);
+    return new THREE.SphereGeometry(0.55, 16, 16);
+  }
+  initPositionStrategic() {
+    if (!params.strategicSpawningEnabled) {
+      const a = RNG.range(0, Math.PI*2);
+      const r = RNG.range(0, coneRadius*0.9);
+      this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
+      return;
+    }
+    switch(this.type){
+      case PType.EXPLOITER:{
+        const a = RNG.range(0, Math.PI*2);
+        const r = RNG.range(0, coneRadius*0.5);
+        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
+        break;
+      }
+      case PType.EXPLORER:{
+        const a = RNG.range(0, Math.PI*2);
+        const r = RNG.range(coneRadius*0.6, coneRadius*0.95);
+        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
+        break;
+      }
+      default:{
+        const a = RNG.range(0, Math.PI*2);
+        const r = RNG.range(0, coneRadius*0.9);
+        this.position.set(Math.cos(a)*r, 0.6, Math.sin(a)*r);
+      }
+    }
+  }
+
+  update(dt) {
+    if (!this.isActive) return;
+
+    // TRT(縦): 高さ比で減衰、個性で重み
+    const hRatio = this.position.y / coneHeight;
+    this.velocity.y += params.trtForce * (1 - Math.min(1, Math.max(0,hRatio))) * this.trtAffinity * dt;
+
+    // PRA(横): ランダム方向、強さは高さ依存、個性で重み（シードRNGで再現性）
+    const theta = RNG.range(0, Math.PI*2);
+    const praMag = params.praForce * (0.3 + 0.7*hRatio) * this.praAffinity * dt;
+    this.velocity.x += Math.cos(theta) * praMag;
+    this.velocity.z += Math.sin(theta) * praMag;
+
+    // 中央収束(原点へ)
+    const toCenter = new THREE.Vector3(-this.position.x, 0, -this.position.z);
+    if (toCenter.lengthSq() > 1e-6) {
+      toCenter.normalize().multiplyScalar(params.centralConvergence * dt);
+      this.velocity.add(toCenter);
+    }
+
+    // 摩擦/減衰
+    this.velocity.multiplyScalar(0.985);
+
+    // 位置更新
+    this.position.addScaledVector(this.velocity, dt*10);
+
+    // 円錐境界内へ(半径=線形減衰)
+    const maxR = Math.max(0.1, coneRadius * (1 - Math.min(1, Math.max(0, this.position.y / coneHeight))));
+    const rNow = Math.sqrt(this.position.x*this.position.x + this.position.z*this.position.z);
+    if (rNow > maxR) {
+      const s = maxR / rNow;
+      this.position.x *= s; this.position.z *= s;
+    }
+    if (this.position.y < 0) this.position.y = 0;
+
+    // 成否・寿命
+    this.age += dt;
+    if (this.position.y >= params.successThreshold && !this.hasSucceeded) {
+      if (state.apexOccupancy < params.vertexCapacity) {
+        this.hasSucceeded = true;
+        this.isActive = false;
+        state.apexOccupancy++;
+        state.successCount++;
+        state.successTimes.push(state.elapsed); // 現時点=到達時間
+        if (!params.headless) this.mesh.material.color.set(0x00ff00);
+      }
+    }
+    if (this.age > this.maxAge || RNG.random() < params.attritionRate * dt) {
+      this.dispose();
+      return;
+    }
+
+    if (!params.headless && this.mesh) {
+      this.mesh.position.copy(this.position);
+      // 高さで色明度を変化
+      const lightness = 1.0 - (this.position.y/coneHeight)*0.6;
+      this.mesh.material.color.offsetHSL(0, 0, 0); // no-op placeholder for future mapping
+    }
+  }
+
+  dispose() {
+    this.isActive = false;
+    if (this.hasSucceeded && state.apexOccupancy > 0) state.apexOccupancy--;
+    if (!params.headless && this.mesh) {
+      scene.remove(this.mesh);
+      this.mesh.geometry.dispose();
+      this.mesh.material.dispose();
+      this.mesh = null;
+    }
+  }
+}
+
+/* ========= シミュレーション制御 ========= */
+function resetSimulation(full=true) {
+  // 粒子破棄
+  state.particles.forEach(p=>p.dispose());
+  state.particles.length = 0;
+  Object.assign(state, {
+    isRunning:false, isPaused:false, elapsed:0, lastSpawn:0,
+    totalSpawned:0, successCount:0, successTimes:[], apexOccupancy:0
+  });
+  RNG = makeRNG(params.seed);
+  if (params.initialParticles > 0) spawn(params.initialParticles);
+  updateStats();
+}
+function spawn(n) {
+  for (let i=0;i<n;i++){
+    if (state.particles.length>2000) break;
+    const p = new Particle();
+    state.particles.push(p);
+    state.totalSpawned++;
+  }
+}
+let lastRAF = 0;
+function tick(ts) {
+  const now = ts || performance.now();
+  const dtReal = (now - (lastRAF||now)) / 1000;
+  lastRAF = now;
+  if (state.isRunning && !state.isPaused) {
+    const dt = Math.max(0, Math.min(0.1, dtReal)) * params.timeScale;
+    state.elapsed += dt;
+    if ((state.elapsed - state.lastSpawn) > params.spawnInterval) {
+      spawn(params.batchSize);
+      state.lastSpawn = state.elapsed;
+    }
+    state.particles.forEach(p => p.update(dt));
+    state.particles = state.particles.filter(p => p.isActive);
+    updateStats();
+  }
+  if (!params.headless) renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+/* ========= UIバインド ========= */
+function bindRange(id, key, valId, fmt= (v)=>v.toFixed(2)) {
+  const el = document.getElementById(id);
+  const val = document.getElementById(valId);
+  const update = ()=>{
+    params[key] = (el.type==='range' ? parseFloat(el.value) : (el.type==='number'? parseFloat(el.value) : el.value));
+    if (val) val.textContent = fmt(params[key]);
+  };
+  el.addEventListener('input', update);
+  update();
+}
+function bindDirect(id, key) {
+  const el = document.getElementById(id);
+  const update = ()=>{
+    if (el.type==='checkbox') params[key] = el.checked;
+    else if (el.type==='number') params[key] = parseFloat(el.value);
+    else params[key] = el.value;
+  };
+  el.addEventListener('input', update);
+  update();
+}
+function bindUI() {
+  bindDirect('seed','seed');
+  bindRange('timeScale','timeScale','val_timeScale');
+  bindRange('spawnInterval','spawnInterval','val_spawnInterval');
+  bindRange('batchSize','batchSize','val_batchSize',v=>v.toFixed(0));
+  bindRange('initialParticles','initialParticles','val_initialParticles',v=>v.toFixed(0));
+
+  bindRange('heterogeneity','heterogeneity','val_heterogeneity');
+  bindRange('lifespanVariance','lifespanVariance','val_lifespanVar');
+  bindRange('exploiterRatio','exploiterRatio','val_exploiter');
+  bindRange('explorerRatio','explorerRatio','val_explorer');
+  bindDirect('strategicSpawningEnabled','strategicSpawningEnabled');
+
+  bindRange('trtForce','trtForce','val_trt',v=>v.toFixed(3));
+  bindRange('praForce','praForce','val_pra',v=>v.toFixed(3));
+  bindRange('centralConvergence','centralConvergence','val_central',v=>v.toFixed(3));
+  bindRange('peerAttraction','peerAttraction','val_peer',v=>v.toFixed(3));
+
+  bindRange('successThreshold','successThreshold','val_threshold',v=>v.toFixed(0));
+  bindRange('vertexCapacity','vertexCapacity','val_vertexCap',v=>v.toFixed(0));
+  bindRange('attritionRate','attritionRate','val_attrition',v=>v.toFixed(3));
+
+  bindDirect('headless','headless');
+  bindDirect('batchRuns','batchRuns');
+  bindDirect('maxSimTime','maxSimTime');
+
+  document.getElementById('btnStart').addEventListener('click', ()=>{
+    state.isRunning = true; state.isPaused = false;
+  });
+  document.getElementById('btnPause').addEventListener('click', ()=>{
+    state.isPaused = !state.isPaused;
+  });
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    resetSimulation(true);
+  });
+
+  document.getElementById('btnExportCSV').addEventListener('click', ()=>{
+    const csv = exportCSV();
+    download(`run_${Date.now()}.csv`, csv);
+  });
+  document.getElementById('btnExportJSON').addEventListener('click', ()=>{
+    const txt = JSON.stringify(params, null, 2);
+    download(`scenario_${Date.now()}.json`, txt);
+  });
+  document.getElementById('fileImport').addEventListener('change', (e)=>{
+    const f = e.target.files?.;
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = ()=>{
+      try {
+        const obj = JSON.parse(fr.result);
+        Object.assign(params, obj);
+        // 反映
+        for (const [id,key] of [
+          ['seed','seed'], ['timeScale','timeScale'], ['spawnInterval','spawnInterval'],
+          ['batchSize','batchSize'], ['initialParticles','initialParticles'],
+          ['heterogeneity','heterogeneity'], ['lifespanVariance','lifespanVariance'],
+          ['exploiterRatio','exploiterRatio'], ['explorerRatio','explorerRatio'],
+          ['trtForce','trtForce'], ['praForce','praForce'], ['centralConvergence','centralConvergence'],
+          ['peerAttraction','peerAttraction'], ['successThreshold','successThreshold'],
+          ['vertexCapacity','vertexCapacity'], ['attritionRate','attritionRate'],
+          ['batchRuns','batchRuns'], ['maxSimTime','maxSimTime']
+        ]) {
+          const el = document.getElementById(id);
+          if (el) el.value = params[key];
+          const lab = document.querySelector(`#val_${id}`) || document.getElementById(`val_${key}`);
+          if (lab) lab.textContent = (typeof params[key]==='number' ? params[key].toString() : params[key]);
+        }
+        const ck = document.getElementById('strategicSpawningEnabled');
+        if (ck) ck.checked = !!params.strategicSpawningEnabled;
+        const hd = document.getElementById('headless'); if (hd) hd.checked = !!params.headless;
+        resetSimulation(true);
+      } catch(e){ alert('JSON読み込みエラー'); }
     };
+    fr.readAsText(f);
+  });
 
-    // ランタイム状態
-    const state = {
-      running: false,
-      paused: false,
-      headless: false,
+  document.getElementById('btnRunBatch').addEventListener('click', async ()=>{
+    const res = await runBatch();
+    alert(`バッチ完了: n=${res.n}, avgSuccess=${(res.avgSuccess*100).toFixed(2)}%, avgTTS=${(res.avgTTS||0).toFixed(2)}s`);
+  });
+  document.getElementById('btnExportBatchCSV').addEventListener('click', ()=>{
+    if (!lastBatch) return alert('先にバッチを実行してください');
+    const csv = exportBatchCSV(lastBatch);
+    download(`batch_${Date.now()}.csv`, csv);
+  });
+}
 
-      elapsed: 0,
-      lastSpawn: 0,
-      totalSpawned: 0,
-      totalSuccess: 0,
+function updateStats() {
+  document.getElementById('stat_time').textContent = state.elapsed.toFixed(1);
+  document.getElementById('stat_spawned').textContent = state.totalSpawned.toString();
+  const active = state.particles.length;
+  document.getElementById('stat_active').textContent = active.toString();
+  document.getElementById('stat_success').textContent = state.successCount.toString();
+  const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned*100) : 0;
+  document.getElementById('stat_rate').textContent = rate.toFixed(1);
+  const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : NaN;
+  document.getElementById('stat_tts').textContent = isFinite(avgTTS) ? avgTTS.toFixed(2) : '-';
+}
 
-      successTimes: [], // 成功までの時間
-      particles: [],
-      maxParticles: 1000
-    };
+/* ========= CSV出力 ========= */
+function exportCSV() {
+  const header = [
+    'time','totalSpawned','active','success','successRate','avgTTS'
+  ];
+  const lines = [];
+  // スナップショット1行(軽量)
+  const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned) : 0;
+  const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : '';
+  lines.push([state.elapsed.toFixed(3), state.totalSpawned, state.particles.length, state.successCount, rate.toFixed(6), (avgTTS||'')].join(','));
+  return header.join(',') + '\n' + lines.join('\n');
+}
 
-    // パラメータ（UIと同期）
-    const P = {
-      timeScale: 0.10,
-      spawnInterval: 0.50,
-      batchSize: 5,
+/* ========= バッチ実行(ヘッドレス推奨) ========= */
+let lastBatch = null;
+async function runBatch() {
+  const savedHeadless = params.headless;
+  params.headless = true;
+  // 描画切り替え: オブジェクト再追加を避けるため停止のみ
+  const results = [];
+  const n = Math.max(1, Math.min(10000, parseInt(params.batchRuns)||1));
+  const maxT = Math.max(1, parseFloat(params.maxSimTime)||60);
 
-      initialParticles: 50,
-
-      exploiterRatio: 0.30,
-      explorerRatio: 0.30,
-      strategicSpawn: true,
-
-      trtForce: 0.015,
-      praForce: 0.020,
-      praDiversity: 1.00,
-
-      centralConv: 0.030,
-      peerAttr: 0.010,
-
-      successTh: 38,
-      attrition: 0.020
-    };
-
-    // 種別
-    const T = { STD: "standard", EXPLOITER: "exploiter", EXPLORER: "explorer" };
-
-    // three.js 初期化
-    const stageEl = document.getElementById("stage");
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    stageEl.appendChild(renderer.domElement);
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8f8f8);
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    camera.position.set(50, 40, 60);
-    camera.lookAt(0, 15, 0);
-
-    const amb = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(amb);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(50,100,50);
-    scene.add(dir);
-
-    // 地面
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshPhongMaterial({ color: 0xeeeeee, side: THREE.DoubleSide })
-    );
-    ground.rotation.x = -Math.PI/2;
-    scene.add(ground);
-
-    // 円錐の外形（側線なし）：底面円＋頂点マーカーのみ
-    const coneGroup = new THREE.Group();
-    scene.add(coneGroup);
-
-    function buildConeOutline() {
-      coneGroup.clear();
-      // 底面円
-      const segments = 96;
-      const circleGeom = new THREE.BufferGeometry();
-      const circlePos = [];
-      for (let i=0;i<=segments;i++){
-        const a = (i/segments)*Math.PI*2;
-        circlePos.push(Math.cos(a)*CONE.radius, 0.01, Math.sin(a)*CONE.radius);
-      }
-      circleGeom.setAttribute("position", new THREE.Float32BufferAttribute(circlePos,3));
-      const circle = new THREE.Line(
-        circleGeom,
-        new THREE.LineBasicMaterial({ color: 0x999999 })
-      );
-      coneGroup.add(circle);
-
-      // 頂点（小球）
-      const apex = new THREE.Mesh(
-        new THREE.SphereGeometry(0.7, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x777777 })
-      );
-      apex.position.set(0, CONE.height, 0);
-      coneGroup.add(apex);
-
-      // 高さ目盛り（任意）
-      const tickMat = new THREE.LineBasicMaterial({ color: 0xcccccc });
-      for (let h=10; h<CONE.height; h+=10){
-        const r = CONE.radius * (1 - h/CONE.height);
-        const g = new THREE.BufferGeometry();
-        const pos = [];
-        for (let i=0;i<=64;i++){
-          const a = (i/64)*Math.PI*2;
-          pos.push(Math.cos(a)*r, h, Math.sin(a)*r);
-        }
-        g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
-        const ring = new THREE.Line(g, tickMat);
-        coneGroup.add(ring);
-      }
-    }
-    buildConeOutline();
-
-    // リサイズ
-    function resize(){
-      const w = stageEl.clientWidth;
-      const h = stageEl.clientHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    }
-    window.addEventListener("resize", resize);
-    resize();
-
-    // メッシュ基本形状
-    const geoStd = new THREE.SphereGeometry(0.5, 16, 16);
-    const geoExpl = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-    const geoExpr = new THREE.ConeGeometry(0.6, 1.0, 16);
-
-    // ユーティリティ
-    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-    function randn(){ // 簡易正規乱数
-      let u=0, v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
-      return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
-    }
-
-    // 粒子クラス
-    class Particle {
-      constructor(now){
-        // 種別
-        const r = Math.random();
-        if (r < P.exploiterRatio) this.type = T.EXPLOITER;
-        else if (r < P.exploiterRatio + P.explorerRatio) this.type = T.EXPLORER;
-        else this.type = T.STD;
-
-        // 個性（親和性）
-        const v = (Math.random() - 0.5)*2;
-        this.trtAffinity = 1 + 0.6*v*(this.type===T.EXPLOITER?+1:-1);
-        this.praAffinity = 1 + 0.6*v*(this.type===T.EXPLORER?+1:-1);
-
-        // 初期位置
-        this.pos = new THREE.Vector3(0, 0.5, 0);
-        this.vel = new THREE.Vector3( (Math.random()-0.5)*0.03, 0.01, (Math.random()-0.5)*0.03 );
-        this.birth = now;
-        this.dead = false;
-        this.succeeded = false;
-
-        this.spawnStrategic();
-
-        // メッシュ
-        let geo, col;
-        if (this.type===T.EXPLOITER){ geo = geoExpl; col = 0xef4444; }
-        else if (this.type===T.EXPLORER){ geo = geoExpr; col = 0x10b981; }
-        else { geo = geoStd; col = 0x3b82f6; }
-        const mat = new THREE.MeshPhongMaterial({ color: col });
-        this.mesh = new THREE.Mesh(geo, mat);
-        this.mesh.position.copy(this.pos);
-        scene.add(this.mesh);
-      }
-
-      spawnStrategic(){
-        const rU = CONE.radius;
-        if (!P.strategicSpawn){
-          const a = Math.random()*Math.PI*2;
-          const r = Math.random()*rU*0.95;
-          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
-          return;
-        }
-        if (this.type===T.EXPLOITER){
-          // 中央寄り / 既存成功点近傍に出やすい
-          if (state.successTimes.length>0 && Math.random()<0.6){
-            // 成功点履歴から近傍生成（粗近似：中心周辺）
-            const a = Math.random()*Math.PI*2;
-            const rr = Math.random()*6;
-            this.pos.set(Math.cos(a)*rr, 0.5, Math.sin(a)*rr);
-          } else {
-            const a = Math.random()*Math.PI*2;
-            const r = Math.random()*rU*0.45;
-            this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
-          }
-        } else if (this.type===T.EXPLORER){
-          // 周縁部
-          const a = Math.random()*Math.PI*2;
-          const r = rU*(0.65 + Math.random()*0.35);
-          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
-        } else {
-          const a = Math.random()*Math.PI*2;
-          const r = Math.random()*rU*0.90;
-          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
-        }
-      }
-
-      update(dt){
-        if (this.dead || this.succeeded) return;
-
-        // 高さ比
-        const hRatio = clamp(this.pos.y / CONE.height, 0, 1);
-
-        // TRT：決定論的上昇（低高度で強い）
-        const trt = P.trtForce * this.trtAffinity * (1 - hRatio);
-        this.vel.y += trt * dt;
-
-        // PRA：確率的水平探索（高度スケール）
-        const praSigma = P.praForce * this.praAffinity * (0.4 + 1.2*hRatio) * P.praDiversity;
-        const dx = (Math.random()-0.5)*2 * praSigma;
-        const dz = (Math.random()-0.5)*2 * praSigma;
-        this.vel.x += dx * dt;
-        this.vel.z += dz * dt;
-
-        // 中央収束（求心力）
-        const toCenter = new THREE.Vector3(-this.pos.x, 0, -this.pos.z);
-        if (toCenter.lengthSq()>1e-6){
-          toCenter.normalize().multiplyScalar(P.centralConv*dt);
-          this.vel.add(toCenter);
-        }
-
-        // 粒子間の緩い引力（近接）
-        if (P.peerAttr>0 && state.particles.length>1){
-          // 近傍数を限定して計算量削減
-          for (let k=0, lim=Math.min(8, state.particles.length); k<lim; k++){
-            const j = (Math.random()*state.particles.length)|0;
-            const q = state.particles[j];
-            if (q===this || q.dead || q.succeeded) continue;
-            const d = q.pos.clone().sub(this.pos);
-            const dd = d.length();
-            if (dd>0.1 && dd<4){
-              d.normalize().multiplyScalar(P.peerAttr * (1.0/(dd+0.2)) * dt);
-              this.vel.add(d);
-            }
-          }
-        }
-
-        // 速度減衰
-        this.vel.multiplyScalar(0.985);
-
-        // 位置更新
-        this.pos.add(this.vel.clone().multiplyScalar(10*dt));
-
-        // 円錐内拘束（半径は高さにより線形縮小）
-        const rMax = CONE.radius * (1 - clamp(this.pos.y / CONE.height, 0, 1));
-        const rNow = Math.hypot(this.pos.x, this.pos.z);
-        if (rNow > rMax){
-          const f = (rNow>0) ? (rMax/rNow) : 0;
-          this.pos.x *= f;
-          this.pos.z *= f;
-          this.vel.x *= 0.5;
-          this.vel.z *= 0.5;
-        }
-        if (this.pos.y < 0.2){ this.pos.y = 0.2; this.vel.y = Math.abs(this.vel.y)*0.2; }
-
-        // 成功判定
-        if (this.pos.y >= P.successTh){
-          this.succeeded = true;
-          state.totalSuccess++;
-          state.successTimes.push(state.elapsed - this.birth);
-          // 色変更
-          this.mesh.material.color.set(0x00b300);
-        }
-
-        // 減耗
-        if (!this.succeeded && Math.random()< (P.attrition*dt)){
-          this.dead = true;
-          scene.remove(this.mesh);
-        }
-
-        // メッシュ反映
-        this.mesh.position.copy(this.pos);
-        // 高度で色を僅かに変化
-        const hue = 0.60 - 0.45*hRatio; // 青→緑系
-        this.mesh.material.color.setHSL(hue, 0.80, 0.55);
-      }
-    }
-
-    // スポーン
-    function spawn(n){
-      const room = Math.max(0, state.maxParticles - state.particles.length);
-      n = Math.min(n, room);
-      for (let i=0;i<n;i++){
-        const p = new Particle(state.elapsed);
-        state.particles.push(p);
-        state.totalSpawned++;
-      }
-    }
-
-    // リセット
-    function reset(){
-      // 既存粒子除去
-      for (const p of state.particles){
-        if (p.mesh) scene.remove(p.mesh);
-      }
-      state.particles.length = 0;
-      state.elapsed = 0;
-      state.lastSpawn = 0;
-      state.totalSpawned = 0;
-      state.totalSuccess = 0;
-      state.successTimes.length = 0;
-      state.maxParticles = parseInt(document.getElementById("maxParticles").value, 10) || 1000;
-
-      spawn(parseInt(document.getElementById("initialParticles").value, 10) || 0);
-    }
-
-    // CSVエクスポート（集計）
-    function exportCSV(){
-      // 1秒毎のスナップショットを保持していた場合ここで書き出すが、
-      // 簡易に最終統計を書き出し
-      const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
-      const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
-      const rows = [
-        ["elapsed_s","spawned","success","success_rate_%","mean_success_time_s"],
-        [state.elapsed.toFixed(3), state.totalSpawned, state.totalSuccess, rate.toFixed(3), isNaN(mean)?"":mean.toFixed(3)]
-      ];
-      const csv = rows.map(r=>r.join(",")).join("\n");
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "abm_summary.csv";
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    // レンダリングループ
-    let lastTime = performance.now();
-    function loop(now){
-      requestAnimationFrame(loop);
-      if (!state.running || state.paused) {
-        renderer.render(scene, camera);
-        return;
-      }
-      const dtReal = (now - lastTime)/1000;
-      lastTime = now;
-      const dt = dtReal * P.timeScale;
-
+  for (let i=0;i<n;i++){
+    // 乱数シードをずらす(再現セットを作る場合は固定のままでも良い)
+    params.seed = (params.seed + i*977) >>> 0;
+    resetSimulation(true);
+    state.isRunning = true;
+    state.isPaused = false;
+    // ヘッドレス時間ループ
+    let last = performance.now();
+    while (state.elapsed < maxT) {
+      const now = performance.now();
+      const dtReal = (now - last)/1000;
+      last = now;
+      const dt = Math.min(0.1, dtReal) * params.timeScale;
       state.elapsed += dt;
-
-      // 発生
-      if (state.elapsed - state.lastSpawn > P.spawnInterval){
-        spawn(P.batchSize);
+      if ((state.elapsed - state.lastSpawn) > params.spawnInterval) {
+        spawn(params.batchSize);
         state.lastSpawn = state.elapsed;
       }
-
-      // 更新
-      for (const p of state.particles) p.update(dt);
-      // ゴミ取り
-      for (let i=state.particles.length-1;i>=0;i--){
-        const p = state.particles[i];
-        if (p.dead){
-          state.particles.splice(i,1);
-        }
-      }
-
-      // 描画
-      if (!state.headless) renderer.render(scene, camera);
-
-      // 統計更新
-      updateStatsView();
+      state.particles.forEach(p => p.update(dt));
+      state.particles = state.particles.filter(p => p.isActive);
+      // 成功が十分溜まれば早期停止
+      if (state.successCount >= Math.max(1, params.vertexCapacity)) break;
+      // 念のためCPUウェイトを軽減
+      // await new Promise(r=>setTimeout(r,0));
     }
-
-    function updateStatsView(){
-      document.getElementById("s_time").textContent = state.elapsed.toFixed(1);
-      document.getElementById("s_spawned").textContent = state.totalSpawned;
-      const active = state.particles.filter(p=>!p.dead && !p.succeeded).length;
-      document.getElementById("s_active").textContent = active;
-      document.getElementById("s_success").textContent = state.totalSuccess;
-      const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
-      document.getElementById("s_rate").textContent = rate.toFixed(1) + "%";
-      const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
-      document.getElementById("s_tmean").textContent = isNaN(mean)?"-":mean.toFixed(2)+"s";
-    }
-
-    // -----------------------------
-    // UIバインド
-    // -----------------------------
-    function bindRange(id, key, fmt= (v)=>v.toFixed(2)){
-      const r = document.getElementById(id);
-      const v = document.getElementById("v_"+id) || document.getElementById("v_"+key);
-      const apply = ()=>{
-        let val = parseFloat(r.value);
-        P[key] = val;
-        if (v) v.textContent = fmt(val);
-      };
-      r.addEventListener("input", apply);
-      apply();
-    }
-
-    bindRange("timeScale","timeScale",(v)=>v.toFixed(2));
-    bindRange("spawnInterval","spawnInterval",(v)=>v.toFixed(2));
-    bindRange("batchSize","batchSize",(v)=>v.toFixed(0));
-
-    bindRange("exploiterRatio","exploiterRatio",(v)=>v.toFixed(2));
-    bindRange("explorerRatio","explorerRatio",(v)=>v.toFixed(2));
-    document.getElementById("strategicSpawn").addEventListener("change", e=>{ P.strategicSpawn = e.target.checked; });
-
-    bindRange("trtForce","trtForce",(v)=>v.toFixed(3));
-    bindRange("praForce","praForce",(v)=>v.toFixed(3));
-    bindRange("praDiversity","praDiversity",(v)=>v.toFixed(2));
-
-    bindRange("centralConv","centralConv",(v)=>v.toFixed(3));
-    bindRange("peerAttr","peerAttr",(v)=>v.toFixed(3));
-    bindRange("successTh","successTh",(v)=>v.toFixed(0));
-    bindRange("attrition","attrition",(v)=>v.toFixed(3));
-
-    document.getElementById("btnStart").addEventListener("click", ()=>{
-      state.running = true; state.paused = false;
+    const rate = state.totalSpawned>0 ? (state.successCount/state.totalSpawned) : 0;
+    const avgTTS = state.successTimes.length>0 ? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length) : NaN;
+    results.push({
+      seed: params.seed, successRate: rate, avgTTS: isFinite(avgTTS)?avgTTS:NaN,
+      totalSpawned: state.totalSpawned, successes: state.successCount
     });
-    document.getElementById("btnPause").addEventListener("click", ()=>{
-      state.paused = !state.paused;
-    });
-    document.getElementById("btnReset").addEventListener("click", ()=>{
-      reset();
-    });
-    document.getElementById("btnExport").addEventListener("click", exportCSV);
-    document.getElementById("btnHeadless").addEventListener("click", ()=>{
-      state.headless = !state.headless;
-    });
+  }
+  params.headless = savedHeadless;
+  lastBatch = { n, results };
+  return {
+    n,
+    avgSuccess: results.reduce((a,b)=>a+b.successRate,0)/n,
+    avgTTS: (()=> {
+      const arr = results.map(r=>r.avgTTS).filter(x=>isFinite(x));
+      return arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : NaN;
+    })()
+  };
+}
+function exportBatchCSV(batch) {
+  const header = ['seed','successRate','avgTTS','totalSpawned','successes'];
+  const lines = batch.results.map(r => [r.seed, r.successRate.toFixed(6), isFinite(r.avgTTS)?r.avgTTS.toFixed(4):'', r.totalSpawned, r.successes].join(','));
+  return header.join(',') + '\n' + lines.join('\n');
+}
 
-    // -----------------------------
-    // シナリオ編集・比較
-    // -----------------------------
-    let scenarioAbort = false;
-
-    document.getElementById("btnScenarioSave").addEventListener("click", ()=>{
-      localStorage.setItem("abm_scenarios", document.getElementById("scenarioArea").value);
-      alert("シナリオを保存しました（ブラウザ LocalStorage）");
-    });
-    document.getElementById("btnScenarioLoad").addEventListener("click", ()=>{
-      const txt = localStorage.getItem("abm_scenarios");
-      if (txt) document.getElementById("scenarioArea").value = txt;
-      else alert("保存済みシナリオが見つかりません。");
-    });
-    document.getElementById("btnScenarioStop").addEventListener("click", ()=>{
-      scenarioAbort = true;
-    });
-
-    document.getElementById("btnScenarioRun").addEventListener("click", async ()=>{
-      let scenarios;
-      try{
-        scenarios = JSON.parse(document.getElementById("scenarioArea").value);
-        if (!Array.isArray(scenarios)) throw new Error("配列ではありません");
-      }catch(e){
-        alert("JSONの形式に誤りがあります: " + e.message);
-        return;
-      }
-
-      const base = {...P};
-      const results = [];
-      scenarioAbort = false;
-
-      for (let i=0;i<scenarios.length;i++){
-        if (scenarioAbort){ alert("シナリオ実行を中止しました"); break; }
-        const s = scenarios[i] || {};
-        // パラメータ適用（差分）
-        Object.assign(P, base, s);
-
-        // UI表示を反映（主パラメータのみ同期）
-        syncUIFromParams();
-
-        // リセット＆実行（固定時間回す）
-        reset();
-        state.running = true;
-        state.paused = false;
-
-        const simSeconds = s.simSeconds ?? 60; // 既定60秒
-        const t0 = state.elapsed;
-        const tStartWall = performance.now();
-        while ((state.elapsed - t0) < simSeconds){
-          // 1フレーム待機
-          await new Promise(r=>setTimeout(r, 10));
-          if (scenarioAbort) break;
-        }
-        state.running = false;
-
-        const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
-        const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
-
-        results.push({
-          label: s.label ?? ("scenario_"+(i+1)),
-          simSeconds,
-          spawned: state.totalSpawned,
-          success: state.totalSuccess,
-          successRate: rate,
-          meanSuccessTime: isNaN(mean)? null : mean
-        });
-      }
-
-      // CSV出力
-      if (results.length>0){
-        const head = ["label","simSeconds","spawned","success","successRate(%)","meanSuccessTime(s)"];
-        const rows = [head].concat(results.map(r=>[
-          r.label, r.simSeconds, r.spawned, r.success,
-          r.successRate?.toFixed(3),
-          (r.meanSuccessTime==null)?"":r.meanSuccessTime.toFixed(3)
-        ]));
-        const csv = rows.map(r=>r.join(",")).join("\n");
-        const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "abm_scenario_results.csv";
-        a.click();
-        URL.revokeObjectURL(a.href);
-        alert("シナリオ比較のCSVを保存しました");
-      }
-
-      // 元のパラメータに戻す
-      Object.assign(P, base);
-      syncUIFromParams();
-      reset();
-    });
-
-    function syncUIFromParams(){
-      const set = (id,val,fmt)=>{ const el=document.getElementById(id); if(el){ el.value=val; } const v=document.getElementById("v_"+id); if(v){ v.textContent = fmt?fmt(val):val; } };
-      set("timeScale",P.timeScale,(v)=>v.toFixed(2));
-      set("spawnInterval",P.spawnInterval,(v)=>v.toFixed(2));
-      set("batchSize",P.batchSize,(v)=>v.toFixed(0));
-      set("exploiterRatio",P.exploiterRatio,(v)=>v.toFixed(2));
-      set("explorerRatio",P.explorerRatio,(v)=>v.toFixed(2));
-      document.getElementById("strategicSpawn").checked = P.strategicSpawn;
-      set("trtForce",P.trtForce,(v)=>v.toFixed(3));
-      set("praForce",P.praForce,(v)=>v.toFixed(3));
-      set("praDiversity",P.praDiversity,(v)=>v.toFixed(2));
-      set("centralConv",P.centralConv,(v)=>v.toFixed(3));
-      set("peerAttr",P.peerAttr,(v)=>v.toFixed(3));
-      set("successTh",P.successTh,(v)=>v.toFixed(0));
-      set("attrition",P.attrition,(v)=>v.toFixed(3));
-    }
-
-    // 初期化
-    reset();
-    requestAnimationFrame(loop);
-
-    // 余談：花火エフェクトは本実装に含めていません（ポストプロセスや派手なパーティクルは未使用）
-  </script>
+/* ========= 初期化 ========= */
+bindUI();
+resetSimulation(true);
+requestAnimationFrame(tick);
+</script>
 </body>
 </html>
