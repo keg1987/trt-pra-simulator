@@ -2,633 +2,921 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TRT・PRAシミュレータ ABM強化版 v6.0</title>
-  <!-- Three.js r128 CDN (安定版) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>TRT・PRA ABMシミュレータ v6.0（研究用・単一HTML）</title>
+  <!-- three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
   <style>
-    :root{
-      --panel-bg:#ffffff;
-      --panel-border:#e5e7eb;
-      --panel-shadow:0 4px 20px rgba(0,0,0,0.12);
-      --text:#1f2937;
-      --subtext:#374151;
+    :root {
+      --panel-bg: #ffffff;
+      --panel-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      --panel-radius: 12px;
+      --panel-border: 1px solid #e5e7eb;
+      --text-1: #1f2937;
+      --text-2: #374151;
+      --text-3: #4b5563;
+      --muted:  #6b7280;
+      --brand:  #3b82f6;
+      --brand-2:#2563eb;
+      --bg-1:   #f0f2f5;
+      --bg-2:   #f8fafb;
     }
-    html,body{margin:0;padding:0;height:100%;font-family:Arial,Helvetica,sans-serif;background:#f0f2f5;color:var(--text)}
-    #main-layout{display:flex;flex-direction:row;height:100vh;width:100vw;box-sizing:border-box;overflow:hidden}
-    #canvas-container{flex:1 1 60vw;min-width:0;min-height:0;position:relative;background:#f8f8f8}
-    #side-panels{flex:0 0 360px;display:flex;flex-direction:column;gap:12px;min-width:280px;max-width:100vw;box-sizing:border-box;overflow-y:auto;background:#f8fafb;border-left:1px solid var(--panel-border);padding:10px}
-    .panel{background:var(--panel-bg);border-radius:12px;box-shadow:var(--panel-shadow);padding:16px}
-    h1{font-size:18px;margin:0 0 10px;color:var(--text)}
-    h2{font-size:14px;margin:14px 0 8px;border-bottom:1px solid var(--panel-border);padding-bottom:4px;color:var(--subtext)}
-    .group{margin-bottom:10px;padding:10px;background:#f9fafb;border:1px solid var(--panel-border);border-radius:8px}
-    .row{display:flex;align-items:center;gap:8px;margin:8px 0}
-    .row label{flex:1;font-size:12px;color:#4b5563;font-weight:600}
-    .row .val{min-width:48px;text-align:right;font-size:12px;color:#6b7280}
-    input[type=range]{width:100%}
-    input[type=text],input[type=number]{width:110px;padding:6px;border:1px solid var(--panel-border);border-radius:6px}
-    button{padding:8px 10px;border:none;border-radius:6px;background:#3b82f6;color:#fff;cursor:pointer}
-    button.secondary{background:#6b7280}
-    button.ghost{background:#e5e7eb;color:#111827}
-    button:disabled{opacity:0.6;cursor:not-allowed}
-    .btn-row{display:flex;gap:8px;flex-wrap:wrap}
-    .stat-line{display:flex;justify-content:space-between;margin:6px 0;font-size:12px}
-    .legend-item{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
-    .swatch{width:16px;height:16px;border-radius:50%}
-    .swatch.square{border-radius:4px}
-    .swatch.tri{clip-path:polygon(50% 0%,0% 100%,100% 100%)}
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--bg-1);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, system-ui, Arial, sans-serif;
+      color: var(--text-1);
+    }
+
+    /* 2ペイン・レイアウト（重なり根絶） */
+    #layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      grid-template-rows: 100vh;
+      gap: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      background: #f8f8f8;
+    }
+
+    #sidebar {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 10px;
+      background: var(--bg-2);
+      border-left: 1px solid #e5e7eb;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border-radius: var(--panel-radius);
+      box-shadow: var(--panel-shadow);
+      border: var(--panel-border);
+      padding: 14px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .panel h1 { font-size: 18px; margin: 0 0 8px; color: var(--text-1); }
+    .panel h2 { font-size: 14px; margin: 10px 0 8px; color: var(--text-2); border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+
+    .group { background: #ffffff; border: 1px solid #eef0f4; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    .row   { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 8px 0; font-size: 12px; color: var(--text-3); }
+    .row input[type="range"] { width: 100%; }
+    .val   { font-size: 11px; color: var(--muted); min-width: 48px; text-align: right; }
+    .row input[type="number"] { width: 90px; padding: 4px 6px; }
+
+    .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+    button {
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button.secondary { background: #e5e7eb; color: #111827; }
+    button.warn { background: #ef4444; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+    .stat { background: #fafbfc; border: 1px solid #eef0f4; border-radius: 8px; padding: 8px; display: grid; gap: 4px; }
+    .stat .k { font-size: 11px; color: var(--muted); }
+    .stat .v { font-size: 14px; color: var(--text-1); }
+
+    /* JSONエディタ領域（比較・シナリオ編集） */
+    #editor {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+    }
+    #scenarioArea {
+      width: 100%;
+      height: 100%;
+      resize: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      box-sizing: border-box;
+      background: #ffffff;
+      color: #111827;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .lg { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; border-radius: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
 
     /* ツールチップ */
-    .tooltip{position:relative;display:inline-block;cursor:help}
-    .tooltip .tip{
-      visibility:hidden;opacity:0;transition:opacity .2s;
-      position:absolute;z-index:1000;left:50%;transform:translateX(-50%);
-      bottom:120%;width:260px;background:#111827;color:#fff;border-radius:8px;padding:10px;box-shadow:0 6px 18px rgba(0,0,0,0.25);font-size:12px;line-height:1.4
+    .tip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: #111827; color: #fff; border-radius: 50%; font-size: 11px; cursor: help; margin-left: 6px; }
+    .tip .bubble {
+      position: absolute;
+      left: 50%; bottom: 130%;
+      transform: translateX(-50%);
+      min-width: 260px; max-width: 320px;
+      visibility: hidden; opacity: 0; transition: 0.2s ease;
+      background: #111827; color: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      padding: 10px; z-index: 1000; font-size: 12px; line-height: 1.5;
     }
-    .tooltip:hover .tip{visibility:visible;opacity:1}
+    .tip:hover .bubble { visibility: visible; opacity: 1; }
 
-    /* レスポンシブ */
-    @media (max-width:1024px){
-      #main-layout{flex-direction:column;height:auto}
-      #canvas-container{order:1;height:48vh;min-height:220px}
-      #side-panels{order:2;flex-direction:column;overflow-y:visible}
+    /* レスポンシブ：縦並びで重なりを完全回避 */
+    @media (max-width: 1100px) {
+      #layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 55vh auto;
+        height: auto;
+      }
+      #stage { height: 55vh; }
+      #sidebar { height: auto; max-height: none; }
     }
-    @media (max-width:768px){
-      #canvas-container{height:40vh}
-      .btn-row{flex-direction:row;gap:6px}
+    @media (max-width: 600px) {
+      #layout { grid-template-rows: 50vh auto; }
+      #stage  { height: 50vh; }
     }
   </style>
 </head>
 <body>
-  <div id="main-layout">
-    <div id="canvas-container"></div>
-    <div id="side-panels">
-      <div class="panel" id="control-panel">
-        <h1>TRT・PRA シミュレータ v6.0</h1>
-
-        <div class="group">
-          <h2>組織モデル 説明</h2>
-          <div class="row" style="justify-content:space-between">
-            <div>
-              <span>中央集権型</span>
-              <span class="tooltip">❓
-                <span class="tip"><b>中央集権型</b>は意思決定が上層に集中し、統一性と効率性に優れる一方、現場の柔軟性や創発が抑制されやすい構造を指します。</span>
-              </span>
-            </div>
-            <div>
-              <span>分散自律型</span>
-              <span class="tooltip">❓
-                <span class="tip"><b>分散自律型</b>は権限が現場に分散し、適応性と革新が生まれやすい一方、全体調和の設計が課題になりやすい構造を指します。</span>
-              </span>
-            </div>
-            <div>
-              <span>ハイブリッド型</span>
-              <span class="tooltip">❓
-                <span class="tip"><b>ハイブリッド型</b>は中央の方針と現場裁量の両立を図り、効率と適応のバランスを狙う構造を指します。</span>
-              </span>
-            </div>
-          </div>
-        </div>
+  <div id="layout">
+    <div id="stage">
+      <!-- three.js canvas will be injected here -->
+    </div>
+    <div id="sidebar">
+      <!-- コントロール -->
+      <div class="panel" id="controls">
+        <h1>TRT・PRA ABM シミュレータ</h1>
 
         <div class="group">
           <h2>シミュレーション制御</h2>
-          <div class="btn-row">
-            <button id="btn-start">開始</button>
-            <button id="btn-pause" class="secondary">一時停止/再開</button>
-            <button id="btn-reset" class="ghost">リセット</button>
+          <div class="btns">
+            <button id="btnStart">開始</button>
+            <button id="btnPause" class="secondary">一時停止/再開</button>
+            <button id="btnReset" class="secondary">リセット</button>
+            <button id="btnExport" class="secondary">ログCSV保存</button>
+            <button id="btnHeadless" class="secondary">描画OFF/ON</button>
           </div>
           <div class="row">
-            <label>描画あり/なし（ヘッドレス）</label>
-            <input type="checkbox" id="headlessToggle"/>
+            <label>初期粒子数</label>
+            <input id="initialParticles" type="number" min="0" max="1000" step="10" value="50" />
           </div>
           <div class="row">
-            <label>乱数シード</label>
-            <input type="number" id="seedInput" value="12345" />
+            <label>最大粒子数</label>
+            <input id="maxParticles" type="number" min="100" max="5000" step="50" value="1000" />
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>時間・発生</h2>
+          <div class="row">
+            <label>時間スケール</label>
+            <span class="val" id="v_timeScale">0.10</span>
+            <input id="timeScale" type="range" min="0.01" max="1.0" step="0.01" value="0.10" />
           </div>
           <div class="row">
-            <label>実時間倍率</label>
-            <input type="range" id="timeScale" min="0.01" max="1" step="0.01" value="0.15"/>
-            <span class="val" id="timeScaleVal">0.15</span>
-          </div>
-          <div class="row">
-            <label>スポーン間隔[s]</label>
-            <input type="range" id="spawnInterval" min="0.05" max="2" step="0.05" value="0.5"/>
-            <span class="val" id="spawnIntervalVal">0.50</span>
+            <label>発生間隔[s]</label>
+            <span class="val" id="v_spawnInterval">0.50</span>
+            <input id="spawnInterval" type="range" min="0.05" max="2.0" step="0.05" value="0.50" />
           </div>
           <div class="row">
             <label>バッチサイズ</label>
-            <input type="range" id="batchSize" min="1" max="20" step="1" value="4"/>
-            <span class="val" id="batchSizeVal">4</span>
+            <span class="val" id="v_batchSize">5</span>
+            <input id="batchSize" type="range" min="1" max="50" step="1" value="5" />
           </div>
         </div>
 
         <div class="group">
-          <h2>資源タイプと初期配置</h2>
+          <h2>資源タイプと初期配置
+            <span class="tip">?
+              <span class="bubble">
+                エージェント（資源）は3タイプ：標準・活用特化（Exploiter）・探索特化（Explorer）で生成されます。<br/>
+                「戦略的初期配置」を有効にすると、活用特化は中心や既存クラスター近傍、探索特化は周縁部にスポーンしやすくなります。
+              </span>
+            </span>
+          </h2>
           <div class="row">
-            <label>活用特化割合</label>
-            <input type="range" id="exploiterRatio" min="0" max="1" step="0.05" value="0.30"/>
-            <span class="val" id="exploiterRatioVal">0.30</span>
+            <label>活用特化の発生割合</label>
+            <span class="val" id="v_exploiterRatio">0.30</span>
+            <input id="exploiterRatio" type="range" min="0" max="1" step="0.05" value="0.30" />
           </div>
           <div class="row">
-            <label>探索特化割合</label>
-            <input type="range" id="explorerRatio" min="0" max="1" step="0.05" value="0.30"/>
-            <span class="val" id="explorerRatioVal">0.30</span>
+            <label>探索特化の発生割合</label>
+            <span class="val" id="v_explorerRatio">0.30</span>
+            <input id="explorerRatio" type="range" min="0" max="1" step="0.05" value="0.30" />
           </div>
           <div class="row">
             <label>戦略的初期配置</label>
-            <input type="checkbox" id="strategicSpawn" checked />
-          </div>
-          <div class="row">
-            <label>資源異質性</label>
-            <input type="range" id="heterogeneity" min="0" max="1" step="0.1" value="0.5"/>
-            <span class="val" id="heterogeneityVal">0.5</span>
-          </div>
-          <div class="row">
-            <label>寿命変動</label>
-            <input type="range" id="lifespanVariance" min="0" max="1" step="0.1" value="0.3"/>
-            <span class="val" id="lifespanVarianceVal">0.3</span>
+            <input id="strategicSpawn" type="checkbox" checked />
           </div>
         </div>
 
         <div class="group">
-          <h2>TRT / PRA 力</h2>
+          <h2>TRT（縦推進）・PRA（横探索）
+            <span class="tip">?
+              <span class="bubble">
+                TRTは円錐の高さ方向（成熟方向）への決定論的推進で、低高度ほど強く高高度で弱まります。<br/>
+                PRAは水平方向の確率的探索で、高度に応じて強さをスケーリングします（多様性・再結合のモデル化）。
+              </span>
+            </span>
+          </h2>
           <div class="row">
             <label>TRT強度</label>
-            <input type="range" id="trtForce" min="0" max="0.08" step="0.001" value="0.018"/>
-            <span class="val" id="trtForceVal">0.018</span>
+            <span class="val" id="v_trtForce">0.015</span>
+            <input id="trtForce" type="range" min="0" max="0.05" step="0.001" value="0.015" />
           </div>
           <div class="row">
             <label>PRA強度</label>
-            <input type="range" id="praForce" min="0" max="0.08" step="0.001" value="0.022"/>
-            <span class="val" id="praForceVal">0.022</span>
+            <span class="val" id="v_praForce">0.020</span>
+            <input id="praForce" type="range" min="0" max="0.05" step="0.001" value="0.020" />
+          </div>
+          <div class="row">
+            <label>PRA多様性スケール</label>
+            <span class="val" id="v_praDiversity">1.00</span>
+            <input id="praDiversity" type="range" min="0.5" max="2.0" step="0.05" value="1.00" />
           </div>
         </div>
 
         <div class="group">
-          <h2>多重重力・環境</h2>
+          <h2>相互作用・環境
+            <span class="tip">?
+              <span class="bubble">
+                中央収束は組織の求心力、粒子引力は資源間の自発的協調（クラスター形成）を表します。<br/>
+                成功閾値に到達した資源は成功としてカウントされ、減耗率により自然消滅も発生します。
+              </span>
+            </span>
+          </h2>
           <div class="row">
-            <label>中央収束力</label>
-            <input type="range" id="centralConv" min="0" max="0.15" step="0.001" value="0.03"/>
-            <span class="val" id="centralConvVal">0.030</span>
+            <label>中央収束</label>
+            <span class="val" id="v_centralConv">0.030</span>
+            <input id="centralConv" type="range" min="0" max="0.1" step="0.001" value="0.030" />
           </div>
           <div class="row">
             <label>粒子引力</label>
-            <input type="range" id="peerAttr" min="0" max="0.05" step="0.001" value="0.01"/>
-            <span class="val" id="peerAttrVal">0.010</span>
+            <span class="val" id="v_peerAttr">0.010</span>
+            <input id="peerAttr" type="range" min="0" max="0.05" step="0.001" value="0.010" />
           </div>
           <div class="row">
-            <label>成功閾値(高さ)</label>
-            <input type="range" id="successThreshold" min="20" max="50" step="1" value="38"/>
-            <span class="val" id="successThresholdVal">38</span>
+            <label>成功閾値（高度）</label>
+            <span class="val" id="v_successTh">38</span>
+            <input id="successTh" type="range" min="10" max="60" step="1" value="38" />
           </div>
           <div class="row">
-            <label>減耗率(1/s)</label>
-            <input type="range" id="attritionRate" min="0" max="0.1" step="0.001" value="0.02"/>
-            <span class="val" id="attritionRateVal">0.020</span>
+            <label>減耗率</label>
+            <span class="val" id="v_attrition">0.020</span>
+            <input id="attrition" type="range" min="0" max="0.1" step="0.001" value="0.020" />
           </div>
         </div>
 
         <div class="group">
-          <h2>比較分析（シナリオ）</h2>
-          <div class="row">
-            <label>シナリオ名</label>
-            <input type="text" id="scenarioName" placeholder="例：分散自律・探索強め"/>
-          </div>
-          <div class="btn-row">
-            <button id="btn-save-scn">保存</button>
-            <button id="btn-load-scn" class="secondary">読込</button>
-            <button id="btn-del-scn" class="ghost">削除</button>
-          </div>
-          <div class="row">
-            <label>保存済み</label>
-            <select id="scenarioList" style="flex:1"></select>
-          </div>
-        </div>
-
-        <div class="group">
-          <h2>複製実行（Monte Carlo）</h2>
-          <div class="row">
-            <label>複製回数</label>
-            <input type="number" id="replications" min="1" max="500" value="20"/>
-          </div>
-          <div class="row">
-            <label>最大シミュレート時間[s]</label>
-            <input type="number" id="maxSimTime" min="5" max="600" value="60"/>
-          </div>
-          <div class="btn-row">
-            <button id="btn-run-batch">複製実行（ヘッドレス）</button>
-            <button id="btn-dl-csv" class="secondary" disabled>CSVダウンロード</button>
+          <h2>組織モデルの説明
+            <span class="tip">?
+              <span class="bubble">
+                中央集権型：上層で意思決定が集中し、効率と統一性に優れるが創発が抑制されやすい。<br/>
+                分散自律型：現場裁量が大きく創発・適応が起きやすいが統一・調整にコスト。<br/>
+                ハイブリッド：中央の方針＋現場裁量で効率と柔軟性の両立を狙う。
+              </span>
+            </span>
+          </h2>
+          <div class="legend">
+            <span class="lg"><span class="dot" style="background:#3b82f6"></span>標準</span>
+            <span class="lg"><span class="dot" style="background:#ef4444"></span>活用特化</span>
+            <span class="lg"><span class="dot" style="background:#10b981"></span>探索特化</span>
+            <span class="lg"><span class="dot" style="background:#00b300"></span>成功</span>
           </div>
         </div>
       </div>
 
-      <div class="panel" id="stats-panel">
-        <h2>統計</h2>
-        <div class="stat-line"><span>経過時間</span><span id="stat-time">0.0 s</span></div>
-        <div class="stat-line"><span>総発生</span><span id="stat-spawned">0</span></div>
-        <div class="stat-line"><span>成功数</span><span id="stat-success">0</span></div>
-        <div class="stat-line"><span>成功率</span><span id="stat-sr">0.0 %</span></div>
-        <div class="stat-line"><span>アクティブ数</span><span id="stat-active">0</span></div>
-        <div class="stat-line"><span>クラスター数</span><span id="stat-clusters">0</span></div>
+      <!-- 統計 -->
+      <div class="panel" id="stats">
+        <h2>統計情報</h2>
+        <div class="stats-grid">
+          <div class="stat"><div class="k">時刻[s]</div><div class="v" id="s_time">0.0</div></div>
+          <div class="stat"><div class="k">総発生</div><div class="v" id="s_spawned">0</div></div>
+          <div class="stat"><div class="k">アクティブ</div><div class="v" id="s_active">0</div></div>
+          <div class="stat"><div class="k">成功数</div><div class="v" id="s_success">0</div></div>
+          <div class="stat"><div class="k">成功率</div><div class="v" id="s_rate">0.0%</div></div>
+          <div class="stat"><div class="k">平均成功時間</div><div class="v" id="s_tmean">-</div></div>
+        </div>
       </div>
 
-      <div class="panel" id="legend-panel">
-        <h2>凡例</h2>
-        <div class="legend-item"><span class="swatch" style="background:#3b82f6"></span><span>標準</span></div>
-        <div class="legend-item"><span class="swatch square" style="background:#ef4444"></span><span>活用特化</span></div>
-        <div class="legend-item"><span class="swatch tri" style="background:#10b981"></span><span>探索特化</span></div>
-        <div class="legend-item"><span class="swatch" style="background:#00c853"></span><span>成功</span></div>
+      <!-- シナリオ編集・比較実行 -->
+      <div class="panel" id="editor">
+        <h2>シナリオ編集・比較（JSON）
+          <span class="tip">?
+            <span class="bubble">
+              複数のシナリオをJSON配列で記述し、連続実行して結果をCSVで保存できます。<br/>
+              各シナリオはパラメータ差分のみでOK（未指定は現行値を継承）。
+            </span>
+          </span>
+        </h2>
+        <textarea id="scenarioArea" spellcheck="false">[
+  {
+    "label": "中央集権強め",
+    "centralConv": 0.05,
+    "peerAttr": 0.005,
+    "exploiterRatio": 0.4,
+    "explorerRatio": 0.2
+  },
+  {
+    "label": "分散自律強め",
+    "centralConv": 0.01,
+    "peerAttr": 0.03,
+    "exploiterRatio": 0.2,
+    "explorerRatio": 0.5
+  },
+  {
+    "label": "ハイブリッド",
+    "centralConv": 0.03,
+    "peerAttr": 0.02,
+    "exploiterRatio": 0.3,
+    "explorerRatio": 0.3
+  }
+]</textarea>
+        <div class="btns">
+          <button id="btnScenarioRun">シナリオ連続実行</button>
+          <button id="btnScenarioStop" class="secondary">停止</button>
+          <button id="btnScenarioSave" class="secondary">シナリオ保存</button>
+          <button id="btnScenarioLoad" class="secondary">読込</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // ========= 乱数（再現性確保のためのLCG） =========
-    class LCG {
-      constructor(seed=12345){ this.m=0x80000000; this.a=1103515245; this.c=12345; this.state=(seed>>>0)||12345; }
-      next(){ this.state=(this.a*this.state+this.c)%this.m; return this.state/this.m; }
-      range(min,max){ return min+(max-min)*this.next(); }
-      pick(){ return this.next(); }
-    }
+    // -----------------------------
+    // 研究水準のABMコア
+    // -----------------------------
 
-    // ========= Three.js セットアップ =========
-    const canvasContainer=document.getElementById('canvas-container');
-    const scene=new THREE.Scene();
-    scene.background=new THREE.Color(0xf8f8f8);
-    const camera=new THREE.PerspectiveCamera(70, canvasContainer.clientWidth/Math.max(1,canvasContainer.clientHeight), 0.1, 1000);
-    camera.position.set(48,42,58); camera.lookAt(0,18,0);
-    const renderer=new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-    renderer.shadowMap.enabled=true;
-    canvasContainer.appendChild(renderer.domElement);
-
-    const amb=new THREE.AmbientLight(0xffffff,0.75); scene.add(amb);
-    const dir=new THREE.DirectionalLight(0xffffff,0.85); dir.position.set(50,100,50); dir.castShadow=true; scene.add(dir);
-
-    // 地面
-    const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240), new THREE.MeshPhongMaterial({color:0xe6e6e6, side:THREE.DoubleSide}));
-    ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
-
-    // 円錐（ワイヤーフレームで領域を可視化）
-    const coneHeight=40, coneRadius=20;
-    const coneGeo=new THREE.ConeGeometry(coneRadius, coneHeight, 48, 1, true);
-    const coneMat=new THREE.MeshBasicMaterial({color:0x9e9e9e, wireframe:true, transparent:true, opacity:0.35});
-    const cone=new THREE.Mesh(coneGeo, coneMat);
-    cone.position.y=coneHeight/2;
-    scene.add(cone);
-
-    // リサイズ
-    window.addEventListener('resize',()=>{
-      const w=canvasContainer.clientWidth, h=Math.max(1,canvasContainer.clientHeight);
-      camera.aspect=w/h; camera.updateProjectionMatrix();
-      renderer.setSize(w,h);
-    });
-
-    // ========= パラメータと状態 =========
-    const params={
-      timeScale:0.15, spawnInterval:0.5, batchSize:4,
-      exploiterRatio:0.30, explorerRatio:0.30, strategicSpawn:true,
-      heterogeneity:0.5, lifespanVariance:0.3,
-      trtForce:0.018, praForce:0.022,
-      centralConv:0.03, peerAttr:0.01,
-      successThreshold:38, attritionRate:0.02,
+    // 物理空間（円錐）の仕様
+    const CONE = {
+      radius: 20,
+      height: 40
     };
 
-    let rng=new LCG(12345);
-    let headless=false;
-    let running=false, paused=false;
-    let elapsed=0, lastSpawn=0, totalSpawned=0, successCount=0;
-    let particles=[];
-    let csvRows=null; // バッチ実行のCSVバッファ
+    // ランタイム状態
+    const state = {
+      running: false,
+      paused: false,
+      headless: false,
 
-    // ========= 粒子型 =========
-    const Type={ STD:'std', EXP:'explore', EXPLOIT:'exploit' };
+      elapsed: 0,
+      lastSpawn: 0,
+      totalSpawned: 0,
+      totalSuccess: 0,
 
+      successTimes: [], // 成功までの時間
+      particles: [],
+      maxParticles: 1000
+    };
+
+    // パラメータ（UIと同期）
+    const P = {
+      timeScale: 0.10,
+      spawnInterval: 0.50,
+      batchSize: 5,
+
+      initialParticles: 50,
+
+      exploiterRatio: 0.30,
+      explorerRatio: 0.30,
+      strategicSpawn: true,
+
+      trtForce: 0.015,
+      praForce: 0.020,
+      praDiversity: 1.00,
+
+      centralConv: 0.030,
+      peerAttr: 0.010,
+
+      successTh: 38,
+      attrition: 0.020
+    };
+
+    // 種別
+    const T = { STD: "standard", EXPLOITER: "exploiter", EXPLORER: "explorer" };
+
+    // three.js 初期化
+    const stageEl = document.getElementById("stage");
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    stageEl.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf8f8f8);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(50, 40, 60);
+    camera.lookAt(0, 15, 0);
+
+    const amb = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(amb);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(50,100,50);
+    scene.add(dir);
+
+    // 地面
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(240, 240),
+      new THREE.MeshPhongMaterial({ color: 0xeeeeee, side: THREE.DoubleSide })
+    );
+    ground.rotation.x = -Math.PI/2;
+    scene.add(ground);
+
+    // 円錐の外形（側線なし）：底面円＋頂点マーカーのみ
+    const coneGroup = new THREE.Group();
+    scene.add(coneGroup);
+
+    function buildConeOutline() {
+      coneGroup.clear();
+      // 底面円
+      const segments = 96;
+      const circleGeom = new THREE.BufferGeometry();
+      const circlePos = [];
+      for (let i=0;i<=segments;i++){
+        const a = (i/segments)*Math.PI*2;
+        circlePos.push(Math.cos(a)*CONE.radius, 0.01, Math.sin(a)*CONE.radius);
+      }
+      circleGeom.setAttribute("position", new THREE.Float32BufferAttribute(circlePos,3));
+      const circle = new THREE.Line(
+        circleGeom,
+        new THREE.LineBasicMaterial({ color: 0x999999 })
+      );
+      coneGroup.add(circle);
+
+      // 頂点（小球）
+      const apex = new THREE.Mesh(
+        new THREE.SphereGeometry(0.7, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x777777 })
+      );
+      apex.position.set(0, CONE.height, 0);
+      coneGroup.add(apex);
+
+      // 高さ目盛り（任意）
+      const tickMat = new THREE.LineBasicMaterial({ color: 0xcccccc });
+      for (let h=10; h<CONE.height; h+=10){
+        const r = CONE.radius * (1 - h/CONE.height);
+        const g = new THREE.BufferGeometry();
+        const pos = [];
+        for (let i=0;i<=64;i++){
+          const a = (i/64)*Math.PI*2;
+          pos.push(Math.cos(a)*r, h, Math.sin(a)*r);
+        }
+        g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+        const ring = new THREE.Line(g, tickMat);
+        coneGroup.add(ring);
+      }
+    }
+    buildConeOutline();
+
+    // リサイズ
+    function resize(){
+      const w = stageEl.clientWidth;
+      const h = stageEl.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    // メッシュ基本形状
+    const geoStd = new THREE.SphereGeometry(0.5, 16, 16);
+    const geoExpl = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const geoExpr = new THREE.ConeGeometry(0.6, 1.0, 16);
+
+    // ユーティリティ
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+    function randn(){ // 簡易正規乱数
+      let u=0, v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
+      return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+    }
+
+    // 粒子クラス
     class Particle {
-      constructor(){
-        this.type=this._decideType();
-        this.pos=new THREE.Vector3(0,0.6,0);
-        this.vel=new THREE.Vector3(rng.range(-0.02,0.02), rng.range(0.01,0.03), rng.range(-0.02,0.02));
-        const v=(rng.pick()-0.5)*2*params.heterogeneity;
-        this.trtAff=1 + (this.type===Type.EXPLOIT? +v : (this.type===Type.EXP? -v : 0));
-        this.praAff=1 + (this.type===Type.EXP? +v : (this.type===Type.EXPLOIT? -v : 0));
-        const baseLife=100; this.age=0; this.maxAge=baseLife*(1+(rng.pick()-0.5)*params.lifespanVariance);
-        this.active=true; this.succeeded=false;
-        this.mesh=this._buildMesh();
+      constructor(now){
+        // 種別
+        const r = Math.random();
+        if (r < P.exploiterRatio) this.type = T.EXPLOITER;
+        else if (r < P.exploiterRatio + P.explorerRatio) this.type = T.EXPLORER;
+        else this.type = T.STD;
+
+        // 個性（親和性）
+        const v = (Math.random() - 0.5)*2;
+        this.trtAffinity = 1 + 0.6*v*(this.type===T.EXPLOITER?+1:-1);
+        this.praAffinity = 1 + 0.6*v*(this.type===T.EXPLORER?+1:-1);
+
+        // 初期位置
+        this.pos = new THREE.Vector3(0, 0.5, 0);
+        this.vel = new THREE.Vector3( (Math.random()-0.5)*0.03, 0.01, (Math.random()-0.5)*0.03 );
+        this.birth = now;
+        this.dead = false;
+        this.succeeded = false;
+
+        this.spawnStrategic();
+
+        // メッシュ
+        let geo, col;
+        if (this.type===T.EXPLOITER){ geo = geoExpl; col = 0xef4444; }
+        else if (this.type===T.EXPLORER){ geo = geoExpr; col = 0x10b981; }
+        else { geo = geoStd; col = 0x3b82f6; }
+        const mat = new THREE.MeshPhongMaterial({ color: col });
+        this.mesh = new THREE.Mesh(geo, mat);
+        this.mesh.position.copy(this.pos);
         scene.add(this.mesh);
       }
-      _decideType(){
-        const r=rng.pick();
-        if(r < params.exploiterRatio) return Type.EXPLOIT;
-        if(r < params.exploiterRatio+params.explorerRatio) return Type.EXP;
-        return Type.STD;
-      }
-      _buildMesh(){
-        let geo, col;
-        if(this.type===Type.EXPLOIT){ geo=new THREE.BoxGeometry(0.8,0.8,0.8); col=0xef4444; }
-        else if(this.type===Type.EXP){ geo=new THREE.ConeGeometry(0.5,1,14); col=0x10b981; }
-        else { geo=new THREE.SphereGeometry(0.5,16,16); col=0x3b82f6; }
-        const mat=new THREE.MeshPhongMaterial({color:col});
-        const m=new THREE.Mesh(geo,mat); m.castShadow=true; m.position.copy(this.pos);
-        return m;
-      }
-      _strategicSpawn(){
-        // クラスター近傍 or 中央/周縁にバイアス
-        if(this.type===Type.EXPLOIT){
-          // 中央寄り
-          const ang=rng.range(0,Math.PI*2);
-          const r= rng.range(0, coneRadius*0.45);
-          this.pos.x=Math.cos(ang)*r; this.pos.z=Math.sin(ang)*r;
-        }else if(this.type===Type.EXP){
-          // 周縁寄り
-          const ang=rng.range(0,Math.PI*2);
-          const r= rng.range(coneRadius*0.6, coneRadius*0.95);
-          this.pos.x=Math.cos(ang)*r; this.pos.z=Math.sin(ang)*r;
-        }else{
-          const ang=rng.range(0,Math.PI*2);
-          const r= rng.range(0, coneRadius*0.9);
-          this.pos.x=Math.cos(ang)*r; this.pos.z=Math.sin(ang)*r;
+
+      spawnStrategic(){
+        const rU = CONE.radius;
+        if (!P.strategicSpawn){
+          const a = Math.random()*Math.PI*2;
+          const r = Math.random()*rU*0.95;
+          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
+          return;
+        }
+        if (this.type===T.EXPLOITER){
+          // 中央寄り / 既存成功点近傍に出やすい
+          if (state.successTimes.length>0 && Math.random()<0.6){
+            // 成功点履歴から近傍生成（粗近似：中心周辺）
+            const a = Math.random()*Math.PI*2;
+            const rr = Math.random()*6;
+            this.pos.set(Math.cos(a)*rr, 0.5, Math.sin(a)*rr);
+          } else {
+            const a = Math.random()*Math.PI*2;
+            const r = Math.random()*rU*0.45;
+            this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
+          }
+        } else if (this.type===T.EXPLORER){
+          // 周縁部
+          const a = Math.random()*Math.PI*2;
+          const r = rU*(0.65 + Math.random()*0.35);
+          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
+        } else {
+          const a = Math.random()*Math.PI*2;
+          const r = Math.random()*rU*0.90;
+          this.pos.set(Math.cos(a)*r, 0.5, Math.sin(a)*r);
         }
       }
-      initPosition(){
-        if(params.strategicSpawn) this._strategicSpawn();
-        else{
-          const ang=rng.range(0,Math.PI*2);
-          const r=rng.range(0,coneRadius*0.9);
-          this.pos.x=Math.cos(ang)*r; this.pos.z=Math.sin(ang)*r;
-        }
-        this.mesh.position.copy(this.pos);
-      }
+
       update(dt){
-        if(!this.active) return;
-        // TRT（縦）: 下ほど強く上向き
-        const hRatio=Math.max(0, Math.min(1, this.pos.y/coneHeight));
-        this.vel.y += params.trtForce * (1 - hRatio) * this.trtAff * dt;
+        if (this.dead || this.succeeded) return;
 
-        // PRA（横）: ランダム方向、上ほど強い
-        const jitterX=(rng.pick()-0.5)*2;
-        const jitterZ=(rng.pick()-0.5)*2;
-        const pra=params.praForce * (0.3 + 0.7*hRatio) * this.praAff;
-        this.vel.x += pra * jitterX * dt;
-        this.vel.z += pra * jitterZ * dt;
+        // 高さ比
+        const hRatio = clamp(this.pos.y / CONE.height, 0, 1);
 
-        // 中央収束（水平のみ）
-        const toCenter=new THREE.Vector3(-this.pos.x, 0, -this.pos.z).normalize().multiplyScalar(params.centralConv*dt);
-        this.vel.add(toCenter);
+        // TRT：決定論的上昇（低高度で強い）
+        const trt = P.trtForce * this.trtAffinity * (1 - hRatio);
+        this.vel.y += trt * dt;
 
-        // 粒子間引力（粗い近似：中心方向に弱くまとめる）
-        if(params.peerAttr>0){
-          this.vel.x += (-this.pos.x)*params.peerAttr*0.05*dt;
-          this.vel.z += (-this.pos.z)*params.peerAttr*0.05*dt;
+        // PRA：確率的水平探索（高度スケール）
+        const praSigma = P.praForce * this.praAffinity * (0.4 + 1.2*hRatio) * P.praDiversity;
+        const dx = (Math.random()-0.5)*2 * praSigma;
+        const dz = (Math.random()-0.5)*2 * praSigma;
+        this.vel.x += dx * dt;
+        this.vel.z += dz * dt;
+
+        // 中央収束（求心力）
+        const toCenter = new THREE.Vector3(-this.pos.x, 0, -this.pos.z);
+        if (toCenter.lengthSq()>1e-6){
+          toCenter.normalize().multiplyScalar(P.centralConv*dt);
+          this.vel.add(toCenter);
         }
 
-        // 位置更新と減衰
-        this.pos.addScaledVector(this.vel, dt*10);
+        // 粒子間の緩い引力（近接）
+        if (P.peerAttr>0 && state.particles.length>1){
+          // 近傍数を限定して計算量削減
+          for (let k=0, lim=Math.min(8, state.particles.length); k<lim; k++){
+            const j = (Math.random()*state.particles.length)|0;
+            const q = state.particles[j];
+            if (q===this || q.dead || q.succeeded) continue;
+            const d = q.pos.clone().sub(this.pos);
+            const dd = d.length();
+            if (dd>0.1 && dd<4){
+              d.normalize().multiplyScalar(P.peerAttr * (1.0/(dd+0.2)) * dt);
+              this.vel.add(d);
+            }
+          }
+        }
+
+        // 速度減衰
         this.vel.multiplyScalar(0.985);
 
-        // 円錐境界（半径線形縮小）
-        const maxR=Math.max(0, coneRadius*(1 - this.pos.y/coneHeight));
-        const rNow=Math.hypot(this.pos.x, this.pos.z);
-        if(rNow>maxR){
-          const s=maxR/(rNow||1e-6);
-          this.pos.x*=s; this.pos.z*=s;
-          this.vel.x*=0.6; this.vel.z*=0.6;
+        // 位置更新
+        this.pos.add(this.vel.clone().multiplyScalar(10*dt));
+
+        // 円錐内拘束（半径は高さにより線形縮小）
+        const rMax = CONE.radius * (1 - clamp(this.pos.y / CONE.height, 0, 1));
+        const rNow = Math.hypot(this.pos.x, this.pos.z);
+        if (rNow > rMax){
+          const f = (rNow>0) ? (rMax/rNow) : 0;
+          this.pos.x *= f;
+          this.pos.z *= f;
+          this.vel.x *= 0.5;
+          this.vel.z *= 0.5;
         }
-        if(this.pos.y<0){ this.pos.y=0; this.vel.y=Math.abs(this.vel.y)*0.3; }
+        if (this.pos.y < 0.2){ this.pos.y = 0.2; this.vel.y = Math.abs(this.vel.y)*0.2; }
 
-        // 成否・寿命
-        this.age+=dt;
-        if(this.pos.y>=params.successThreshold){
-          this.active=false; this.succeeded=true; successCount++;
-          this.mesh.material.color.set(0x00c853);
-        }else if(this.age>this.maxAge || rng.pick()< (params.attritionRate*dt)){
-          this.active=false; scene.remove(this.mesh);
-        }else{
-          // 色の明度を高さで変化
-          this.mesh.position.copy(this.pos);
-          this.mesh.material.color.offsetHSL(0,0,0); // no-op（維持）
+        // 成功判定
+        if (this.pos.y >= P.successTh){
+          this.succeeded = true;
+          state.totalSuccess++;
+          state.successTimes.push(state.elapsed - this.birth);
+          // 色変更
+          this.mesh.material.color.set(0x00b300);
         }
-      }
-    }
 
-    function spawnBatch(n){
-      for(let i=0;i<n;i++){
-        const p=new Particle();
-        p.initPosition();
-        particles.push(p);
-        totalSpawned++;
-      }
-    }
-
-    // ========= UI束縛 =========
-    function bindRange(id, key, fmt= (v)=>v.toFixed(3)){
-      const el=document.getElementById(id);
-      const lab=document.getElementById(id+'Val');
-      const apply=()=>{
-        const v=parseFloat(el.value);
-        params[key]=v;
-        if(lab) lab.textContent=(id==='timeScale'||id==='spawnInterval')? v.toFixed(2): fmt(v);
-      };
-      el.addEventListener('input', apply);
-      apply();
-    }
-    bindRange('timeScale','timeScale',v=>v.toFixed(2));
-    bindRange('spawnInterval','spawnInterval',v=>v.toFixed(2));
-    bindRange('batchSize','batchSize',v=>v.toFixed(0));
-    bindRange('exploiterRatio','exploiterRatio',v=>v.toFixed(2));
-    bindRange('explorerRatio','explorerRatio',v=>v.toFixed(2));
-    bindRange('heterogeneity','heterogeneity',v=>v.toFixed(1));
-    bindRange('lifespanVariance','lifespanVariance',v=>v.toFixed(1));
-    bindRange('trtForce','trtForce');
-    bindRange('praForce','praForce');
-    bindRange('centralConv','centralConv');
-    bindRange('peerAttr','peerAttr');
-    bindRange('successThreshold','successThreshold',v=>v.toFixed(0));
-    bindRange('attritionRate','attritionRate');
-
-    document.getElementById('strategicSpawn').addEventListener('change', e=>params.strategicSpawn=e.target.checked);
-    document.getElementById('headlessToggle').addEventListener('change', e=>headless=e.target.checked);
-    const seedInput=document.getElementById('seedInput');
-
-    // ========= 統計表示 =========
-    const statTime=document.getElementById('stat-time');
-    const statSpawn=document.getElementById('stat-spawned');
-    const statSucc=document.getElementById('stat-success');
-    const statSR=document.getElementById('stat-sr');
-    const statActive=document.getElementById('stat-active');
-    const statClusters=document.getElementById('stat-clusters'); // 簡易：未実装→0
-
-    function refreshStats(){
-      statTime.textContent=elapsed.toFixed(1)+' s';
-      statSpawn.textContent=String(totalSpawned);
-      statSucc.textContent=String(successCount);
-      statSR.textContent=(totalSpawned>0?(successCount/totalSpawned*100):0).toFixed(1)+' %';
-      statActive.textContent=String(particles.filter(p=>p.active).length);
-      statClusters.textContent='0';
-    }
-
-    // ========= ラン/ポーズ/リセット =========
-    document.getElementById('btn-start').addEventListener('click', ()=>{
-      if(!running){
-        // 乱数初期化
-        rng=new LCG(parseInt(seedInput.value||'12345',10));
-        running=true; paused=false;
-      }
-    });
-    document.getElementById('btn-pause').addEventListener('click', ()=>{ if(running) paused=!paused; });
-    document.getElementById('btn-reset').addEventListener('click', resetSim);
-
-    function resetSim(){
-      particles.forEach(p=>{ if(p.mesh) scene.remove(p.mesh); });
-      particles.length=0;
-      elapsed=0; lastSpawn=0; totalSpawned=0; successCount=0;
-      refreshStats();
-    }
-
-    // ========= シナリオ保存/読込 =========
-    const scenarioNameEl=document.getElementById('scenarioName');
-    const scenarioList=document.getElementById('scenarioList');
-    function loadScenarioList(){
-      scenarioList.innerHTML='';
-      const keys=Object.keys(localStorage).filter(k=>k.startsWith('TRTPRA_SCN_')).sort();
-      keys.forEach(k=>{
-        const opt=document.createElement('option'); opt.value=k; opt.textContent=k.replace('TRTPRA_SCN_','');
-        scenarioList.appendChild(opt);
-      });
-    }
-    function currentConfig(){
-      return JSON.stringify({
-        params:{...params},
-        headless, seed: parseInt(seedInput.value||'12345',10)
-      });
-    }
-    function applyConfig(jsonStr){
-      try{
-        const obj=JSON.parse(jsonStr);
-        Object.assign(params, obj.params||{});
-        headless= !!obj.headless;
-        seedInput.value= obj.seed??12345;
-        // 反映
-        for(const [id,key] of [
-          ['timeScale','timeScale'],['spawnInterval','spawnInterval'],['batchSize','batchSize'],
-          ['exploiterRatio','exploiterRatio'],['explorerRatio','explorerRatio'],['heterogeneity','heterogeneity'],
-          ['lifespanVariance','lifespanVariance'],['trtForce','trtForce'],['praForce','praForce'],
-          ['centralConv','centralConv'],['peerAttr','peerAttr'],['successThreshold','successThreshold'],
-          ['attritionRate','attritionRate']
-        ]){
-          const el=document.getElementById(id);
-          if(el){ el.value=params[key]; el.dispatchEvent(new Event('input')); }
+        // 減耗
+        if (!this.succeeded && Math.random()< (P.attrition*dt)){
+          this.dead = true;
+          scene.remove(this.mesh);
         }
-        document.getElementById('strategicSpawn').checked=params.strategicSpawn;
-        document.getElementById('headlessToggle').checked=headless;
-      }catch(e){ alert('シナリオ読み込みに失敗しました'); }
-    }
-    document.getElementById('btn-save-scn').addEventListener('click',()=>{
-      const name=(scenarioNameEl.value||'scenario').trim();
-      localStorage.setItem('TRTPRA_SCN_'+name, currentConfig());
-      loadScenarioList();
-    });
-    document.getElementById('btn-load-scn').addEventListener('click',()=>{
-      const key=scenarioList.value; if(!key){ alert('シナリオを選択してください'); return; }
-      const data=localStorage.getItem(key); if(!data){ alert('データが見つかりません'); return; }
-      applyConfig(data);
-    });
-    document.getElementById('btn-del-scn').addEventListener('click',()=>{
-      const key=scenarioList.value; if(!key){ alert('シナリオを選択してください'); return; }
-      localStorage.removeItem(key); loadScenarioList();
-    });
-    loadScenarioList();
 
-    // ========= バッチ（複製）実行 =========
-    const btnRunBatch=document.getElementById('btn-run-batch');
-    const btnDlCsv=document.getElementById('btn-dl-csv');
-    btnRunBatch.addEventListener('click', async ()=>{
-      const reps=parseInt(document.getElementById('replications').value||'10',10);
-      const maxT=parseFloat(document.getElementById('maxSimTime').value||'60');
-      csvRows=[['rep','seed','time','spawned','success','successRate(%)']];
-      btnRunBatch.disabled=true; btnDlCsv.disabled=true;
-
-      for(let r=0;r<reps;r++){
-        const seedBase=parseInt(seedInput.value||'12345',10);
-        const thisSeed= (seedBase + r*9973)>>>0;
-        // ヘッドレスで1本実行
-        const res= await runOneHeadless(thisSeed, maxT);
-        csvRows.push([
-          r+1, thisSeed, res.time.toFixed(2), res.spawned, res.success, (res.spawned>0?(res.success/res.spawned*100):0).toFixed(2)
-        ]);
+        // メッシュ反映
+        this.mesh.position.copy(this.pos);
+        // 高度で色を僅かに変化
+        const hue = 0.60 - 0.45*hRatio; // 青→緑系
+        this.mesh.material.color.setHSL(hue, 0.80, 0.55);
       }
-      btnRunBatch.disabled=false; btnDlCsv.disabled=false;
-    });
-    btnDlCsv.addEventListener('click', ()=>{
-      if(!csvRows){ return; }
-      const csv=csvRows.map(row=>row.join(',')).join('\n');
-      const blob=new Blob([csv],{type:'text/csv'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url; a.download='trt_pra_batch.csv';
+    }
+
+    // スポーン
+    function spawn(n){
+      const room = Math.max(0, state.maxParticles - state.particles.length);
+      n = Math.min(n, room);
+      for (let i=0;i<n;i++){
+        const p = new Particle(state.elapsed);
+        state.particles.push(p);
+        state.totalSpawned++;
+      }
+    }
+
+    // リセット
+    function reset(){
+      // 既存粒子除去
+      for (const p of state.particles){
+        if (p.mesh) scene.remove(p.mesh);
+      }
+      state.particles.length = 0;
+      state.elapsed = 0;
+      state.lastSpawn = 0;
+      state.totalSpawned = 0;
+      state.totalSuccess = 0;
+      state.successTimes.length = 0;
+      state.maxParticles = parseInt(document.getElementById("maxParticles").value, 10) || 1000;
+
+      spawn(parseInt(document.getElementById("initialParticles").value, 10) || 0);
+    }
+
+    // CSVエクスポート（集計）
+    function exportCSV(){
+      // 1秒毎のスナップショットを保持していた場合ここで書き出すが、
+      // 簡易に最終統計を書き出し
+      const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
+      const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
+      const rows = [
+        ["elapsed_s","spawned","success","success_rate_%","mean_success_time_s"],
+        [state.elapsed.toFixed(3), state.totalSpawned, state.totalSuccess, rate.toFixed(3), isNaN(mean)?"":mean.toFixed(3)]
+      ];
+      const csv = rows.map(r=>r.join(",")).join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "abm_summary.csv";
       a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    async function runOneHeadless(seed, maxT){
-      // 現在のUI設定を使用しつつ、描画なしで高速実行
-      const backup={
-        running, paused, headless, rng, elapsed, lastSpawn, totalSpawned, successCount, particles
-      };
-      running=false; paused=false; headless=true;
-      rng=new LCG(seed);
-      elapsed=0; lastSpawn=0; totalSpawned=0; successCount=0;
-      particles=[];
-
-      const dtBase=0.016;
-      while(elapsed<maxT){
-        // スポーン
-        if((elapsed - lastSpawn) > params.spawnInterval){
-          spawnBatch(params.batchSize);
-          lastSpawn=elapsed;
-        }
-        // 更新
-        const dt= dtBase*params.timeScale;
-        for(let i=0;i<particles.length;i++) particles[i].update(dt);
-        particles=particles.filter(p=>p.active);
-        elapsed+=dt;
-      }
-      // 後始末：可視Meshは削除（ヘッドレス時は生成されないが保険）
-      particles.forEach(p=>{ if(p.mesh) scene.remove(p.mesh); });
-      const res={time:elapsed, spawned:totalSpawned, success:successCount};
-      // 復元
-      ({running, paused, headless, rng, elapsed, lastSpawn, totalSpawned, successCount, particles}=backup);
-      return res;
+      URL.revokeObjectURL(a.href);
     }
 
-    // ========= ループ =========
-    let last=performance.now();
+    // レンダリングループ
+    let lastTime = performance.now();
     function loop(now){
       requestAnimationFrame(loop);
-      const dtReal=(now-last)*0.001; last=now;
-      if(!running || paused) { if(!headless) renderer.render(scene,camera); return; }
-
-      const dt= dtReal*params.timeScale;
-
-      // スポーン
-      if((elapsed - lastSpawn) > params.spawnInterval){
-        spawnBatch(params.batchSize);
-        lastSpawn=elapsed;
+      if (!state.running || state.paused) {
+        renderer.render(scene, camera);
+        return;
       }
-      // 更新
-      for(let i=0;i<particles.length;i++) particles[i].update(dt);
-      particles=particles.filter(p=>p.active);
-      elapsed+=dt;
+      const dtReal = (now - lastTime)/1000;
+      lastTime = now;
+      const dt = dtReal * P.timeScale;
 
-      refreshStats();
-      if(!headless) renderer.render(scene,camera);
+      state.elapsed += dt;
+
+      // 発生
+      if (state.elapsed - state.lastSpawn > P.spawnInterval){
+        spawn(P.batchSize);
+        state.lastSpawn = state.elapsed;
+      }
+
+      // 更新
+      for (const p of state.particles) p.update(dt);
+      // ゴミ取り
+      for (let i=state.particles.length-1;i>=0;i--){
+        const p = state.particles[i];
+        if (p.dead){
+          state.particles.splice(i,1);
+        }
+      }
+
+      // 描画
+      if (!state.headless) renderer.render(scene, camera);
+
+      // 統計更新
+      updateStatsView();
     }
+
+    function updateStatsView(){
+      document.getElementById("s_time").textContent = state.elapsed.toFixed(1);
+      document.getElementById("s_spawned").textContent = state.totalSpawned;
+      const active = state.particles.filter(p=>!p.dead && !p.succeeded).length;
+      document.getElementById("s_active").textContent = active;
+      document.getElementById("s_success").textContent = state.totalSuccess;
+      const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
+      document.getElementById("s_rate").textContent = rate.toFixed(1) + "%";
+      const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
+      document.getElementById("s_tmean").textContent = isNaN(mean)?"-":mean.toFixed(2)+"s";
+    }
+
+    // -----------------------------
+    // UIバインド
+    // -----------------------------
+    function bindRange(id, key, fmt= (v)=>v.toFixed(2)){
+      const r = document.getElementById(id);
+      const v = document.getElementById("v_"+id) || document.getElementById("v_"+key);
+      const apply = ()=>{
+        let val = parseFloat(r.value);
+        P[key] = val;
+        if (v) v.textContent = fmt(val);
+      };
+      r.addEventListener("input", apply);
+      apply();
+    }
+
+    bindRange("timeScale","timeScale",(v)=>v.toFixed(2));
+    bindRange("spawnInterval","spawnInterval",(v)=>v.toFixed(2));
+    bindRange("batchSize","batchSize",(v)=>v.toFixed(0));
+
+    bindRange("exploiterRatio","exploiterRatio",(v)=>v.toFixed(2));
+    bindRange("explorerRatio","explorerRatio",(v)=>v.toFixed(2));
+    document.getElementById("strategicSpawn").addEventListener("change", e=>{ P.strategicSpawn = e.target.checked; });
+
+    bindRange("trtForce","trtForce",(v)=>v.toFixed(3));
+    bindRange("praForce","praForce",(v)=>v.toFixed(3));
+    bindRange("praDiversity","praDiversity",(v)=>v.toFixed(2));
+
+    bindRange("centralConv","centralConv",(v)=>v.toFixed(3));
+    bindRange("peerAttr","peerAttr",(v)=>v.toFixed(3));
+    bindRange("successTh","successTh",(v)=>v.toFixed(0));
+    bindRange("attrition","attrition",(v)=>v.toFixed(3));
+
+    document.getElementById("btnStart").addEventListener("click", ()=>{
+      state.running = true; state.paused = false;
+    });
+    document.getElementById("btnPause").addEventListener("click", ()=>{
+      state.paused = !state.paused;
+    });
+    document.getElementById("btnReset").addEventListener("click", ()=>{
+      reset();
+    });
+    document.getElementById("btnExport").addEventListener("click", exportCSV);
+    document.getElementById("btnHeadless").addEventListener("click", ()=>{
+      state.headless = !state.headless;
+    });
+
+    // -----------------------------
+    // シナリオ編集・比較
+    // -----------------------------
+    let scenarioAbort = false;
+
+    document.getElementById("btnScenarioSave").addEventListener("click", ()=>{
+      localStorage.setItem("abm_scenarios", document.getElementById("scenarioArea").value);
+      alert("シナリオを保存しました（ブラウザ LocalStorage）");
+    });
+    document.getElementById("btnScenarioLoad").addEventListener("click", ()=>{
+      const txt = localStorage.getItem("abm_scenarios");
+      if (txt) document.getElementById("scenarioArea").value = txt;
+      else alert("保存済みシナリオが見つかりません。");
+    });
+    document.getElementById("btnScenarioStop").addEventListener("click", ()=>{
+      scenarioAbort = true;
+    });
+
+    document.getElementById("btnScenarioRun").addEventListener("click", async ()=>{
+      let scenarios;
+      try{
+        scenarios = JSON.parse(document.getElementById("scenarioArea").value);
+        if (!Array.isArray(scenarios)) throw new Error("配列ではありません");
+      }catch(e){
+        alert("JSONの形式に誤りがあります: " + e.message);
+        return;
+      }
+
+      const base = {...P};
+      const results = [];
+      scenarioAbort = false;
+
+      for (let i=0;i<scenarios.length;i++){
+        if (scenarioAbort){ alert("シナリオ実行を中止しました"); break; }
+        const s = scenarios[i] || {};
+        // パラメータ適用（差分）
+        Object.assign(P, base, s);
+
+        // UI表示を反映（主パラメータのみ同期）
+        syncUIFromParams();
+
+        // リセット＆実行（固定時間回す）
+        reset();
+        state.running = true;
+        state.paused = false;
+
+        const simSeconds = s.simSeconds ?? 60; // 既定60秒
+        const t0 = state.elapsed;
+        const tStartWall = performance.now();
+        while ((state.elapsed - t0) < simSeconds){
+          // 1フレーム待機
+          await new Promise(r=>setTimeout(r, 10));
+          if (scenarioAbort) break;
+        }
+        state.running = false;
+
+        const rate = (state.totalSpawned>0)? (100*state.totalSuccess/state.totalSpawned):0;
+        const mean = (state.successTimes.length>0)? (state.successTimes.reduce((a,b)=>a+b,0)/state.successTimes.length):NaN;
+
+        results.push({
+          label: s.label ?? ("scenario_"+(i+1)),
+          simSeconds,
+          spawned: state.totalSpawned,
+          success: state.totalSuccess,
+          successRate: rate,
+          meanSuccessTime: isNaN(mean)? null : mean
+        });
+      }
+
+      // CSV出力
+      if (results.length>0){
+        const head = ["label","simSeconds","spawned","success","successRate(%)","meanSuccessTime(s)"];
+        const rows = [head].concat(results.map(r=>[
+          r.label, r.simSeconds, r.spawned, r.success,
+          r.successRate?.toFixed(3),
+          (r.meanSuccessTime==null)?"":r.meanSuccessTime.toFixed(3)
+        ]));
+        const csv = rows.map(r=>r.join(",")).join("\n");
+        const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "abm_scenario_results.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        alert("シナリオ比較のCSVを保存しました");
+      }
+
+      // 元のパラメータに戻す
+      Object.assign(P, base);
+      syncUIFromParams();
+      reset();
+    });
+
+    function syncUIFromParams(){
+      const set = (id,val,fmt)=>{ const el=document.getElementById(id); if(el){ el.value=val; } const v=document.getElementById("v_"+id); if(v){ v.textContent = fmt?fmt(val):val; } };
+      set("timeScale",P.timeScale,(v)=>v.toFixed(2));
+      set("spawnInterval",P.spawnInterval,(v)=>v.toFixed(2));
+      set("batchSize",P.batchSize,(v)=>v.toFixed(0));
+      set("exploiterRatio",P.exploiterRatio,(v)=>v.toFixed(2));
+      set("explorerRatio",P.explorerRatio,(v)=>v.toFixed(2));
+      document.getElementById("strategicSpawn").checked = P.strategicSpawn;
+      set("trtForce",P.trtForce,(v)=>v.toFixed(3));
+      set("praForce",P.praForce,(v)=>v.toFixed(3));
+      set("praDiversity",P.praDiversity,(v)=>v.toFixed(2));
+      set("centralConv",P.centralConv,(v)=>v.toFixed(3));
+      set("peerAttr",P.peerAttr,(v)=>v.toFixed(3));
+      set("successTh",P.successTh,(v)=>v.toFixed(0));
+      set("attrition",P.attrition,(v)=>v.toFixed(3));
+    }
+
+    // 初期化
+    reset();
     requestAnimationFrame(loop);
 
-    // 初期状態の可視更新
-    refreshStats();
-
-    // 注記：花火などのエフェクトは一切実装していません（描画負荷と可搬性のため完全に削除）。
+    // 余談：花火エフェクトは本実装に含めていません（ポストプロセスや派手なパーティクルは未使用）
   </script>
 </body>
 </html>
