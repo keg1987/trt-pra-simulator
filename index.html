@@ -1,471 +1,1036 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TRT×PRA ABM – Research-Ready (ESM/No-Global)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TRT×PRA ABM v9 — Batch Experiment for Empirical Validation</title>
 <style>
-  :root{
-    --bg:#0b1020; --panel:#0f172a; --muted:#94a3b8; --text:#e2e8f0; --accent:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
-    --bd:#1f2937; --bd2:#334155;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  #app{display:grid;grid-template-columns:360px 1fr;grid-template-rows:100vh}
-  #left{background:var(--panel);padding:16px 14px;overflow:auto;box-shadow:2px 0 12px rgba(0,0,0,.35)}
-  #right{position:relative}
-  h1{font-size:18px;margin:0 0 8px;letter-spacing:.2px}
-  h2{font-size:13px;margin:14px 0 6px;color:#cbd5e1}
-  fieldset{border:1px solid var(--bd);border-radius:10px;padding:10px 10px 8px;margin:10px 0}
-  legend{padding:0 6px;color:var(--muted)}
-  .row{display:grid;grid-template-columns:1fr 80px;gap:8px;align-items:center;margin:6px 0}
-  .row>label{font-size:12px;color:var(--muted)}
-  input[type=number],input[type=text]{width:100%;background:#0b1220;border:1px solid var(--bd2);color:var(--text);border-radius:8px;padding:6px 8px}
-  .btns{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
-  button{background:#1e293b;color:#e2e8f0;border:1px solid var(--bd2);padding:8px 10px;border-radius:8px;cursor:pointer}
-  button:hover{background:#233047}
-  button.primary{background:linear-gradient(180deg,#3b82f6,#1d4ed8);border:none}
-  button.warn{background:#f59e0b;color:#0b1020;border:none}
-  button.ghost{background:transparent;border:1px dashed var(--bd2)}
-  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-  .stat{background:#0b1220;border:1px solid var(--bd);border-radius:8px;padding:10px}
-  .stat h3{margin:0;font-size:12px;color:#94a3b8}
-  .stat .v{font-size:16px;margin-top:6px}
-  #canvas{width:100%;height:100%;display:block}
-  .small{font-size:12px;opacity:.85}
-  .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;background:#0b1220;border:1px solid var(--bd);border-radius:8px;padding:8px;white-space:pre-wrap}
-  .sep{height:1px;background:var(--bd);margin:10px 0}
-  #toast{position:absolute;left:16px;bottom:16px;max-width:460px}
-  .toast{background:#0b1220;border:1px solid var(--bd);border-left:4px solid var(--accent);padding:10px 12px;border-radius:8px;margin-top:8px;font-size:12px}
+  :root { --bg:#0b0f14; --fg:#dfe7ef; --dim:#9ab; --accent:#7bd; --panel:#121821; --ok:#5cd68d; --warn:#ffca66; --err:#ff6e6e;}
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.5 'Noto Sans JP',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  #app { display:grid; grid-template-columns: 380px 1fr; grid-template-rows: auto 1fr; height:100%; }
+  header { grid-column: 1 / span 2; padding:8px 14px; background:#0e141c; border-bottom:1px solid #223; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  header h1{ font-size:15px; margin:0; color:#bfe; letter-spacing:.3px; }
+  header .tag{ padding:2px 6px; border-radius:6px; background:#1b2735; color:#9ed; font-size:11px; }
+  #left { border-right:1px solid #1e2733; overflow:auto; }
+  #right { position:relative; overflow:auto; }
+  canvas { display:block; width:100%; height:100%; }
+  details.panel { border-bottom:1px solid #1b2330; background:var(--panel); }
+  details.panel summary { list-style:none; cursor:pointer; padding:8px 12px; background:#111824; color:#cfe; user-select:none; font-weight:600; font-size:13px;}
+  details.panel summary::-webkit-details-marker{display:none;}
+  .content { padding:8px 12px; display:grid; gap:6px; }
+  .row { display:grid; grid-template-columns: 120px 1fr 60px; align-items:center; gap:6px; }
+  .row label{ color:#cde; font-size:12px; }
+  .row input[type="range"]{ width:100%; }
+  .row input[type="number"], .row input[type="text"], .row select { width:100%; background:#0f1520; color:#ddf; border:1px solid #263246; border-radius:5px; padding:4px 6px; font-size:12px;}
+  .row button, .btn{ background:#1a2636; color:#cff; border:1px solid #2b3b52; border-radius:6px; padding:5px 8px; cursor:pointer; font-size:12px; }
+  .row button:hover, .btn:hover{ background:#203049; }
+  .btn-primary{ background:#1a3a5a; border-color:#2a5a8a; color:#adf; font-weight:600; }
+  .btn-primary:hover{ background:#1a4a6a; }
+  .btn-danger{ background:#3a1a1a; border-color:#6a2a2a; color:#faa; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  .badge{ padding:2px 6px; border-radius:6px; font-size:11px; background:#1b2735; color:#9ed; display:inline-block; }
+  .stat{ display:flex; justify-content:space-between; border:1px solid #243143; padding:4px 8px; border-radius:6px; background:#0e141c; gap:8px; font-size:12px;}
+  .ok{ color:var(--ok) } .warn{ color:var(--warn) } .err{ color:var(--err) }
+  pre#log { white-space:pre; background:#0a0f17; border-top:1px solid #1c2635; margin:0; padding:6px 8px; max-height:160px; overflow:auto; font-size:11px; }
+  .floatStats{ position:absolute; left:12px; top:12px; background:#0b111a90; padding:6px 8px; border:1px solid #1c2a3d; border-radius:8px; backdrop-filter: blur(4px); z-index:10; }
+  .pill{ font-variant-numeric:tabular-nums; padding:2px 5px; margin-right:4px; background:#112033; border:1px solid #20324a; border-radius:999px; font-size:11px; }
+  .mini{ font-size:11px; color:#a9bfd6; }
+
+  /* Batch results */
+  #batchPanel { display:none; }
+  #batchPanel.active { display:block; }
+  .batch-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:6px; }
+  .batch-table th, .batch-table td { border:1px solid #243143; padding:3px 5px; text-align:right; }
+  .batch-table th { background:#111824; color:#9ed; text-align:center; font-weight:600; position:sticky; top:0; }
+  .batch-table td { background:#0e141c; }
+  .batch-table tr:hover td { background:#151e2c; }
+  .batch-table .cond { text-align:left; color:#cfe; font-weight:600; }
+  .progress-bar { height:6px; background:#1b2735; border-radius:3px; overflow:hidden; margin:4px 0; }
+  .progress-bar-fill { height:100%; background:linear-gradient(90deg, #5cd68d, #7bd); transition: width 0.2s; }
+  .prop-card { border:1px solid #243143; border-radius:8px; padding:8px 10px; background:#0e141c; margin:4px 0; }
+  .prop-card h4 { margin:0 0 4px 0; color:#7bd; font-size:12px; }
+  .prop-card .verdict { font-weight:700; font-size:13px; }
+  .prop-card .detail { font-size:11px; color:#9ab; margin-top:2px; }
+
+  /* Canvas mode vs batch mode */
+  #canvasWrap { width:100%; height:100%; position:relative; }
+  #batchResults { padding:12px; overflow:auto; height:100%; }
+  .tab-bar { display:flex; gap:0; border-bottom:1px solid #223; }
+  .tab-bar button { flex:1; padding:8px; background:#0e141c; color:#9ab; border:none; border-bottom:2px solid transparent; cursor:pointer; font-size:12px; font-weight:600; }
+  .tab-bar button.active { color:#7bd; border-bottom-color:#7bd; background:#121821; }
 </style>
 </head>
 <body>
 <div id="app">
+  <header>
+    <h1>TRT×PRA ABM v9</h1>
+    <span class="tag">Batch Experiment Mode</span>
+    <span class="tag">P1–P4 Proposition Testing</span>
+    <span class="tag">Factorial Design × Multi-Seed</span>
+  </header>
+
   <aside id="left">
-    <h1>TRT×PRA ABM <span class="small">Research-Ready（円錐=外形のみ）</span></h1>
-    <div class="code">原理：dy = μ(y)·dτ + σ·dW<sub>τ</sub>, &nbsp; dτ = r(u,diversity)·dt</div>
-
-    <fieldset>
-      <legend>再現性 / 実行</legend>
-      <div class="row"><label>Seed</label><input id="seed" type="number" value="12345"></div>
-      <div class="row"><label>試行回数 K</label><input id="trials" type="number" min="1" max="500" value="20"></div>
-      <div class="row"><label>dt (秒)</label><input id="dt" type="number" step="0.001" value="0.02"></div>
-      <div class="row"><label>T (秒)</label><input id="T" type="number" step="0.1" value="60"></div>
-      <div class="btns">
-        <button class="primary" id="btnStart">開始</button>
-        <button id="btnPause">一時停止</button>
-        <button id="btnReset">リセット</button>
-        <button class="ghost" id="btnStep">1ステップ</button>
+    <!-- ① Interactive mode params (collapsed by default when batch is open) -->
+    <details class="panel">
+      <summary>① インタラクティブ設定</summary>
+      <div class="content">
+        <div class="row"><label for="seed">Seed</label>
+          <input id="seed" type="number" value="1234" step="1"/><button id="btnReseed">適用</button>
+        </div>
+        <div class="row"><label for="N">粒数 N</label>
+          <input id="N" type="number" value="600" min="100" step="50"/><button id="btnApplyN">適用</button>
+        </div>
+        <div class="row"><label for="K">Projects K</label>
+          <input id="K" type="number" value="6" min="3" max="16" step="1"/><button id="btnApplyK">適用</button>
+        </div>
+        <div class="row"><label for="praSpeed">PRA速度</label><input id="praSpeed" type="range" min="0" max="2" step="0.01" value="1.0"><span id="praSpeedV">1.00</span></div>
+        <div class="row"><label for="trtSpeed">TRT速度</label><input id="trtSpeed" type="range" min="0" max="2" step="0.01" value="0.75"><span id="trtSpeedV">0.75</span></div>
+        <div class="row"><label for="dt">Δt (ms)</label><input id="dt" type="range" min="8" max="40" step="1" value="16"><span id="dtV">16</span></div>
+        <div class="row"><label for="rho">相関ショックρ</label><input id="rho" type="range" min="-0.9" max="0.95" step="0.05" value="0.3"><span id="rhoV">0.30</span></div>
+        <div class="row"><label for="eta">A更新η</label><input id="eta" type="range" min="0" max="0.5" step="0.005" value="0.05"><span id="etaV">0.050</span></div>
+        <div class="row"><label for="dirAlpha">Dirichlet α</label><input id="dirAlpha" type="range" min="0.1" max="5" step="0.1" value="1.0"><span id="dirAlphaV">1.0</span></div>
+        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
+        <div class="row"><label for="identity">同一性 I</label><input id="identity" type="range" min="0" max="1" step="0.01" value="0.75"><span id="identityV">0.75</span></div>
+        <div class="row"><label for="align">評価整合 E</label><input id="align" type="range" min="0" max="1" step="0.01" value="0.70"><span id="alignV">0.70</span></div>
+        <div class="row"><label for="hetero">案件異質 H</label><input id="hetero" type="range" min="0" max="1" step="0.01" value="0.45"><span id="heteroV">0.45</span></div>
+        <div class="row"><label for="stageZ1">境界 z1</label><input id="stageZ1" type="range" min="0.15" max="0.80" step="0.01" value="0.40"><span id="stageZ1V">0.40</span></div>
+        <div class="row"><label for="stageZ2">境界 z2</label><input id="stageZ2" type="range" min="0.20" max="0.95" step="0.01" value="0.75"><span id="stageZ2V">0.75</span></div>
+        <div class="row"><label for="tlBase">TL基礎率</label><input id="tlBase" type="range" min="0" max="1" step="0.01" value="0.25"><span id="tlBaseV">0.25</span></div>
+        <div class="row"><label for="tlKick">TL遅延量</label><input id="tlKick" type="range" min="0" max="4" step="0.05" value="1.20"><span id="tlKickV">1.20</span></div>
+        <div class="row"><label for="lambdaTRT">TRT λ</label><input id="lambdaTRT" type="range" min="0.005" max="0.20" step="0.005" value="0.05"><span id="lambdaTRTV">0.050</span></div>
+        <div class="row"><label for="secPerYear">1年=秒</label><input id="secPerYear" type="range" min="0.2" max="5" step="0.1" value="1.0"><span id="secPerYearV">1.0</span></div>
+        <div class="row"><label for="reviewSec">レビュー周期(s)</label><input id="reviewSec" type="range" min="0.5" max="8" step="0.1" value="2.0"><span id="reviewSecV">2.0</span></div>
+        <div class="grid2">
+          <label><input type="checkbox" id="ablatePRA"> PRA=0</label>
+          <label><input type="checkbox" id="ablateTRT"> TRT=0</label>
+        </div>
+        <div class="grid2">
+          <label><input type="checkbox" id="ablateTL"> TL=0</label>
+          <label><input type="checkbox" id="ablateID"> I=1</label>
+        </div>
+        <div class="grid2">
+          <button id="btnReset">リセット</button>
+          <button id="btnPause">⏸ Pause</button>
+        </div>
       </div>
-    </fieldset>
+    </details>
 
-    <fieldset>
-      <legend>環境（円錐空間：外形のみ）</legend>
-      <div class="row"><label>高さ H</label><input id="H" type="number" step="1" value="40"></div>
-      <div class="row"><label>底面半径 R</label><input id="R" type="number" step="1" value="20"></div>
-      <div class="row"><label>成功閾値 y<sub>succ</sub></label><input id="ySucc" type="number" step="0.1" value="38"></div>
-      <div class="row"><label>頂点容量 C</label><input id="vertexCap" type="number" step="1" value="6"></div>
-      <div class="row"><label>容量半径 r<sub>cap</sub></label><input id="capRadius" type="number" step="0.1" value="2"></div>
-      <div class="row"><label>混雑指数 γ (0–2)</label><input id="gammaCong" type="number" step="0.1" value="0.8"></div>
-    </fieldset>
+    <details class="panel">
+      <summary>② ライブ統計</summary>
+      <div class="content">
+        <div class="stat"><span>HHI（システム）</span><strong id="hhiSys">—</strong></div>
+        <div class="stat"><span>Simpson（=1−HHI）</span><strong id="simpsonSys">—</strong></div>
+        <div class="stat"><span>TRT_score</span><strong id="trtScore">—</strong></div>
+        <div class="stat"><span>PRA_interact</span><strong id="praInteract">—</strong></div>
+        <div class="stat"><span>TL_events（z1/z2/合計）</span><strong id="tlEvents">—</strong></div>
+        <div class="stat"><span>成功/失敗</span><strong id="succFail">—</strong></div>
+        <div class="stat"><span>平均ラグ（成功）</span><strong id="avgLag">—</strong></div>
+        <div class="stat"><span>平均TL遅延</span><strong id="avgTlDelay">—</strong></div>
+        <div class="grid2">
+          <button id="btnSnap">スナップショットCSV</button>
+          <button id="btnDL">ログCSV</button>
+        </div>
+      </div>
+      <pre id="log"></pre>
+    </details>
 
-    <fieldset>
-      <legend>TRT（縦推進）</legend>
-      <div class="row"><label>基礎成長 α<sub>0</sub></label><input id="alpha0" type="number" step="0.001" value="0.015"></div>
-      <div class="row"><label>ティップ点 y*</label><input id="yStar" type="number" step="0.1" value="28"></div>
-      <div class="row"><label>ブースト α<sub>1</sub></label><input id="alpha1" type="number" step="0.01" value="0.5"></div>
-      <div class="row"><label>滑らかさ τ<sub>s</sub></label><input id="tauS" type="number" step="0.1" value="1.5"></div>
-      <div class="row"><label>市場引力 β<sub>m</sub></label><input id="betaM" type="number" step="0.001" value="0.02"></div>
-    </fieldset>
+    <!-- ③ BATCH EXPERIMENT — the key addition -->
+    <details class="panel" open>
+      <summary>③ バッチ実験（命題検証）</summary>
+      <div class="content">
+        <div class="mini" style="margin-bottom:4px;">P1–P4検証用の因子計画実験。ヘッドレス高速実行。</div>
 
-    <fieldset>
-      <legend>PRA（水平探索）</legend>
-      <div class="row"><label>探索率 u ∈[0,1]</label><input id="uRate" type="number" min="0" max="1" step="0.01" value="0.4"></div>
-      <div class="row"><label>拡散 D<sub>0</sub></label><input id="D0" type="number" step="0.001" value="0.02"></div>
-      <div class="row"><label>中心収束 κ<sub>c</sub></label><input id="kappaC" type="number" step="0.001" value="0.03"></div>
-      <div class="row"><label>近接引力 κ<sub>p</sub></label><input id="kappaP" type="number" step="0.001" value="0.03"></div>
-      <div class="row"><label>τ効率 ρ (diversity係数)</label><input id="rhoTau" type="number" step="0.05" value="0.3"></div>
-    </fieldset>
+        <div class="row"><label>シード数</label>
+          <input id="batchSeeds" type="number" value="20" min="5" max="200" step="5"/><span class="mini">反復</span>
+        </div>
+        <div class="row"><label>実行ステップ</label>
+          <input id="batchSteps" type="number" value="8000" min="2000" max="50000" step="1000"/><span class="mini">per run</span>
+        </div>
+        <div class="row"><label>N（バッチ）</label>
+          <input id="batchN" type="number" value="400" min="100" max="2000" step="50"/><span class="mini">粒子</span>
+        </div>
+        <div class="row"><label>K（バッチ）</label>
+          <input id="batchK" type="number" value="6" min="3" max="12" step="1"/><span class="mini">案件</span>
+        </div>
 
-    <fieldset>
-      <legend>生成/人口</legend>
-      <div class="row"><label>初期 N</label><input id="N0" type="number" step="1" value="30"></div>
-      <div class="row"><label>バッチ投入 b</label><input id="batch" type="number" step="1" value="3"></div>
-      <div class="row"><label>投入間隔 Δt<sub>spawn</sub> (秒)</label><input id="spawnInt" type="number" step="0.1" value="0.8"></div>
-    </fieldset>
+        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
+        <div class="mini">因子水準（カスタム）</div>
 
-    <fieldset>
-      <legend>クラスタ検出（DBSCAN）</legend>
-      <div class="row"><label>ε (eps)</label><input id="eps" type="number" step="0.1" value="3.5"></div>
-      <div class="row"><label>MinPts</label><input id="minPts" type="number" step="1" value="3"></div>
-      <div class="row"><label>検出間隔(秒)</label><input id="detectInt" type="number" step="0.1" value="0.5"></div>
-    </fieldset>
+        <div class="row"><label>I_high / I_low</label>
+          <input id="bI_high" type="number" value="0.85" min="0" max="1" step="0.05"/>
+          <input id="bI_low" type="number" value="0.20" min="0" max="1" step="0.05"/>
+        </div>
+        <div class="row"><label>E_high / E_low</label>
+          <input id="bE_high" type="number" value="0.80" min="0" max="1" step="0.05"/>
+          <input id="bE_low" type="number" value="0.25" min="0" max="1" step="0.05"/>
+        </div>
+        <div class="row"><label>PRA速度(on/off)</label>
+          <input id="bPRA_on" type="number" value="1.0" min="0" max="2" step="0.1"/>
+          <input id="bPRA_off" type="number" value="0.0" min="0" max="2" step="0.1"/>
+        </div>
 
-    <div class="btns">
-      <button id="btnExportSnapshot">スナップCSV</button>
-      <button id="btnExportSummary">サマリCSV</button>
-      <button id="btnExportConfig">設定JSON</button>
-      <button class="warn" id="btnHeadless">ヘッドレスK試行CSV</button>
-    </div>
+        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
+        <div class="mini">追加固定パラメータ</div>
+        <div class="row"><label>H（異質性）</label>
+          <input id="bH" type="number" value="0.45" min="0" max="1" step="0.05"/><span></span>
+        </div>
+        <div class="row"><label>TL基礎率</label>
+          <input id="bTlBase" type="number" value="0.25" min="0" max="1" step="0.05"/><span></span>
+        </div>
+        <div class="row"><label>TL遅延量</label>
+          <input id="bTlKick" type="number" value="1.20" min="0" max="4" step="0.1"/><span></span>
+        </div>
+        <div class="row"><label>TRT λ</label>
+          <input id="bLambda" type="number" value="0.05" min="0.005" max="0.2" step="0.005"/><span></span>
+        </div>
 
-    <h2>リアルタイム指標</h2>
-    <div class="stats">
-      <div class="stat"><h3>t（実時間, s）</h3><div class="v" id="stat_t">0.00</div></div>
-      <div class="stat"><h3>τ（内生時間）</h3><div class="v" id="stat_tau">0.00</div></div>
-      <div class="stat"><h3>成功数</h3><div class="v" id="stat_succ">0</div></div>
-      <div class="stat"><h3>成功率</h3><div class="v" id="stat_rate">0.0%</div></div>
-      <div class="stat"><h3>アクティブ</h3><div class="v" id="stat_active">0</div></div>
-      <div class="stat"><h3>クラスタ数</h3><div class="v" id="stat_clusters">0</div></div>
-      <div class="stat"><h3>最大クラスタ</h3><div class="v" id="stat_maxcl">0</div></div>
-      <div class="stat"><h3>TDCI(τ)</h3><div class="v" id="stat_tdci">0.000</div></div>
-    </div>
+        <div class="progress-bar"><div class="progress-bar-fill" id="batchProgress" style="width:0%"></div></div>
+        <div id="batchStatus" class="mini">待機中</div>
 
-    <div class="sep"></div>
-    <div class="code" id="logBox" style="max-height:180px">ready.</div>
+        <div class="grid2" style="margin-top:4px;">
+          <button class="btn btn-primary" id="btnBatchRun">▶ バッチ実行</button>
+          <button class="btn btn-danger" id="btnBatchStop">■ 中断</button>
+        </div>
+        <div class="grid2">
+          <button class="btn" id="btnBatchCSV" disabled>結果CSV</button>
+          <button class="btn" id="btnBatchFullCSV" disabled>全runCSV</button>
+        </div>
+      </div>
+    </details>
   </aside>
 
   <main id="right">
-    <canvas id="canvas"></canvas>
-    <div id="toast"></div>
+    <div class="tab-bar">
+      <button class="active" id="tabVis">3D可視化</button>
+      <button id="tabBatch">バッチ結果・命題検証</button>
+    </div>
+
+    <div id="canvasWrap">
+      <div class="floatStats" id="floatStats">
+        <span class="pill">fps <span id="fps">—</span></span>
+        <span class="pill">N <span id="statN">—</span></span>
+        <span class="pill">K <span id="statK">—</span></span>
+        <span class="pill">z1 <span id="statZ1">—</span></span>
+        <span class="pill">z2 <span id="statZ2">—</span></span>
+      </div>
+      <canvas id="c"></canvas>
+    </div>
+
+    <div id="batchResults" style="display:none;">
+      <h3 style="color:#7bd;margin:0 0 8px 0;">バッチ実験結果</h3>
+      <div id="propCards"></div>
+      <h4 style="color:#9ed;margin:12px 0 6px 0;">条件別サマリ（Mean ± SD, n=seeds）</h4>
+      <div style="overflow-x:auto;">
+        <table class="batch-table" id="batchTable">
+          <thead><tr><th>条件</th><th>I</th><th>E</th><th>PRA</th><th>TL_events<br>(mean±sd)</th><th>TL1_events</th><th>TL2_events</th><th>Lag<br>(mean±sd)</th><th>TRT_score<br>(mean±sd)</th><th>PRA_interact<br>(mean±sd)</th><th>Success<br>(mean±sd)</th><th>Fail<br>(mean±sd)</th><th>HHI<br>(mean±sd)</th></tr></thead>
+          <tbody id="batchTableBody"></tbody>
+        </table>
+      </div>
+      <h4 style="color:#9ed;margin:12px 0 6px 0;">命題別対比（差の検定）</h4>
+      <div style="overflow-x:auto;">
+        <table class="batch-table" id="propTable">
+          <thead><tr><th>命題</th><th>比較</th><th>指標</th><th>条件A (mean±sd)</th><th>条件B (mean±sd)</th><th>差 (A−B)</th><th>Cohen's d</th><th>支持</th></tr></thead>
+          <tbody id="propTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </main>
 </div>
 
-<!-- three.js ESM (安定版)。CDNはこの2本のみ。 -->
-<script type="module">
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+<script>
+/* ===== Fatal overlay ===== */
+function __fatal(t,d){
+  const h=document.getElementById('right')||document.body;
+  const b=document.createElement('div');
+  b.style.cssText='position:absolute;inset:12px;background:#0b111ae6;border:1px solid #2b3b52;border-radius:12px;padding:12px;z-index:9999;color:#dfe7ef;font:13px/1.6 sans-serif;overflow:auto;';
+  b.innerHTML=`<div style="font-weight:700">${t}</div><div style="white-space:pre-wrap;color:#cbd6e3;margin-top:6px">${d||''}</div>`;
+  h.appendChild(b);
+}
+function __loadScript(u){return new Promise((r,e)=>{const s=document.createElement('script');s.src=u;s.async=true;s.onload=()=>r();s.onerror=()=>e(new Error('load:'+u));document.head.appendChild(s)})}
 
-/***  ユーティリティ／RNG  ***/
-function mulberry32(seed){ let a=seed>>>0; return function(){ a+=0x6D2B79F5; let t=Math.imul(a^(a>>>15),1|a); t^=t+Math.imul(t^(t>>>7),61|t); return ((t^(t>>>14))>>>0)/4294967296; } }
-function gaussian(rng){ let u=0,v=0; while(u===0) u=rng(); while(v===0) v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+/* ===== CORE ENGINE (shared between interactive & batch) ===== */
+const EPS=1e-9;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-const smoothStep=(x,tau)=>1/(1+Math.exp(-x/Math.max(1e-6,tau)));
-const UI=(sel)=>document.querySelector(sel);
-const toast=(msg)=>{ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; UI('#toast').appendChild(t); setTimeout(()=>t.remove(), 4200); };
-function download(content, name, mime){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:mime})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
 
-/***  角度多様性とTDCI  ***/
-function angularDiversity(points, bins=16){
-  if(points.length===0) return 0;
-  const hist=new Array(bins).fill(0);
-  for(const p of points){
-    const ang=Math.atan2(p.z,p.x);
-    let k=Math.floor(((ang+Math.PI)/(2*Math.PI))*bins); if(k===bins) k=bins-1;
-    hist[k]++;
+function makeRNG(seed){let t=seed>>>0;return function(){t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+function nd(rng){return Math.sqrt(-2*Math.log(rng()+EPS))*Math.cos(2*Math.PI*rng())}
+function gammaRand(a,rng){if(a<1){return gammaRand(1+a,rng)*Math.pow(rng(),1/a)}const d=a-1/3,c=1/Math.sqrt(9*d);while(true){let x,v;do{x=nd(rng);v=1+c*x}while(v<=0);v=v*v*v;const u=rng();if(u<1-0.0331*(x*x)*(x*x))return d*v;if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v)))return d*v}}
+function dirichletSym(K,alpha,rng){const v=new Float64Array(K);let s=0;for(let k=0;k<K;k++){const g=gammaRand(alpha,rng);v[k]=g;s+=g}if(s<=0){const u=1/K;for(let k=0;k<K;k++)v[k]=u;return v}for(let k=0;k<K;k++)v[k]/=s;return v}
+
+function normalizeRow(A){let s=0;for(let k=0;k<A.length;k++){if(!Number.isFinite(A[k])||A[k]<0)A[k]=0;s+=A[k]}if(s<=0){const u=1/A.length;for(let k=0;k<A.length;k++)A[k]=u;return}const inv=1/s;for(let k=0;k<A.length;k++)A[k]*=inv}
+function rowHHI(A){let s=0;for(let k=0;k<A.length;k++)s+=A[k]*A[k];return s}
+
+/* ===== Simulation Engine Class ===== */
+class TRTPRAEngine {
+  constructor(cfg){
+    this.cfg = Object.assign({
+      N:400, K:6, poolMass:1.0, height:10.0, radius:6.0,
+      praSpeed:1.0, trtSpeed:0.75, dtMs:16, eta:0.05, dirAlpha:1.0, rho:0.3,
+      identity:0.75, align:0.70, hetero:0.45,
+      stageFrac1:0.40, stageFrac2:0.75,
+      tlBase:0.25, tlKick:1.20, lambdaTRT:0.05,
+      secPerYear:1.0, reviewEveryMs:2000,
+      ablatePRA:false, ablateTRT:false, ablateTL:false, ablateID:false,
+      seed:1234
+    }, cfg);
+    this.reset();
   }
-  const N=points.length; let sumsq=0;
-  for(const h of hist){ const pr=h/N; sumsq+=pr*pr; }
-  return 1 - sumsq; // Simpson
-}
 
-/***  空間ハッシュ（DBSCAN & 近接力用）  ***/
-class SpatialHash{
-  constructor(cell){ this.cell=cell; this.map=new Map(); }
-  key(i,j,k){ return `${i}|${j}|${k}`; }
-  idx(x,y,z){ return [Math.floor(x/this.cell), Math.floor(y/this.cell), Math.floor(z/this.cell)]; }
-  clear(){ this.map.clear(); }
-  insert(id, p){ const [i,j,k]=this.idx(p.x,p.y,p.z); const key=this.key(i,j,k); if(!this.map.has(key)) this.map.set(key,[]); this.map.get(key).push(id); }
-  query(p, r){ const c=this.cell; const [i0,j0,k0]=this.idx(p.x,p.y,p.z); const L=Math.ceil(r/c); const out=[]; for(let i=-L;i<=L;i++) for(let j=-L;j<=L;j++) for(let k=-L;k<=L;k++){ const arr=this.map.get(this.key(i0+i,j0+j,k0+k)); if(arr) out.push(...arr); } return out; }
-}
+  reset(){
+    const c=this.cfg;
+    this.rng=makeRNG(c.seed);
+    this.tSim=0;
+    this.nextId=1;
 
-/***  物理コア（可視化・ヘッドレス共通）  ***/
-class ABMCore{
-  constructor(params){ this.p={...params}; this.resetState(); }
-  resetState(){ this.t=0; this.tau=0; this.lastSpawn=0; this.succ=0; this.totalSpawned=0; this.particles=[]; this.grid=new SpatialHash(this.p.eps); this.tdci=0; this._lam=0.2; this._id=1; }
-  radius(y){ const {H,R}=this.p; return R*(1-clamp(y/H,0,1)); }
-  timeDensity(u,div){ return Math.max(1e-6, (1-u) * (1 - this.p.rhoTau * div)); } // dτ/dt
-  driftY(y){ const {H,alpha0,alpha1,yStar,tauS,betaM,ySucc}=this.p; const rel=1-y/H; const tip=1 + alpha1*smoothStep(yStar - y, tauS); const pull = (y>0.7*H? betaM*(ySucc-y)/Math.max(1, H*0.05):0); return alpha0*rel*tip + pull; }
-  randomInitPos(rng){ const r=this.p.R*0.9*Math.sqrt(rng()); const th=2*Math.PI*rng(); return new THREE.Vector3(r*Math.cos(th),1.0,r*Math.sin(th)); }
-  spawn(n,rng){ for(let i=0;i<n;i++){ this.particles.push({ id:this._id++, pos:this.randomInitPos(rng), alive:true, succT:null }); } this.totalSpawned+=n; }
-  init(rng){ this.particles=[]; this._id=1; this.spawn(this.p.N0,rng); }
-  step(dt,rng){
-    const P=this.p;
-    const act=this.particles.filter(q=>q.alive).map(q=>q.pos);
-    const div=angularDiversity(act, 16);
-    const dTau=this.timeDensity(P.uRate, div)*dt; // 内生時間
-    this.tau+=dTau;
+    // build project dirs & similarity
+    this.projDir=[];
+    for(let k=0;k<c.K;k++){
+      const th=2*Math.PI*k/c.K;
+      this.projDir.push({x:Math.cos(th),y:Math.sin(th)});
+    }
+    this.sim=new Float32Array(c.K*c.K);
+    this.rebuildSim();
+    this.shocks=new Float64Array(c.K);
 
-    // 頂点容量混雑
-    const apex=new THREE.Vector3(0,P.H,0); let near=0;
-    for(const q of this.particles){ if(q.alive && q.pos.distanceTo(apex)<P.capRadius) near++; }
-    const cong=Math.pow(Math.min(1, P.vertexCap/Math.max(1,near)), P.gammaCong);
+    // stats
+    this.successByProj=new Array(c.K).fill(0);
+    this.failCount=0;
+    this.tlEventsTotal=0;
+    this.tlEventsByB=[0,0];
+    this.tlDelayTotalMs=0; this.tlDelayTotalMsByB=[0,0];
+    this.tlDelayEpisodes=0; this.tlDelayEpisodesByB=[0,0];
+    this.tlDelaySuccSumMs=0; this.tlDelaySuccSumMsByB=[0,0];
+    this.succLagSum=0; this.succLagN=0;
+    this.TRT_num=0; this.TRT_den=0; this.TRT_score=0; this.lastAggMs=0; this.lastHHI=0;
 
-    // 空間ハッシュ更新
-    this.grid.clear(); for(const q of this.particles){ if(q.alive) this.grid.insert(q.id, q.pos); }
+    // particles
+    this.P=[];
+    for(let i=0;i<c.N;i++) this.P.push(this.makeParticle());
+  }
 
-    const eps2=P.eps*P.eps; const kNN=6;
-    for(const q of this.particles){
-      if(!q.alive) continue;
-      const y=q.pos.y;
+  rebuildSim(){
+    const c=this.cfg, K=c.K;
+    for(let k=0;k<K;k++)for(let l=0;l<K;l++){
+      if(k===l){this.sim[k*K+l]=1;continue}
+      const d=Math.min(Math.abs(k-l),K-Math.abs(k-l));
+      const dn=d/(K/2);
+      this.sim[k*K+l]=clamp(c.align*Math.exp(-c.hetero*dn*3),0,1);
+    }
+  }
 
-      // 縦方向（τ時間でのドリフト、ノイズは0で安定化）
-      const muY=this.driftY(y)*cong;
-      const dy=muY*dTau;
+  makeParticle(){
+    const c=this.cfg;
+    const id=this.nextId++;
+    const r=c.radius*Math.sqrt(this.rng());
+    const th=2*Math.PI*this.rng();
+    const row=dirichletSym(c.K,c.dirAlpha,this.rng);
+    const A=new Float32Array(c.K);
+    for(let k=0;k<c.K;k++)A[k]=row[k];
+    const hhi0=rowHHI(A);
+    return {
+      id, gen:0, mass:c.poolMass/c.N,
+      x:r*Math.cos(th), y:r*Math.sin(th), z:0,
+      vx:0.2*Math.cos(2*Math.PI*this.rng()), vy:0.2*Math.sin(2*Math.PI*this.rng()), vz:0,
+      A, cycleStart:this.tSim,
+      tlEventsByB:[0,0], tlPendingStartByB:[null,null], tlDelayCycleMsByB:[0,0],
+      hhiEwma:hhi0, hhiEwmaPrev:hhi0
+    };
+  }
 
-      // 水平（τ拡散 + 中央収束 + 近接引力）
-      const D=P.D0*P.uRate;
-      const dxDiff=Math.sqrt(2*D*Math.max(dTau,0))*gaussian(rng);
-      const dzDiff=Math.sqrt(2*D*Math.max(dTau,0))*gaussian(rng);
-      const cx=-P.kappaC*q.pos.x*dTau, cz=-P.kappaC*q.pos.z*dTau;
+  rowCoherence(A){
+    const K=A.length;let num=0,den=0;
+    for(let k=0;k<K;k++)for(let l=k+1;l<K;l++){
+      const w=A[k]*A[l];den+=w;num+=w*this.sim[k*K+l];
+    }
+    return den<=EPS?1:clamp(num/den,0,1);
+  }
 
-      // 近接重心
-      const ids=this.grid.query(q.pos,P.eps); const neigh=[];
-      for(const id of ids){
-        if(id===q.id) continue;
-        const other=this.particles.find(p=>p.id===id); if(!other||!other.alive) continue;
-        const dx0=other.pos.x-q.pos.x, dy0=other.pos.y-q.pos.y, dz0=other.pos.z-q.pos.z;
-        const d2=dx0*dx0+dy0*dy0+dz0*dz0; if(d2<=eps2) neigh.push({ref:other, d2});
-      }
-      neigh.sort((a,b)=>a.d2-b.d2); const take=Math.min(kNN,neigh.length);
-      let px=0,pz=0; if(take>0){ for(let i=0;i<take;i++){ px+=neigh[i].ref.pos.x; pz+=neigh[i].ref.pos.z; } px/=take; pz/=take; px-=q.pos.x; pz-=q.pos.z; }
-      const dxPeer=P.kappaP*px*dTau, dzPeer=P.kappaP*pz*dTau;
+  coneRadiusAtZ(z){return this.cfg.radius*(1-clamp(z/this.cfg.height,0,1))}
 
-      // 合成
-      q.pos.x += dxDiff + cx + dxPeer;
-      q.pos.z += dzDiff + cz + dzPeer;
-      q.pos.y = Math.max(0, y+dy);
+  step(){
+    const c=this.cfg, dt=c.dtMs, K=c.K;
+    const dtSec=dt*0.001;
 
-      // 円錐側面で反射（外形のみ）
-      const rad=this.radius(q.pos.y); const rr=Math.hypot(q.pos.x,q.pos.z);
-      if(rr>rad){ const s=rad/rr; q.pos.x*=s; q.pos.z*=s; }
-
-      // 成功
-      if(q.pos.y>=P.ySucc){ q.alive=false; q.succT=this.t; this.succ++; }
+    // shocks
+    const common=nd(this.rng)*0.03;
+    for(let k=0;k<K;k++){
+      const idio=nd(this.rng)*0.03;
+      this.shocks[k]=0.95*this.shocks[k]+c.rho*common+(1-c.rho)*idio;
     }
 
-    // スポーン
-    if(this.t - this.lastSpawn >= P.spawnInt){ this.spawn(P.batch,rng); this.lastSpawn=this.t; }
-    this.t += dt;
+    // softmax target
+    const beta=10;let mx=-1e9;
+    for(let k=0;k<K;k++)mx=Math.max(mx,this.shocks[k]);
+    let Z=0;const T=new Float64Array(K);
+    for(let k=0;k<K;k++){T[k]=Math.exp(beta*(this.shocks[k]-mx));Z+=T[k]}
+    for(let k=0;k<K;k++)T[k]/=Z;
 
-    // TDCI(τ) を指数平滑
-    const bins=16; const hist=new Array(bins).fill(0);
-    const alivePts=act; for(const Pp of alivePts){ const ang=Math.atan2(Pp.z,Pp.x); let k=Math.floor(((ang+Math.PI)/(2*Math.PI))*bins); if(k===bins) k=bins-1; hist[k]++; }
-    let s=0; const N=Math.max(1,alivePts.length); for(const h of hist){ const p=h/N; s+=p*p; }
-    const lam=0.2; this.tdci = (1-lam)*this.tdci + lam*s;
-  }
-}
+    const inReview=(c.reviewEveryMs>0)&&((this.tSim%c.reviewEveryMs)<dt);
+    const etaEff=c.eta*(inReview?4:1);
+    const z1=c.height*c.stageFrac1, z2=c.height*c.stageFrac2;
 
-/***  DBSCAN（簡易）  ***/
-class Clusterer{
-  constructor(eps, minPts){ this.eps=eps; this.minPts=minPts; this.grid=new SpatialHash(eps); }
-  detect(points){ // points: [{id,pos}]
-    this.grid.clear();
-    const visited=new Set(); const labels=new Map(); const pointsById=new Map(points.map(p=>[p.id,p]));
-    for(const p of points){ this.grid.insert(p.id, p.pos); }
-    const clusters=[]; const eps2=this.eps*this.eps;
-    const neighOf=(p)=>{ const ids=this.grid.query(p.pos, this.eps); const arr=[]; for(const id of ids){ if(id===p.id) continue; const q=pointsById.get(id); if(!q) continue; const dx=q.pos.x-p.pos.x, dy=q.pos.y-p.pos.y, dz=q.pos.z-p.pos.z; const d2=dx*dx+dy*dy+dz*dz; if(d2<=eps2) arr.push(q); } return arr; };
+    for(const p of this.P){
+      // allocation update
+      for(let k=0;k<K;k++){
+        p.A[k]+=etaEff*(T[k]-p.A[k])+0.01*(this.rng()-0.5);
+        if(p.A[k]<0)p.A[k]=0;
+      }
+      const early=clamp(1-p.z/(z1+EPS),0,1);
+      const late=clamp((p.z-z2)/((c.height-z2)+EPS),0,1);
+      const gamma=(1-0.6*early)*(1+1.8*late);
+      for(let k=0;k<K;k++)p.A[k]=Math.pow(p.A[k]+EPS,gamma);
+      normalizeRow(p.A);
 
-    for(const p of points){
-      if(visited.has(p.id)) continue;
-      visited.add(p.id);
-      const neigh=neighOf(p);
-      if(neigh.length+1 < this.minPts){ labels.set(p.id,-1); continue; }
-      const cluster=[]; clusters.push(cluster);
-      cluster.push(p); labels.set(p.id, clusters.length-1);
-      const seed=[...neigh];
-      while(seed.length){
-        const q=seed.pop();
-        if(!visited.has(q.id)){
-          visited.add(q.id);
-          const neigh2=neighOf(q);
-          if(neigh2.length+1>=this.minPts) seed.push(...neigh2);
-        }
-        if(!labels.has(q.id) || labels.get(q.id)===-1){
-          labels.set(q.id, clusters.length-1); cluster.push(q);
+      const hhi=rowHHI(p.A);
+      const dtYear=(dt*0.001)/Math.max(EPS,c.secPerYear);
+      const alpha=1-Math.exp(-c.lambdaTRT*dtYear);
+      p.hhiEwmaPrev=p.hhiEwma;
+      p.hhiEwma+= alpha*(hhi-p.hhiEwma);
+
+      // horizontal motion
+      if(!c.ablatePRA && c.praSpeed>0){
+        let cx=0,cy=0;
+        for(let k=0;k<K;k++){cx+=p.A[k]*this.projDir[k].x;cy+=p.A[k]*this.projDir[k].y}
+        const clen=Math.hypot(cx,cy);
+        let dx,dy;
+        if(clen>1e-6){dx=cx/clen;dy=cy/clen}
+        else{const vl=Math.hypot(p.vx,p.vy);if(vl>1e-6){dx=p.vx/vl;dy=p.vy/vl}else{const t2=2*Math.PI*this.rng();dx=Math.cos(t2);dy=Math.sin(t2)}}
+        const focN=(hhi-1/K)/(1-1/K);
+        const div=1-focN;
+        const coh=this.rowCoherence(p.A);
+        const comp=c.align*coh;
+        const conf=(1-c.align)*div;
+        const amp=c.praSpeed*clamp(0.12+0.55*div+0.25*comp-0.30*conf,0,2);
+        const tau=0.45,a2=1-Math.exp(-dtSec/Math.max(EPS,tau));
+        p.vx+=a2*(dx*amp-p.vx);p.vy+=a2*(dy*amp-p.vy);
+        const noise=0.35*c.praSpeed*(0.25+0.75*div)*(0.2+0.8*(1-c.align));
+        const sdt=Math.sqrt(Math.max(EPS,dtSec));
+        p.vx+=noise*sdt*nd(this.rng);p.vy+=noise*sdt*nd(this.rng);
+        const vmax=2.2*c.praSpeed+0.25;
+        const sp=Math.hypot(p.vx,p.vy);
+        if(sp>vmax){const s2=vmax/(sp+EPS);p.vx*=s2;p.vy*=s2}
+      }else{p.vx=0;p.vy=0}
+
+      // vertical velocity
+      let vz=0;
+      if(!c.ablateTRT && c.trtSpeed>0){
+        const focN=(hhi-1/K)/(1-1/K);
+        const div=1-focN;
+        const dh=p.hhiEwma-p.hhiEwmaPrev;
+        const wE=1-smoothstep(0,z1,p.z);
+        const wL=smoothstep(z2,c.height,p.z);
+        const wM=clamp(1-wE-wL,0,1);
+        const coh=this.rowCoherence(p.A);
+        const praComp=c.align*coh;
+        const praConf=(1-c.align)*div;
+        const bias=0.06*wE+0.14*wM+0.22*wL;
+        vz+=c.trtSpeed*(0.65*wE*div*(0.4+0.6*praComp)+0.50*wM*(0.45*focN+0.55*div)*(0.55+0.45*praComp)+0.75*wL*focN);
+        vz-=c.trtSpeed*(0.22*wM*praConf+0.60*wL*praConf);
+        vz+=c.trtSpeed*6*dh;
+        vz-=c.trtSpeed*bias;
+      }
+
+      const prevZ=p.z;
+      p.x+=p.vx*dtSec;p.y+=p.vy*dtSec;p.z+=vz*dtSec;
+
+      // TL at boundaries
+      if(!c.ablateTL){
+        const bounds=[z1,z2];
+        for(let b=0;b<2;b++){
+          const bz=bounds[b];
+          // resolve pending delay
+          if(p.tlPendingStartByB[b]!==null && p.z>=bz){
+            const delay=Math.max(0,this.tSim+dt-p.tlPendingStartByB[b]);
+            p.tlDelayCycleMsByB[b]+=delay;
+            this.tlDelayTotalMsByB[b]+=delay;this.tlDelayEpisodesByB[b]++;
+            this.tlDelayTotalMs+=delay;this.tlDelayEpisodes++;
+            p.tlPendingStartByB[b]=null;
+          }
+          // crossing check
+          if(prevZ<bz && p.z>=bz){
+            const I2=c.ablateID?1:c.identity;
+            const focN2=(hhi-1/K)/(1-1/K);
+            const div2=1-focN2;
+            const coh2=this.rowCoherence(p.A);
+            const span2=1-coh2;
+            const mis=1-c.align;
+            let prob=c.tlBase*(1-I2)*(0.55+0.45*div2)*(0.45+0.55*(mis+0.8*span2));
+            prob=clamp(prob,0,0.95);
+            if(this.rng()<prob){
+              this.tlEventsByB[b]++;this.tlEventsTotal++;p.tlEventsByB[b]++;
+              p.tlPendingStartByB[b]=this.tSim+dt;
+              const kick=c.tlKick*(0.6+0.7*span2)*(0.6+0.4*mis);
+              p.z=clamp(bz-0.15-kick,0,c.height);
+              for(let k=0;k<K;k++)p.A[k]=Math.pow(p.A[k]+EPS,0.72);
+              normalizeRow(p.A);
+            }
+          }
         }
       }
+
+      // boundaries
+      if(p.z<0){this.recycle(p,'fail');continue}
+      if(p.z>c.height){
+        let arg=0,best=-1;for(let k=0;k<K;k++)if(p.A[k]>best){best=p.A[k];arg=k}
+        this.successByProj[arg]++;
+        this.recycle(p,'success');continue;
+      }
+      const rmax=this.coneRadiusAtZ(p.z);
+      const rxy=Math.hypot(p.x,p.y);
+      if(rxy>rmax){const s3=rmax/(rxy+EPS);p.x*=s3;p.y*=s3}
     }
-    return clusters.map(members=>{
-      const c=new THREE.Vector3(); for(const m of members){ c.add(m.pos); } c.multiplyScalar(1/members.length);
-      return {members, center:c};
-    });
+    this.tSim+=dt;
+  }
+
+  recycle(p,event){
+    if(event==='fail')this.failCount++;
+    if(event==='success'){
+      const lag=Math.max(0,this.tSim-p.cycleStart);
+      this.succLagSum+=lag;this.succLagN++;
+      this.tlDelaySuccSumMsByB[0]+=(p.tlDelayCycleMsByB[0]||0);
+      this.tlDelaySuccSumMsByB[1]+=(p.tlDelayCycleMsByB[1]||0);
+      this.tlDelaySuccSumMs+=(p.tlDelayCycleMsByB[0]||0)+(p.tlDelayCycleMsByB[1]||0);
+    }
+    const c=this.cfg;
+    p.gen++;
+    const r=c.radius*Math.sqrt(this.rng());
+    const th=2*Math.PI*this.rng();
+    p.x=r*Math.cos(th);p.y=r*Math.sin(th);p.z=0;
+    const thV=2*Math.PI*this.rng();
+    p.vx=0.2*Math.cos(thV);p.vy=0.2*Math.sin(thV);
+    const I2=c.ablateID?1:c.identity;
+    const row=dirichletSym(c.K,c.dirAlpha,this.rng);
+    for(let k=0;k<c.K;k++)p.A[k]=I2*p.A[k]+(1-I2)*row[k];
+    normalizeRow(p.A);
+    p.cycleStart=this.tSim;
+    p.tlEventsByB=[0,0];p.tlPendingStartByB=[null,null];p.tlDelayCycleMsByB=[0,0];
+    const h0=rowHHI(p.A);p.hhiEwma=h0;p.hhiEwmaPrev=h0;
+  }
+
+  aggregate(){
+    const c=this.cfg, K=c.K;
+    const M=new Float64Array(K);
+    for(const p of this.P)for(let k=0;k<K;k++)M[k]+=p.mass*p.A[k];
+    let hhi=0;for(let k=0;k<K;k++){const s=M[k]/c.poolMass;hhi+=s*s}
+
+    let num=0,den=0;
+    for(let k=0;k<K;k++)for(let l=k+1;l<K;l++){
+      const w=(M[k]/c.poolMass)*(M[l]/c.poolMass);den+=w;num+=w*this.sim[k*K+l];
+    }
+    const praNet=den<=EPS?0:clamp(num/den,0,1);
+    const praInteract=clamp(2*num,0,1);
+
+    // TRT_score update
+    const dtAgg=Math.max(1,this.tSim-this.lastAggMs);
+    const dtY=(dtAgg*0.001)/Math.max(EPS,c.secPerYear);
+    const w2=Math.exp(-c.lambdaTRT*dtY);
+    this.TRT_num=w2*this.TRT_num+hhi;
+    this.TRT_den=w2*this.TRT_den+1;
+    this.TRT_score=this.TRT_den>EPS?(this.TRT_num/this.TRT_den):hhi;
+    this.lastAggMs=this.tSim;this.lastHHI=hhi;
+
+    const succTotal=this.successByProj.reduce((a,b)=>a+b,0);
+    const avgLag=this.succLagN>0?(this.succLagSum/this.succLagN/1000):0;
+    return {HHI:hhi,Simpson:1-hhi,TRT_score:this.TRT_score,PRA_net:praNet,PRA_interact:praInteract,
+      tlEvents:this.tlEventsTotal,tlE1:this.tlEventsByB[0],tlE2:this.tlEventsByB[1],
+      success:succTotal,fail:this.failCount,avgLag,M};
   }
 }
 
-/***  3Dレンダラ（InstancedMesh・円錐外形のみ）  ***/
-class Renderer3D{
-  constructor(canvas, H, R){
-    this.canvas=canvas;
-    this.scene=new THREE.Scene(); this.scene.background=new THREE.Color(0x0b1020);
-    this.camera=new THREE.PerspectiveCamera(60, canvas.clientWidth/canvas.clientHeight, 0.1, 2000);
-    this.camera.position.set(60,45,60); this.camera.lookAt(0,H/2,0);
-    this.renderer=new THREE.WebGLRenderer({canvas, antialias:true});
-    this.controls=new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0,H/2,0);
+/* ===== BATCH EXPERIMENT ENGINE ===== */
+let batchRunning=false, batchCancel=false;
+let batchAllRuns=[];  // all individual run results
+let batchSummary=[];  // condition-level summary
 
-    const amb=new THREE.AmbientLight(0xffffff,.7); this.scene.add(amb);
-    const dir=new THREE.DirectionalLight(0xffffff,.9); dir.position.set(80,120,40); this.scene.add(dir);
+async function runBatchExperiment(){
+  if(batchRunning)return;
+  batchRunning=true;batchCancel=false;
+  batchAllRuns=[];batchSummary=[];
 
-    this.updateCone(H,R);
+  const $=id=>document.getElementById(id);
+  const nSeeds=Math.max(3,+$('batchSeeds').value||20);
+  const nSteps=Math.max(500,+$('batchSteps').value||8000);
+  const N=Math.max(50,+$('batchN').value||400);
+  const K=clamp(+$('batchK').value||6,3,12);
+  const I_h=+$('bI_high').value, I_l=+$('bI_low').value;
+  const E_h=+$('bE_high').value, E_l=+$('bE_low').value;
+  const PRA_on=+$('bPRA_on').value, PRA_off=+$('bPRA_off').value;
+  const H=+$('bH').value, tlBase=+$('bTlBase').value, tlKick=+$('bTlKick').value, lambda=+$('bLambda').value;
 
-    const g=new THREE.SphereGeometry(0.35,16,16);
-    const m=new THREE.MeshPhongMaterial({color:0x60a5fa, emissive:0x2563eb, emissiveIntensity:.18});
-    this.capacity=8000;
-    this.im=new THREE.InstancedMesh(g,m,this.capacity);
-    this.im.count=0; this.scene.add(this.im);
-    this.tmp=new THREE.Matrix4();
-
-    window.addEventListener('resize',()=>this.resize());
-    this.resize();
-  }
-  resize(){ const w=this.canvas.clientWidth, h=this.canvas.clientHeight; this.renderer.setSize(w,h,false); this.camera.aspect=w/Math.max(1,h); this.camera.updateProjectionMatrix(); }
-  updateCone(H,R){
-    if(this.cone){ this.scene.remove(this.cone); this.cone.geometry.dispose(); this.cone.material.dispose(); }
-    const coneGeom=new THREE.CylinderGeometry(0,R,H, 48, 1, true); // open-ended, side-only
-    const coneMat=new THREE.MeshPhongMaterial({color:0x4b5563, transparent:true, opacity:0.12, side:THREE.DoubleSide});
-    this.cone=new THREE.Mesh(coneGeom, coneMat); this.cone.position.y=H/2; this.scene.add(this.cone);
-  }
-  updateParticles(positions){
-    const n=Math.min(positions.length, this.capacity); this.im.count=n;
-    for(let i=0;i<n;i++){ const p=positions[i]; this.tmp.makeTranslation(p.x,p.y,p.z); this.im.setMatrixAt(i,this.tmp); }
-    this.im.instanceMatrix.needsUpdate=true;
-  }
-  render(){ this.controls.update(); this.renderer.render(this.scene,this.camera); }
-}
-
-/***  コントローラ  ***/
-function readParams(){
-  return {
-    // env
-    H:+UI('#H').value, R:+UI('#R').value, ySucc:+UI('#ySucc').value,
-    vertexCap:+UI('#vertexCap').value, capRadius:+UI('#capRadius').value, gammaCong:+UI('#gammaCong').value,
-    // TRT
-    alpha0:+UI('#alpha0').value, alpha1:+UI('#alpha1').value, yStar:+UI('#yStar').value, tauS:+UI('#tauS').value, betaM:+UI('#betaM').value,
-    // PRA
-    uRate:+UI('#uRate').value, D0:+UI('#D0').value, kappaC:+UI('#kappaC').value, kappaP:+UI('#kappaP').value, rhoTau:+UI('#rhoTau').value,
-    // population
-    N0:+UI('#N0').value, batch:+UI('#batch').value, spawnInt:+UI('#spawnInt').value,
-    // clustering
-    eps:+UI('#eps').value, minPts:+UI('#minPts').value, detectInt:+UI('#detectInt').value
-  };
-}
-
-let core=null, rng=null, view=null, clusterer=null;
-let running=false, detectAcc=0;
-
-function resetAll(){
-  const p=readParams();
-  core=new ABMCore(p);
-  rng=mulberry32(+UI('#seed').value||12345);
-  core.init(rng);
-  clusterer=new Clusterer(p.eps, p.minPts);
-  if(view){ view.updateCone(p.H,p.R); }
-  updateStats(); draw(); toast('リセット完了 / Seed='+UI('#seed').value);
-}
-
-function updateStats(){
-  UI('#stat_t').textContent=core.t.toFixed(2);
-  UI('#stat_tau').textContent=core.tau.toFixed(2);
-  UI('#stat_succ').textContent=core.succ;
-  const rate= core.totalSpawned>0 ? (100*core.succ/core.totalSpawned):0;
-  UI('#stat_rate').textContent=rate.toFixed(1)+'%';
-  UI('#stat_active').textContent=core.particles.filter(p=>p.alive).length;
-  UI('#stat_tdci').textContent=core.tdci.toFixed(3);
-}
-
-function draw(){
-  if(!view) return;
-  const pos=core.particles.filter(p=>p.alive).map(p=>p.pos);
-  view.updateParticles(pos);
-  view.render();
-}
-
-function runClusterDetection(){
-  const pts=core.particles.filter(p=>p.alive).map(p=>({id:p.id, pos:p.pos}));
-  if(pts.length===0){ UI('#stat_clusters').textContent='0'; UI('#stat_maxcl').textContent='0'; return; }
-  const cs=clusterer.detect(pts); UI('#stat_clusters').textContent=cs.length; const mx=cs.reduce((a,c)=>Math.max(a,c.members.length),0); UI('#stat_maxcl').textContent=mx;
-}
-
-function loop(){
-  if(!running){ requestAnimationFrame(loop); return; }
-  const dt=+UI('#dt').value, T=+UI('#T').value;
-  if(core.t>=T){ running=false; toast('終了 T に到達'); return; }
-  core.step(dt, rng);
-  detectAcc+=dt; if(detectAcc>=core.p.detectInt){ detectAcc=0; runClusterDetection(); }
-  updateStats(); draw();
-  requestAnimationFrame(loop);
-}
-
-/***  エクスポート類  ***/
-function exportSnapshotCSV(){
-  const rows=['t,tau,id,x,y,z,alive'];
-  for(const p of core.particles){
-    const {x,y,z}=p.pos; rows.push([core.t.toFixed(4), core.tau.toFixed(4), p.id, x.toFixed(4), y.toFixed(4), z.toFixed(4), p.alive?1:0].join(','));
-  }
-  download(rows.join('\n'),'abm_snapshot.csv','text/csv');
-}
-function exportSummaryCSV(){
-  const rate = core.totalSpawned? core.succ/core.totalSpawned:0;
-  const rows = [
-    'metric,value',
-    `t,${core.t.toFixed(4)}`,
-    `tau,${core.tau.toFixed(4)}`,
-    `success_count,${core.succ}`,
-    `total_spawned,${core.totalSpawned}`,
-    `success_rate,${rate.toFixed(6)}`,
-    `tdci_tau,${core.tdci.toFixed(6)}`
+  // 2×2×2 factorial
+  const conditions=[
+    {label:'HI·HE·PRA+', I:I_h, E:E_h, pra:PRA_on},
+    {label:'HI·HE·PRA−', I:I_h, E:E_h, pra:PRA_off},
+    {label:'HI·LE·PRA+', I:I_h, E:E_l, pra:PRA_on},
+    {label:'HI·LE·PRA−', I:I_h, E:E_l, pra:PRA_off},
+    {label:'LI·HE·PRA+', I:I_l, E:E_h, pra:PRA_on},
+    {label:'LI·HE·PRA−', I:I_l, E:E_h, pra:PRA_off},
+    {label:'LI·LE·PRA+', I:I_l, E:E_l, pra:PRA_on},
+    {label:'LI·LE·PRA−', I:I_l, E:E_l, pra:PRA_off},
   ];
-  download(rows.join('\n'), 'abm_summary.csv','text/csv');
-}
-function exportConfig(){
-  const cfg={ seed:+UI('#seed').value, dt:+UI('#dt').value, T:+UI('#T').value, params:readParams(), version:'ResearchReady v1.0', timestamp:new Date().toISOString() };
-  download(JSON.stringify(cfg,null,2),'abm_config.json','application/json');
-}
 
-/***  ヘッドレスK試行（研究用）  ***/
-async function headlessBatch(){
-  const K=+UI('#trials').value; const dt=+UI('#dt').value, T=+UI('#T').value; const baseSeed=+UI('#seed').value||12345; const p=readParams();
-  const results=[];
-  for(let k=0;k<K;k++){
-    const rngK=mulberry32(baseSeed + k*100003);
-    const coreK=new ABMCore(p); coreK.init(rngK);
-    const clK=new Clusterer(p.eps, p.minPts);
-    let detAcc=0, maxCl=0;
-    for(let t=0; t<T; t+=dt){
-      coreK.step(dt, rngK);
-      detAcc+=dt; if(detAcc>=p.detectInt){ detAcc=0; const pts=coreK.particles.filter(q=>q.alive).map(q=>({id:q.id,pos:q.pos})); const cs=clK.detect(pts); maxCl=Math.max(maxCl, cs.length); }
+  const totalRuns=conditions.length*nSeeds;
+  let done=0;
+
+  for(const cond of conditions){
+    const runs=[];
+    for(let s=0;s<nSeeds;s++){
+      if(batchCancel)break;
+      const eng=new TRTPRAEngine({
+        N, K, seed:1000+s*7+conditions.indexOf(cond)*1000,
+        identity:cond.I, align:cond.E, praSpeed:cond.pra,
+        ablatePRA:cond.pra<=0,
+        hetero:H, tlBase, tlKick, lambdaTRT:lambda,
+        trtSpeed:0.75, dtMs:16, eta:0.05, dirAlpha:1.0, rho:0.3,
+        stageFrac1:0.40, stageFrac2:0.75, secPerYear:1.0, reviewEveryMs:2000
+      });
+
+      for(let t=0;t<nSteps;t++){
+        eng.step();
+        // aggregate every 200 steps for TRT_score tracking
+        if(t%200===199)eng.aggregate();
+      }
+      const ag=eng.aggregate();
+      runs.push({seed:1000+s*7+conditions.indexOf(cond)*1000, ...ag, condLabel:cond.label, I:cond.I, E:cond.E, PRA:cond.pra});
+      batchAllRuns.push(runs[runs.length-1]);
+
+      done++;
+      $('batchProgress').style.width=(100*done/totalRuns)+'%';
+      $('batchStatus').textContent=`${done}/${totalRuns} (${cond.label} seed ${s+1}/${nSeeds})`;
+
+      // yield to UI every few runs
+      if(s%3===0) await new Promise(r=>setTimeout(r,0));
     }
-    const rate = coreK.totalSpawned? coreK.succ/coreK.totalSpawned:0;
-    results.push({succ:coreK.succ, total:coreK.totalSpawned, rate, tdci:coreK.tdci, maxCl});
+    if(batchCancel)break;
+
+    // compute summary stats
+    const metrics=['tlEvents','tlE1','tlE2','avgLag','TRT_score','PRA_interact','success','fail','HHI'];
+    const summary={label:cond.label, I:cond.I, E:cond.E, PRA:cond.pra, n:runs.length};
+    for(const m of metrics){
+      const vals=runs.map(r=>r[m]);
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,vals.length-1));
+      summary[m]={mean,sd,vals};
+    }
+    batchSummary.push(summary);
   }
-  const csv=['k,succ,total,rate,tdci,max_cluster'];
-  results.forEach((r,i)=>csv.push([i+1,r.succ,r.total,r.rate.toFixed(6),r.tdci.toFixed(6),r.maxCl].join(',')));
-  // 平均
-  const mean=(arr,f)=>arr.reduce((s,x)=>s+f(x),0)/arr.length;
-  csv.push(['mean',
-    mean(results,r=>r.succ).toFixed(3),'',
-    mean(results,r=>r.rate).toFixed(6),
-    mean(results,r=>r.tdci).toFixed(6),
-    mean(results,r=>r.maxCl).toFixed(3)
-  ].join(','));
-  download(csv.join('\n'),'headless_results.csv','text/csv');
-  UI('#logBox').textContent = 'Headless K='+K+' 完了\n'+csv.slice(-5).join('\n');
+
+  if(!batchCancel){
+    renderBatchResults();
+    $('btnBatchCSV').disabled=false;
+    $('btnBatchFullCSV').disabled=false;
+  }
+  $('batchStatus').textContent=batchCancel?'中断済み':'完了！';
+  batchRunning=false;
 }
 
-/***  初期化  ***/
-function main(){
-  const canvas=UI('#canvas');
-  const p=readParams();
-  view=new Renderer3D(canvas, p.H, p.R);
-  resetAll();
+function renderBatchResults(){
+  const body=document.getElementById('batchTableBody');
+  body.innerHTML='';
+  const fmt=(m)=>`${m.mean.toFixed(2)}±${m.sd.toFixed(2)}`;
 
-  UI('#btnStart').onclick=()=>{ if(!running){ running=true; requestAnimationFrame(loop); toast('開始'); } };
-  UI('#btnPause').onclick=()=>{ running=false; toast('一時停止'); };
-  UI('#btnReset').onclick=()=>{ running=false; resetAll(); };
-  UI('#btnStep').onclick=()=>{ const dt=+UI('#dt').value; core.step(dt, rng); detectAcc+=dt; if(detectAcc>=core.p.detectInt){ detectAcc=0; runClusterDetection(); } updateStats(); draw(); };
+  for(const s of batchSummary){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="cond">${s.label}</td><td>${s.I.toFixed(2)}</td><td>${s.E.toFixed(2)}</td><td>${s.PRA.toFixed(1)}</td>
+      <td>${fmt(s.tlEvents)}</td><td>${fmt(s.tlE1)}</td><td>${fmt(s.tlE2)}</td>
+      <td>${fmt(s.avgLag)}</td><td>${fmt(s.TRT_score)}</td><td>${fmt(s.PRA_interact)}</td>
+      <td>${fmt(s.success)}</td><td>${fmt(s.fail)}</td><td>${fmt(s.HHI)}</td>`;
+    body.appendChild(tr);
+  }
 
-  UI('#btnExportSnapshot').onclick=exportSnapshotCSV;
-  UI('#btnExportSummary').onclick=exportSummaryCSV;
-  UI('#btnExportConfig').onclick=exportConfig;
-  UI('#btnHeadless').onclick=headlessBatch;
+  // Proposition tests
+  renderPropositionTests();
+}
 
-  // 主要パラメタ変更でリセット（可視化と物理条件の一貫性を担保）
-  ['H','R','ySucc','vertexCap','capRadius','gammaCong','alpha0','alpha1','yStar','tauS','betaM','uRate','D0','kappaC','kappaP','rhoTau','N0','batch','spawnInt','eps','minPts','detectInt','seed'].forEach(id=>{
-    UI('#'+id).addEventListener('change', ()=>{ running=false; resetAll(); });
+function cohenD(a,b){
+  const ma=a.mean, mb=b.mean, sa=a.sd, sb=b.sd;
+  const sp=Math.sqrt(((a.vals.length-1)*sa*sa+(b.vals.length-1)*sb*sb)/(a.vals.length+b.vals.length-2+EPS));
+  return sp>EPS?(ma-mb)/sp:0;
+}
+
+function renderPropositionTests(){
+  const body=document.getElementById('propTableBody');
+  body.innerHTML='';
+  const cards=document.getElementById('propCards');
+  cards.innerHTML='';
+
+  if(batchSummary.length<8)return;
+
+  // Index conditions: 0=HI·HE·PRA+, 1=HI·HE·PRA−, 2=HI·LE·PRA+, 3=HI·LE·PRA−
+  // 4=LI·HE·PRA+, 5=LI·HE·PRA−, 6=LI·LE·PRA+, 7=LI·LE·PRA−
+  const S=batchSummary;
+
+  const tests=[
+    // P4: High I → lower TL, shorter lag (main effect of I, averaging over E and PRA)
+    {prop:'P4（中心命題）',
+     desc:'高継続性 vs 低継続性（E・PRA平均）',
+     metric:'tlEvents',
+     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
+     labelA:'High I (avg)', labelB:'Low I (avg)',
+     expectSign:-1, // A < B → negative diff means A has fewer TL
+    },
+    {prop:'P4',
+     desc:'高継続性 vs 低継続性（Lag）',
+     metric:'avgLag',
+     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
+     labelA:'High I (avg)', labelB:'Low I (avg)',
+     expectSign:-1,
+    },
+
+    // P1: TRT mechanism — High I shows higher TRT_score (more focused transition)
+    {prop:'P1（TRT）',
+     desc:'高I → TRT_score上昇',
+     metric:'TRT_score',
+     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
+     labelA:'High I (avg)', labelB:'Low I (avg)',
+     expectSign:1, // A > B
+    },
+
+    // P3: Evaluative alignment as boundary condition — Low E → more TL (holding I high)
+    {prop:'P3（評価関数整合）',
+     desc:'高I下: 低E vs 高E → TL差',
+     metric:'tlEvents',
+     condA_idx:[2,3], condB_idx:[0,1], // HI·LE vs HI·HE
+     labelA:'HI·LE', labelB:'HI·HE',
+     expectSign:1, // low E has MORE TL
+    },
+
+    // P2: PRA conditional — High E + PRA on vs off (complement)
+    {prop:'P2（PRA相補）',
+     desc:'高E下: PRA+ vs PRA− → TL差',
+     metric:'tlEvents',
+     condA_idx:[0,4], condB_idx:[1,5], // HE·PRA+ vs HE·PRA−
+     labelA:'HE·PRA+', labelB:'HE·PRA−',
+     expectSign:-1, // with PRA, fewer TL under high E
+    },
+    // P2: PRA conflict — Low E + PRA on vs off
+    {prop:'P2（PRA相克）',
+     desc:'低E下: PRA+ vs PRA− → TL差',
+     metric:'tlEvents',
+     condA_idx:[2,6], condB_idx:[3,7], // LE·PRA+ vs LE·PRA−
+     labelA:'LE·PRA+', labelB:'LE·PRA−',
+     expectSign:1, // with PRA under low E, MORE TL
+    },
+  ];
+
+  const propVerdicts={};
+
+  for(const t of tests){
+    // Pool values across conditions
+    const valsA=[];const valsB=[];
+    for(const i of t.condA_idx) valsA.push(...S[i][t.metric].vals);
+    for(const i of t.condB_idx) valsB.push(...S[i][t.metric].vals);
+    const mA=valsA.reduce((a,b)=>a+b,0)/valsA.length;
+    const mB=valsB.reduce((a,b)=>a+b,0)/valsB.length;
+    const sdA=Math.sqrt(valsA.reduce((a,b)=>a+(b-mA)**2,0)/Math.max(1,valsA.length-1));
+    const sdB=Math.sqrt(valsB.reduce((a,b)=>a+(b-mB)**2,0)/Math.max(1,valsB.length-1));
+    const sp=Math.sqrt(((valsA.length-1)*sdA*sdA+(valsB.length-1)*sdB*sdB)/(valsA.length+valsB.length-2+EPS));
+    const d=sp>EPS?(mA-mB)/sp:0;
+    const diff=mA-mB;
+
+    const supported=(t.expectSign>0 && diff>0 && Math.abs(d)>0.2)||(t.expectSign<0 && diff<0 && Math.abs(d)>0.2);
+    const strong=Math.abs(d)>0.5;
+
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="cond">${t.prop}</td><td>${t.desc}</td><td>${t.metric}</td>
+      <td>${mA.toFixed(2)}±${sdA.toFixed(2)}</td><td>${mB.toFixed(2)}±${sdB.toFixed(2)}</td>
+      <td>${diff.toFixed(2)}</td><td>${d.toFixed(2)}</td>
+      <td class="${supported?(strong?'ok':'warn'):'err'}">${supported?(strong?'◎ 強支持':'○ 支持'):'△ 不支持'}</td>`;
+    body.appendChild(tr);
+
+    const pkey=t.prop.split('（')[0];
+    if(!propVerdicts[pkey])propVerdicts[pkey]={supported:0,total:0,details:[]};
+    propVerdicts[pkey].total++;
+    if(supported)propVerdicts[pkey].supported++;
+    propVerdicts[pkey].details.push({desc:t.desc, metric:t.metric, d, supported, strong});
+  }
+
+  // Prop cards
+  for(const [key,v] of Object.entries(propVerdicts)){
+    const card=document.createElement('div');
+    card.className='prop-card';
+    const allSupported=v.supported===v.total;
+    const partial=v.supported>0;
+    card.innerHTML=`<h4>${key}</h4>
+      <div class="verdict ${allSupported?'ok':(partial?'warn':'err')}">${allSupported?'◎ 全テスト支持':(partial?'○ 部分支持':'△ 不支持')} (${v.supported}/${v.total})</div>
+      <div class="detail">${v.details.map(d=>`${d.desc}: d=${d.d.toFixed(2)} ${d.supported?(d.strong?'◎':'○'):'△'}`).join(' / ')}</div>`;
+    cards.appendChild(card);
+  }
+}
+
+/* ===== CSV EXPORT ===== */
+function downloadCSV(name, text){
+  const blob=new Blob(['\uFEFF'+text],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+}
+
+function exportBatchSummaryCSV(){
+  let csv='condition,I,E,PRA,n,TL_events_mean,TL_events_sd,TL1_mean,TL1_sd,TL2_mean,TL2_sd,avgLag_mean,avgLag_sd,TRT_score_mean,TRT_score_sd,PRA_interact_mean,PRA_interact_sd,success_mean,success_sd,fail_mean,fail_sd,HHI_mean,HHI_sd\n';
+  for(const s of batchSummary){
+    csv+=`${s.label},${s.I},${s.E},${s.PRA},${s.n},${s.tlEvents.mean.toFixed(4)},${s.tlEvents.sd.toFixed(4)},${s.tlE1.mean.toFixed(4)},${s.tlE1.sd.toFixed(4)},${s.tlE2.mean.toFixed(4)},${s.tlE2.sd.toFixed(4)},${s.avgLag.mean.toFixed(4)},${s.avgLag.sd.toFixed(4)},${s.TRT_score.mean.toFixed(6)},${s.TRT_score.sd.toFixed(6)},${s.PRA_interact.mean.toFixed(6)},${s.PRA_interact.sd.toFixed(6)},${s.success.mean.toFixed(2)},${s.success.sd.toFixed(2)},${s.fail.mean.toFixed(2)},${s.fail.sd.toFixed(2)},${s.HHI.mean.toFixed(6)},${s.HHI.sd.toFixed(6)}\n`;
+  }
+  downloadCSV('batch_summary.csv',csv);
+}
+function exportBatchFullCSV(){
+  let csv='condition,I,E,PRA,seed,TL_events,TL1,TL2,avgLag,TRT_score,PRA_interact,success,fail,HHI,Simpson\n';
+  for(const r of batchAllRuns){
+    csv+=`${r.condLabel},${r.I},${r.E},${r.PRA},${r.seed},${r.tlEvents},${r.tlE1},${r.tlE2},${r.avgLag.toFixed(4)},${r.TRT_score.toFixed(6)},${r.PRA_interact.toFixed(6)},${r.success},${r.fail},${r.HHI.toFixed(6)},${r.Simpson.toFixed(6)}\n`;
+  }
+  downloadCSV('batch_all_runs.csv',csv);
+}
+
+/* ===== THREE.JS INTERACTIVE MODE (adapted from v8) ===== */
+let interactiveEngine=null;
+let renderer,scene,camera,coneMesh,inst,instGeo,instMat;
+let paused=false,frameCount=0,fpsSMA=60,lastTime=0;
+
+function initInteractive(){
+  const canvas=document.getElementById('c');
+  if(!canvas||!window.THREE)return;
+
+  try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}
+  catch(e){__fatal('WebGL error',e.message);return}
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0b0f14);
+  camera=new THREE.PerspectiveCamera(55,1,0.1,1000);
+  camera.position.set(14,-18,10);
+
+  const orbitTarget=new THREE.Vector3(0,0,5);
+  camera.lookAt(orbitTarget);
+
+  // Simple orbit
+  (function(){
+    let radius=camera.position.distanceTo(orbitTarget);
+    let theta=Math.atan2(camera.position.y-orbitTarget.y,camera.position.x-orbitTarget.x);
+    let phi=Math.acos(clamp((camera.position.z-orbitTarget.z)/Math.max(EPS,radius),-1,1));
+    let dragging=false,lastX=0,lastY=0,pid=null;
+    function apply(){
+      phi=clamp(phi,0.1,Math.PI-0.1);
+      radius=clamp(radius,2,120);
+      camera.position.set(orbitTarget.x+radius*Math.cos(theta)*Math.sin(phi),orbitTarget.y+radius*Math.sin(theta)*Math.sin(phi),orbitTarget.z+radius*Math.cos(phi));
+      camera.lookAt(orbitTarget);
+    }
+    canvas.style.touchAction='none';
+    canvas.addEventListener('pointerdown',e=>{dragging=true;pid=e.pointerId;lastX=e.clientX;lastY=e.clientY;try{canvas.setPointerCapture(pid)}catch(_){}});
+    window.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==pid)return;theta-=(e.clientX-lastX)*0.005;phi-=(e.clientY-lastY)*0.005;lastX=e.clientX;lastY=e.clientY;apply()});
+    window.addEventListener('pointerup',e=>{if(e.pointerId!==pid)return;dragging=false;try{canvas.releasePointerCapture(pid)}catch(_){}});
+    canvas.addEventListener('wheel',e=>{e.preventDefault();radius*=Math.exp(e.deltaY*0.0012);apply()},{passive:false});
+    apply();
+  })();
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.6));
+  const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(10,-8,14);scene.add(dl);
+
+  interactiveEngine=new TRTPRAEngine({N:600,K:6,seed:1234});
+  rebuildVisuals();
+  resize();
+  requestAnimationFrame(tick);
+}
+
+function rebuildVisuals(){
+  if(!interactiveEngine||!scene)return;
+  const c=interactiveEngine.cfg;
+
+  // Cone
+  if(coneMesh){scene.remove(coneMesh);coneMesh.geometry.dispose();coneMesh.material.dispose();
+    if(coneMesh.userData.rings)for(const r of coneMesh.userData.rings){scene.remove(r);r.geometry.dispose();r.material.dispose()}}
+  const geo=new THREE.ConeGeometry(c.radius,c.height,96,1,true);
+  const mat=new THREE.MeshPhongMaterial({color:0x2196f3,transparent:true,opacity:0.08,depthWrite:false,side:THREE.DoubleSide});
+  coneMesh=new THREE.Mesh(geo,mat);
+  coneMesh.position.set(0,0,c.height/2);coneMesh.rotation.x=Math.PI/2;
+  coneMesh.userData.rings=[];
+  scene.add(coneMesh);
+
+  const bounds=[c.height*c.stageFrac1,c.height*c.stageFrac2];
+  const colors=[0xffca66,0x5cd68d];
+  for(let b=0;b<2;b++){
+    const z=bounds[b],r2=c.radius*(1-z/c.height);
+    const rg=new THREE.RingGeometry(Math.max(0,r2-0.03),r2+0.03,64);
+    const rm=new THREE.MeshBasicMaterial({color:colors[b],transparent:true,opacity:0.35,side:THREE.DoubleSide,depthWrite:false});
+    const ring=new THREE.Mesh(rg,rm);ring.position.set(0,0,z);scene.add(ring);
+    coneMesh.userData.rings.push(ring);
+  }
+
+  // Particles
+  if(inst){scene.remove(inst);instGeo.dispose();instMat.dispose()}
+  instGeo=new THREE.SphereGeometry(0.06,8,8);
+  instMat=new THREE.MeshBasicMaterial({color:0xa6e3ff});
+  inst=new THREE.InstancedMesh(instGeo,instMat,c.N);
+  inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  scene.add(inst);
+}
+
+function renderParticles(){
+  if(!inst||!interactiveEngine)return;
+  const m=new THREE.Matrix4();
+  for(let i=0;i<interactiveEngine.P.length;i++){
+    const p=interactiveEngine.P[i];
+    m.makeTranslation(p.x,p.y,p.z);
+    inst.setMatrixAt(i,m);
+  }
+  inst.instanceMatrix.needsUpdate=true;
+}
+
+function resize(){
+  const w=document.getElementById('canvasWrap').clientWidth;
+  const h=document.getElementById('canvasWrap').clientHeight-36; // minus tab bar
+  if(renderer){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+}
+
+function tick(now){
+  if(!paused && interactiveEngine){
+    interactiveEngine.step();
+    if(frameCount%30===0){
+      const ag=interactiveEngine.aggregate();
+      updateLiveStats(ag);
+    }
+  }
+  if(renderer&&scene&&camera){renderParticles();renderer.render(scene,camera)}
+  const d=now-lastTime;lastTime=now;
+  fpsSMA=fpsSMA*0.9+(1000/(d+EPS))*0.1;
+  frameCount++;
+  if(frameCount%20===0){
+    document.getElementById('fps').textContent=fpsSMA.toFixed(0);
+    document.getElementById('statN').textContent=interactiveEngine?String(interactiveEngine.cfg.N):'—';
+    document.getElementById('statK').textContent=interactiveEngine?String(interactiveEngine.cfg.K):'—';
+    if(interactiveEngine){
+      document.getElementById('statZ1').textContent=(interactiveEngine.cfg.stageFrac1*interactiveEngine.cfg.height).toFixed(2);
+      document.getElementById('statZ2').textContent=(interactiveEngine.cfg.stageFrac2*interactiveEngine.cfg.height).toFixed(2);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function updateLiveStats(ag){
+  const $=id=>document.getElementById(id);
+  $('hhiSys').textContent=ag.HHI.toFixed(3);
+  $('simpsonSys').textContent=ag.Simpson.toFixed(3);
+  $('trtScore').textContent=ag.TRT_score.toFixed(3);
+  $('praInteract').textContent=ag.PRA_interact.toFixed(3);
+  $('tlEvents').textContent=`${ag.tlE1} / ${ag.tlE2} / ${ag.tlEvents}`;
+  $('succFail').textContent=`${ag.success} / ${ag.fail}`;
+  $('avgLag').textContent=ag.avgLag>0?`${ag.avgLag.toFixed(2)} s`:'—';
+  const e=interactiveEngine;
+  if(e){
+    const a1=e.succLagN>0?(e.tlDelaySuccSumMsByB[0]/e.succLagN/1000):0;
+    const a2=e.succLagN>0?(e.tlDelaySuccSumMsByB[1]/e.succLagN/1000):0;
+    $('avgTlDelay').textContent=e.succLagN>0?`${a1.toFixed(2)}/${a2.toFixed(2)}/${(a1+a2).toFixed(2)} s`:'—';
+  }
+}
+
+/* ===== UI BINDINGS ===== */
+function bindUI(){
+  const $=id=>document.getElementById(id);
+
+  // Range sliders
+  const ranges=[
+    ['praSpeed',v=>Number(v).toFixed(2),'praSpeed'],
+    ['trtSpeed',v=>Number(v).toFixed(2),'trtSpeed'],
+    ['dt',v=>v,'dtMs'],
+    ['rho',v=>Number(v).toFixed(2),'rho'],
+    ['eta',v=>Number(v).toFixed(3),'eta'],
+    ['dirAlpha',v=>Number(v).toFixed(1),'dirAlpha'],
+    ['identity',v=>Number(v).toFixed(2),'identity'],
+    ['align',v=>Number(v).toFixed(2),'align'],
+    ['hetero',v=>Number(v).toFixed(2),'hetero'],
+    ['stageZ1',v=>Number(v).toFixed(2),'stageFrac1'],
+    ['stageZ2',v=>Number(v).toFixed(2),'stageFrac2'],
+    ['tlBase',v=>Number(v).toFixed(2),'tlBase'],
+    ['tlKick',v=>Number(v).toFixed(2),'tlKick'],
+    ['lambdaTRT',v=>Number(v).toFixed(3),'lambdaTRT'],
+    ['secPerYear',v=>Number(v).toFixed(1),'secPerYear'],
+    ['reviewSec',v=>Number(v).toFixed(1),null],
+  ];
+  for(const [id,fmt,cfgKey] of ranges){
+    const el=$(id),out=$(id+'V');
+    if(!el||!out)continue;
+    const render=()=>{out.textContent=fmt(el.value)};
+    el.addEventListener('input',()=>{
+      render();
+      if(interactiveEngine&&cfgKey){
+        let v=Number(el.value);
+        if(cfgKey==='dtMs')v=Math.round(v);
+        interactiveEngine.cfg[cfgKey]=v;
+        if(cfgKey==='align'||cfgKey==='hetero')interactiveEngine.rebuildSim();
+      }
+      if(id==='reviewSec'&&interactiveEngine)interactiveEngine.cfg.reviewEveryMs=Math.max(0,Number(el.value)*1000);
+    });
+    render();
+  }
+
+  ['ablatePRA','ablateTRT','ablateTL','ablateID'].forEach(id=>{
+    $(id).addEventListener('change',e=>{if(interactiveEngine)interactiveEngine.cfg[id]=e.target.checked});
   });
+
+  $('btnReseed').addEventListener('click',()=>{
+    if(!interactiveEngine)return;
+    interactiveEngine.cfg.seed=Number($('seed').value)|0;
+    interactiveEngine.reset();rebuildVisuals();
+  });
+  $('btnApplyN').addEventListener('click',()=>{
+    if(!interactiveEngine)return;
+    interactiveEngine.cfg.N=Math.max(100,Number($('N').value)|0);
+    interactiveEngine.reset();rebuildVisuals();
+  });
+  $('btnApplyK').addEventListener('click',()=>{
+    if(!interactiveEngine)return;
+    interactiveEngine.cfg.K=clamp(Number($('K').value)|0,3,16);
+    interactiveEngine.reset();rebuildVisuals();
+  });
+  $('btnReset').addEventListener('click',()=>{if(interactiveEngine){interactiveEngine.reset();rebuildVisuals()}});
+  $('btnPause').addEventListener('click',()=>{paused=!paused;$('btnPause').textContent=paused?'▶ Resume':'⏸ Pause'});
+
+  // Tab switching
+  $('tabVis').addEventListener('click',()=>{
+    $('tabVis').classList.add('active');$('tabBatch').classList.remove('active');
+    $('canvasWrap').style.display='';$('batchResults').style.display='none';
+    resize();
+  });
+  $('tabBatch').addEventListener('click',()=>{
+    $('tabBatch').classList.add('active');$('tabVis').classList.remove('active');
+    $('canvasWrap').style.display='none';$('batchResults').style.display='';
+  });
+
+  // Batch
+  $('btnBatchRun').addEventListener('click',()=>runBatchExperiment());
+  $('btnBatchStop').addEventListener('click',()=>{batchCancel=true});
+  $('btnBatchCSV').addEventListener('click',exportBatchSummaryCSV);
+  $('btnBatchFullCSV').addEventListener('click',exportBatchFullCSV);
+
+  // Snapshot / log CSV (simplified)
+  $('btnSnap').addEventListener('click',()=>{
+    if(!interactiveEngine)return;
+    const ag=interactiveEngine.aggregate();
+    const csv='HHI,Simpson,TRT_score,PRA_interact,TL_events,success,fail,avgLag\n'+
+      `${ag.HHI.toFixed(6)},${ag.Simpson.toFixed(6)},${ag.TRT_score.toFixed(6)},${ag.PRA_interact.toFixed(6)},${ag.tlEvents},${ag.success},${ag.fail},${ag.avgLag.toFixed(4)}\n`;
+    downloadCSV('snapshot.csv',csv);
+  });
+  $('btnDL').addEventListener('click',()=>{alert('ライブログは簡略化済み。バッチ結果CSVをご利用ください。')});
+
+  window.addEventListener('resize',resize);
 }
 
-window.addEventListener('DOMContentLoaded', main);
+/* ===== INIT ===== */
+(async function(){
+  window.addEventListener('error',ev=>{__fatal('Runtime error',(ev.error&&ev.error.stack)||ev.message)},{once:true});
+
+  const urls=[
+    'https://unpkg.com/three@0.160.0/build/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js'
+  ];
+  for(const u of urls){try{await __loadScript(u);break}catch(e){console.warn(e)}}
+
+  if(window.THREE){
+    try{initInteractive()}catch(e){__fatal('Init error',e.stack||e.message)}
+  }
+  bindUI();
+})();
 </script>
 </body>
 </html>
