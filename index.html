@@ -1,104 +1,60 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>TRT×PRA ABM v9 — Batch Experiment for Empirical Validation</title>
-<style>
-  :root { --bg:#0b0f14; --fg:#dfe7ef; --dim:#9ab; --accent:#7bd; --panel:#121821; --ok:#5cd68d; --warn:#ffca66; --err:#ff6e6e;}
-  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.5 'Noto Sans JP',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  #app { display:grid; grid-template-columns: 380px 1fr; grid-template-rows: auto 1fr; height:100%; }
-  header { grid-column: 1 / span 2; padding:8px 14px; background:#0e141c; border-bottom:1px solid #223; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-  header h1{ font-size:15px; margin:0; color:#bfe; letter-spacing:.3px; }
-  header .tag{ padding:2px 6px; border-radius:6px; background:#1b2735; color:#9ed; font-size:11px; }
-  #left { border-right:1px solid #1e2733; overflow:auto; }
-  #right { position:relative; overflow:auto; }
-  canvas { display:block; width:100%; height:100%; }
-  details.panel { border-bottom:1px solid #1b2330; background:var(--panel); }
-  details.panel summary { list-style:none; cursor:pointer; padding:8px 12px; background:#111824; color:#cfe; user-select:none; font-weight:600; font-size:13px;}
-  details.panel summary::-webkit-details-marker{display:none;}
-  .content { padding:8px 12px; display:grid; gap:6px; }
-  .row { display:grid; grid-template-columns: 120px 1fr 60px; align-items:center; gap:6px; }
-  .row label{ color:#cde; font-size:12px; }
-  .row input[type="range"]{ width:100%; }
-  .row input[type="number"], .row input[type="text"], .row select { width:100%; background:#0f1520; color:#ddf; border:1px solid #263246; border-radius:5px; padding:4px 6px; font-size:12px;}
-  .row button, .btn{ background:#1a2636; color:#cff; border:1px solid #2b3b52; border-radius:6px; padding:5px 8px; cursor:pointer; font-size:12px; }
-  .row button:hover, .btn:hover{ background:#203049; }
-  .btn-primary{ background:#1a3a5a; border-color:#2a5a8a; color:#adf; font-weight:600; }
-  .btn-primary:hover{ background:#1a4a6a; }
-  .btn-danger{ background:#3a1a1a; border-color:#6a2a2a; color:#faa; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
-  .badge{ padding:2px 6px; border-radius:6px; font-size:11px; background:#1b2735; color:#9ed; display:inline-block; }
-  .stat{ display:flex; justify-content:space-between; border:1px solid #243143; padding:4px 8px; border-radius:6px; background:#0e141c; gap:8px; font-size:12px;}
-  .ok{ color:var(--ok) } .warn{ color:var(--warn) } .err{ color:var(--err) }
-  pre#log { white-space:pre; background:#0a0f17; border-top:1px solid #1c2635; margin:0; padding:6px 8px; max-height:160px; overflow:auto; font-size:11px; }
-  .floatStats{ position:absolute; left:12px; top:12px; background:#0b111a90; padding:6px 8px; border:1px solid #1c2a3d; border-radius:8px; backdrop-filter: blur(4px); z-index:10; }
-  .pill{ font-variant-numeric:tabular-nums; padding:2px 5px; margin-right:4px; background:#112033; border:1px solid #20324a; border-radius:999px; font-size:11px; }
-  .mini{ font-size:11px; color:#a9bfd6; }
 
-  /* Batch results */
-  #batchPanel { display:none; }
-  #batchPanel.active { display:block; }
-  .batch-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:6px; }
-  .batch-table th, .batch-table td { border:1px solid #243143; padding:3px 5px; text-align:right; }
-  .batch-table th { background:#111824; color:#9ed; text-align:center; font-weight:600; position:sticky; top:0; }
-  .batch-table td { background:#0e141c; }
-  .batch-table tr:hover td { background:#151e2c; }
-  .batch-table .cond { text-align:left; color:#cfe; font-weight:600; }
-  .progress-bar { height:6px; background:#1b2735; border-radius:3px; overflow:hidden; margin:4px 0; }
-  .progress-bar-fill { height:100%; background:linear-gradient(90deg, #5cd68d, #7bd); transition: width 0.2s; }
-  .prop-card { border:1px solid #243143; border-radius:8px; padding:8px 10px; background:#0e141c; margin:4px 0; }
-  .prop-card h4 { margin:0 0 4px 0; color:#7bd; font-size:12px; }
-  .prop-card .verdict { font-weight:700; font-size:13px; }
-  .prop-card .detail { font-size:11px; color:#9ab; margin-top:2px; }
+Adjust simulator for translation loss analysis
+4月12日
+·
+trt-pra-simulator
+·
+main
+·
++32
+-11
 
-  /* Canvas mode vs batch mode */
-  #canvasWrap { width:100%; height:100%; position:relative; }
-  #batchResults { padding:12px; overflow:auto; height:100%; }
-  .tab-bar { display:flex; gap:0; border-bottom:1px solid #223; }
-  .tab-bar button { flex:1; padding:8px; background:#0e141c; color:#9ab; border:none; border-bottom:2px solid transparent; cursor:pointer; font-size:12px; font-weight:600; }
-  .tab-bar button.active { color:#7bd; border-bottom-color:#7bd; background:#121821; }
-</style>
-</head>
-<body>
-<div id="app">
-  <header>
-    <h1>TRT×PRA ABM v9</h1>
-    <span class="tag">Batch Experiment Mode</span>
-    <span class="tag">P1–P4 Proposition Testing</span>
-    <span class="tag">Factorial Design × Multi-Seed</span>
-  </header>
+アーカイブする
 
-  <aside id="left">
-    <!-- ① Interactive mode params (collapsed by default when batch is open) -->
-    <details class="panel">
-      <summary>① インタラクティブ設定</summary>
-      <div class="content">
-        <div class="row"><label for="seed">Seed</label>
-          <input id="seed" type="number" value="1234" step="1"/><button id="btnReseed">適用</button>
-        </div>
-        <div class="row"><label for="N">粒数 N</label>
-          <input id="N" type="number" value="600" min="100" step="50"/><button id="btnApplyN">適用</button>
-        </div>
-        <div class="row"><label for="K">Projects K</label>
-          <input id="K" type="number" value="6" min="3" max="16" step="1"/><button id="btnApplyK">適用</button>
-        </div>
-        <div class="row"><label for="praSpeed">PRA速度</label><input id="praSpeed" type="range" min="0" max="2" step="0.01" value="1.0"><span id="praSpeedV">1.00</span></div>
-        <div class="row"><label for="trtSpeed">TRT速度</label><input id="trtSpeed" type="range" min="0" max="2" step="0.01" value="0.75"><span id="trtSpeedV">0.75</span></div>
-        <div class="row"><label for="dt">Δt (ms)</label><input id="dt" type="range" min="8" max="40" step="1" value="16"><span id="dtV">16</span></div>
-        <div class="row"><label for="rho">相関ショックρ</label><input id="rho" type="range" min="-0.9" max="0.95" step="0.05" value="0.3"><span id="rhoV">0.30</span></div>
-        <div class="row"><label for="eta">A更新η</label><input id="eta" type="range" min="0" max="0.5" step="0.005" value="0.05"><span id="etaV">0.050</span></div>
-        <div class="row"><label for="dirAlpha">Dirichlet α</label><input id="dirAlpha" type="range" min="0.1" max="5" step="0.1" value="1.0"><span id="dirAlphaV">1.0</span></div>
-        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
-        <div class="row"><label for="identity">同一性 I</label><input id="identity" type="range" min="0" max="1" step="0.01" value="0.75"><span id="identityV">0.75</span></div>
-        <div class="row"><label for="align">評価整合 E</label><input id="align" type="range" min="0" max="1" step="0.01" value="0.70"><span id="alignV">0.70</span></div>
-        <div class="row"><label for="hetero">案件異質 H</label><input id="hetero" type="range" min="0" max="1" step="0.01" value="0.45"><span id="heteroV">0.45</span></div>
-        <div class="row"><label for="stageZ1">境界 z1</label><input id="stageZ1" type="range" min="0.15" max="0.80" step="0.01" value="0.40"><span id="stageZ1V">0.40</span></div>
-        <div class="row"><label for="stageZ2">境界 z2</label><input id="stageZ2" type="range" min="0.20" max="0.95" step="0.01" value="0.75"><span id="stageZ2V">0.75</span></div>
-        <div class="row"><label for="tlBase">TL基礎率</label><input id="tlBase" type="range" min="0" max="1" step="0.01" value="0.25"><span id="tlBaseV">0.25</span></div>
-        <div class="row"><label for="tlKick">TL遅延量</label><input id="tlKick" type="range" min="0" max="4" step="0.05" value="1.20"><span id="tlKickV">1.20</span></div>
-        <div class="row"><label for="lambdaTRT">TRT λ</label><input id="lambdaTRT" type="range" min="0.005" max="0.20" step="0.005" value="0.05"><span id="lambdaTRTV">0.050</span></div>
+共有する
+
+PR を作成する
+
+
+以下の論文の命題に適合するようにシミュレータを調整したい。
+日本の創薬・バイオベンチャーにおける境界翻訳損失の差はなぜ生じるのか：同一資源プールの継続性、評価関数整合、TRT-PRA\nWhy Do Boundary Translation-Loss Differences Arise in Japanese Biotech Ventures? Resource-Pool Continuity, Evaluative Alignment, and TRT-PRA\n要旨\n本稿は、資源制約のため探索と活用を分離しにくい日本の創薬・バイオベンチャーにおいて、なぜ同一資源プールの継続性の差が事業化ラグの差として現れるのかを、段階境界設計の問題として検討する。継続性は設計痕跡の保持を支える構造条件、TRT は保持された痕跡を次段階へ持ち越す時間軸の重点移行、PRA はその持越し効果を条件付きで増幅・減衰させる空間軸の並列配分、評価関数整合は保持された痕跡の可用化条件として定義される。現上場企業と過去上場企業を含む8社12境界窓の比較から、継続性だけでなく評価関数整合が境界TLのリスク条件として働くことが示唆された。他方、低整合が直ちにTLを生むわけではなく、成果化ラグ差そのものの説明は限られた到達点による補助的確認にとどまる。以上より本稿は、事業化ラグ差を、保持と可用化の組合せが境界TLをどのように分岐させるかという中範囲理論として提示する。\nキーワード：両利き経営、資源制約、同一資源プールの継続性、評価関数整合、翻訳損失\nAbstract\nThis paper examines why commercialization lags differ across Japanese drug-discovery and biotech ventures when exploration and exploitation cannot easily be separated under resource constraints. It reframes the issue as a problem of stage-boundary design. Resource-pool continuity is defined as the structural condition that preserves design traces formed in exploration; TRT as the time-axis shift that carries retained traces forward within the same resource pool; PRA as the space-axis parallel allocation that conditionally amplifies or attenuates that carryover; and evaluative alignment as the condition under which retained traces remain usable on the development side. Empirically, the paper employs a mixed-method design based on 8 firms and 12 boundary windows, combining six core case comparisons with exploratory boundary-level summaries. The evidence most directly supports the claim that evaluative alignment matters in addition to continuity: low alignment appears to raise the risk of boundary-level translation loss, but does not mechanically generate it, because a companion window shows a high-continuity/low-alignment configuration without an observable TL bundle. Commercialization-lag differences themselves are examined only through a limited set of lag endpoints. The paper therefore does not claim a general theory of ambidexterity outcomes. Instead, it offers a middle-range explanation of how retained design traces, their usability under changed evaluation functions, and boundary-level translation loss jointly shape downstream commercialization-lag differences in Japanese biotech ventures.\nKey words: organizational ambidexterity; resource-pool continuity; evaluative alignment; translation loss; biotech ventures \n1. 序論\n1.1 研究背景：日本の創薬・バイオベンチャーにおける事業化ラグと両利き設計\n日本の創薬・バイオベンチャーでは、上市までに長い時間を要し、資金制約や提携依存の下で研究開発の継続が大きな課題となることが指摘されてきた（藤原, 2013; 高橋・木川, 2017; 奥山, 2025）。既存の国内研究では、事業化ラグの差は、資金調達、提携形成、導入資産の成熟度、組織能力の差として論じられることが多い。もっとも、同じように探索を進めていても、開発・承認・上市へ移る段階境界で再設計や手戻りが集中的に生じ、事業化ラグが開く局面はなお十分には説明されていない。\nこの事業化ラグの差を説明する分析視角として、組織研究では、探索と活用の両立、すなわち両利きの設計問題が論じられてきた。そこでは、探索と活用の干渉を抑える設計として、構造的分離、文脈的統合、逐次切替などが主要な解として提示される（Gupta et al., 2006; Raisch et al., 2009; O’Reilly & Tushman, 2013）。しかし日本の創薬・バイオベンチャーでは、人的・資金的・設備的余剰が限られるため、探索と活用を恒常的に分離する前提そのものが置きにくい。本稿はこの文脈から、分離不能下でなお生じる事業化ラグの差へ接近する。\n1.2 中心問題意識：分離不能性の下で成立する両利き\nしかし資源制約下のベンチャーでは、探索と活用を別部門・別人材・別設備として冗長に持つことが難しく、分離は制度的にも運用上も成立しにくい。それにもかかわらず、同一のコア技術、同一チーム、共通設備やデータ基盤を反復的に用いながら探索と活用を接続し、段階移行に伴う失敗のリセットを抑えつつ成果化の速度を高める事例が観察される。本稿が保持したい中心問題意識は、分離できないにもかかわらず、なぜ段階境界をまたいだ同一資源プールの継続性の差が、同じように探索を進めるベンチャーの事業化ラグの差として現れるのか、という逆説である。\n1.3 研究課題と本稿の貢献\n本稿は、この逆説を資源制約型ベンチャーの特殊事例としてではなく、日本の創薬・バイオベンチャーに反復して現れる事業化問題として引き受ける。既存の国内研究では、事業化ラグの差は、資金調達力、提携形成能力、導入資産の成熟度、一般的な組織能力といった要因で説明されることが多い。これらの説明はいずれも重要であるが、探索成果が開発・承認・上市へ移る段階境界で、なぜ再設計や手戻りが集中的に生じるのかという問題は、なお十分には開かれていない。本稿が前面に出すのは、この段階境界において、人・技術基盤・設備／データ基盤に担持された設計痕跡がどの程度保持され、どの条件で再利用可能な形に変換されるのかという設計問題である。したがって本稿の第一義的な貢献先は、日本のベンチャー研究における事業化論である。他方で組織研究への貢献は、その問題を分離不能下の両利きに残された未説明部分として再定式化する点にある。本稿の貢献は三点に整理できる。第一に、事業化ラグ差を、その手前にある境界翻訳損失の比較を通じて読み解く視角を提示する。第二に、継続性、評価関数整合、翻訳損失を主連鎖とし、TRT と PRA をその時間軸・空間軸の理論部品として位置づけた理論枠組みを提示する。第三に、その理論を日本の創薬・バイオベンチャーの文脈に結びつけ、mixed-method のケース比較と exploratory summary を通じて検討する。ここで理論上の中心命題はP4である。もっとも、本文の実証で比較的直接に点検できるのは、境界TLと評価関数整合の関係、すなわちP3である。読みやすさのため先に整理すれば、P4は理論上の中心命題、P3は本文の主柱、P1とP2はその前段を支える探索的な理論部品である。本稿の命題が直接扱う基本単位は案件×段階境界であり、組織はその上位文脈として扱う。また本稿は、保持と可用化が観測上切り分けられないなら理論の識別力自体が失われるという棄却条件を明示的に引き受ける。なお、本稿本文では理論の論理導出を主とし、測定指標の定義や識別手順の細部はオンライン付録（補足資料）に退避することを想定する。\n本稿は、日本の創薬・バイオベンチャーにおける事業化ラグ差を、その前段にある段階境界での翻訳損失の差として捉え、同一資源プールの継続性が設計痕跡の保持を、評価関数整合が保持された痕跡の可用化を、それぞれどのように規定するかを mixed-method で検討する。\n1.4 本稿の構成\n以上を踏まえると、本稿の根底にある問いは、資源の分離が難しいにもかかわらず、なぜベンチャー企業で両利きが成立しうるのかという点にある。以下ではこの問いを、日本の創薬・バイオベンチャーにおける事業化ラグ差へつながる前段の境界TL差として観測できる形に置き直し、段階境界での保持・可用化・翻訳損失の連鎖として追う。本文で最も厚く見ていくのは、境界TLと評価関数整合の関係であり、lag はその先にある downstream outcome を限られた endpoint で確かめる位置に置く。したがって読解の重心はP3にあり、P4は境界TL差を介した条件付きの含意として扱う。そのうえで、2節で理論枠組みと命題を提示し、3節でデータと主要変数のコード化を整理する。4節で mixed-method 設計と分析単位を明示し、5節で既存研究との接続を整理する。6節で中核6ケースの比較と12境界窓の exploratory summary を示し、7節で予測分岐の読みと反証可能性を整理する。最後に8節で含意・限界・結論を述べる。\n2. 理論枠組み：同一資源プールの時間・空間配分としてのTRT-PRA\n本節で使う概念の役割を先に整理する。継続性は設計痕跡の保持を支える土台、TRT はその痕跡を段階境界へ持ち越す時間軸の配分、PRA は同一資源プールを複数機会へ配る空間軸の条件、評価関数整合は保持された痕跡が開発側で可用化される条件、翻訳損失（TL）は境界で観測される近接メカニズム、成果化ラグはその帰結である。以下では、この役割分担に沿って前提、命題、既存研究との差異を順に示す。\n2.1 前提1：資源制約と分離不能性\n本稿が対象とするのは、探索と活用を組織的に分離したくても、資源制約ゆえにそれが実行できない状況である。したがって、分離を達成する能力差を主要な説明に置かず、分離不能性を理論の前提条件として固定する。\n2.2 前提2：同一資源プールと継続性\n分離不能性の下では、探索と活用は同一のチーム、技術基盤、設備・データ基盤を部分的に共有せざるを得ない。本稿はこの共有の度合いを、同一資源プールの継続性として捉える。ここでいう継続性は、切替頻度や順序そのものでも、TRTやPRAそのものでもない。探索段階で形成された設計痕跡を担う人・技術基盤・インフラが、段階境界を越えてどれだけ残るかという、資源プールのストック側の条件である。継続性が高いほど、失敗履歴、測定系、データ表現、CMC仕様、意思決定理由といった設計痕跡が段階境界で失われにくくなる。もっとも、継続性が高いことは、設計痕跡が保持されることを意味しても、それがそのまま開発側で使えることを意味しない。この点で継続性は、成功の十分条件ではなく、設計痕跡の保持を支える構造条件として位置づけられる。\n2.3 前提3：TRTとPRA\n同一資源プールの下で両利きを成立させる配分操作として、本稿は二つの動きを区別する。第一に、探索寄りだった重点を、同じ担い手と基盤を保ったまま開発寄りへ移す時間軸的資源移行（TRT）である。言い換えれば、同じメンバーや設備を残したまま、時間配分の重心を徐々に開発側へ移す動きである。第二に、同一資源プールから複数機会へ同時に配る並列的資源配分（PRA）である。これは、共通の研究設備や人材を複数案件にまたがって使う結果として生じる並列配分であり、案件数の多寡それ自体ではなく、共通資源を並列化した結果として生じる可搬性と干渉の両方を含む空間軸の操作として定義される。\n本稿では因果順序を次のように固定する。継続性は設計痕跡の保持量を規定する。TRTは保持された設計痕跡を探索側から開発側へ持ち越す時間軸の操作である。PRAは同じ資源プールを複数機会へ並列配分することで、その持越し効果を条件付きで増幅も減衰もさせる。評価関数整合は、保持・持越しされた設計痕跡が新段階で可用化される程度を規定する。翻訳損失はその結果として生じる近接メカニズムであり、成果化ラグはその帰結である。したがって、継続性、TRT、PRA、評価関数整合は互いに置き換え可能な概念ではなく、ストック、時間軸の操作、空間軸の操作、可用化条件という異なる理論役割を担う。\n2.4 概念定義：成果化ラグと翻訳損失\n【成果化ラグ】探索起点から所定の成果化到達点までに要する時間である。本稿では理論構成概念として成果化を、臨床進展、承認、上市、提携・導出を含む広い価値化到達点として捉える。実証化に際しては、主要操作化として上市までのラグを用い、代替終点による頑健性確認を行う。\n【翻訳損失】探索知が活用知として減価する現象を指すが、その焦点は知識が動かないことではない。ここでの翻訳は、意図的な説明や伝達だけでなく、段階境界で評価関数が切り替わることに伴って必要となる再符号化・再作業を含む。平たく言えば、研究で有効だった証拠や設計選択が、開発ではそのまま通用せず、やり直しが必要になるときにTLが現れる。移転や共有が成立した後でも、成功基準、測定系、意思決定規則、品質要求が非連続に変化すると、追加試験、プロトコル改訂、CMC変更、比較可能性の再構成として表出する。本稿はこの減価を翻訳損失（TL）として理論化し、成果化ラグの近接的決定因として位置づける。\n【設計痕跡と継続性】設計痕跡とは、探索段階で形成された仮説、実験系、データ表現、CMC仕様、失敗履歴、意思決定理由の束であり、人（チーム）・技術基盤・インフラ（設備・データ基盤）に担持される。継続性が高いほど、これらの痕跡は段階境界を越えて保持されやすい。しかし保持と可用化は同じではない。同じチームが継続していても、開発段階で求められる評価関数が探索段階と大きくずれれば、痕跡は残っていても、そのままでは使えず、再符号化の負荷が生じる。したがって、継続性が説明するのは設計痕跡の保持であり、自動的な成果化ではない。\n【評価関数整合】評価関数整合とは、段階境界・案件間で成功基準（品質属性・エンドポイント・マイルストーン等）、測定系、意思決定規則がどの程度連続しており、探索で形成された根拠の連鎖が開発側で再利用できるかを指す。平たく言えば、研究で良いとされた根拠が、開発でもそのまま意味を持つかどうかである。本稿では、評価関数整合を継続性と切り離して扱う。整合が高ければ、保持された設計痕跡は再重み付けによって可用化されやすい。整合が低ければ、痕跡は保持されていても比較可能性の作り直しが必要となり、翻訳損失が増幅する。逆に、整合がある程度高くても継続性が低ければ、暗黙の判断理由や失敗履歴が失われ、可用化できる痕跡量そのものが乏しくなりうる。この点で、継続性は保持、評価関数整合は可用化を、それぞれ異なる経路で規定する。\n2.5 理論命題（P1–P4）\n本稿の中心連鎖は、継続性が探索段階で形成された設計痕跡の保持量を規定し、TRT が保持された痕跡を同一資源プール内部で次段階へ持ち越し、評価関数整合がその可用化可能性を規定し、PRA がその過程を条件付きで増幅も減衰もさせ、その差が段階境界における翻訳損失の多寡を左右し、条件付きで成果化ラグ差へつながる、というものである。したがって本稿が直接説明しようとするのは、継続性が自動的に速さを生むという単線的関係ではなく、保持と可用化の組合せが境界TLをどう分岐させるかという段階境界の設計問題である。\n•	命題1（時間軸メカニズム：TRT）：TRT が強い案件ほど、継続性によって保持された設計痕跡は、外部的な引継ぎではなく同一資源プール内部で次段階へ持ち越されやすい。その効果は継続性が高いほど大きく、結果として段階境界における翻訳損失は低下しやすい。\n•	命題2（空間軸の条件分岐：PRA）：PRA は、TRT による持越し効果を案件間評価関数整合に応じて条件付きで調整する。案件間評価関数整合が高い場合、PRA は共通資源の可搬性を通じて、保持された設計痕跡の横断的利用可能性を高める。他方、案件間評価関数整合が低い場合、PRA は注意散逸、標準の分断、手戻りを通じて、保持された設計痕跡の利用可能性を弱める。\n•	命題3（境界条件：評価関数整合）：段階境界評価関数整合が高いほど、保持・持越しされた設計痕跡は開発側で可用化されやすい。反対に、段階境界評価関数整合が低い場合には、保持された痕跡が存在していても比較可能性の作り直しや再符号化が必要となり、翻訳損失は増幅しやすい。段階境界評価関数整合の低下は、外生的な評価基準変更、規制・提携条件の更新、要求精度の非連続な上昇などとして生じうる。\n•	命題4（差異命題／中心命題）：切替頻度・順序と主要な既存説明要因が大きく異ならない条件の下で、同一資源プールの継続性が高く、かつ段階境界評価関数整合が高い案件ほど、探索段階で形成された設計痕跡はより多く保持され、開発側で可用化されやすく、その結果として翻訳損失は小さく、成果化ラグは短くなりやすい。反対に、継続性が低く保持が薄い場合、あるいは継続性が高くても段階境界評価関数整合が低く可用化に失敗する場合には、翻訳損失は増幅し、成果化ラグは伸びやすい。 \nもっとも、本稿が公開資料から直接観測するのは保持量そのものではなく、保持を支える継続性条件と、その帰結として表出する境界再作業である。\n図1　保持と可用化を区別した TRT-PRA の基本連鎖\n \n表1　概念定義と観測可能性（構成物・プロキシ・データ源・命題上の役割）\n概念（構成物）	本稿での定義	観測可能なプロキシ（例）	主なデータ源（例）	命題上の役割\n同一資源プールの継続性（resource-pool continuity）	段階境界をまたいで、設計痕跡の担い手であるコア資源（人・技術基盤・インフラ）が維持される度合い	発明者・主要研究者の継続性（重複率） コア特許／基盤技術語の反復利用（引用・類似度） 共通設備・共通データ基盤の継続（設備注記、システム投資、共通プロトコル）	特許データ（J-PlatPat等）、有価証券報告書・統合報告書、IR資料・プレスリリース、臨床試験レジストリ	P4の主要説明変数。P1の土台（保持条件）\nTRT（時間軸的重点移行）	保持された設計痕跡を、同一資源プール内部で探索から開発へ持ち越す時間軸の重点移行	HHIの時系列変化（TRT_score）、パイプライン配分の重心移動	特許分類構成比、開示パイプライン、事業別R&D記載	P1の時間軸メカニズム\nPRA（並列的資源配分）	同一資源プールを複数機会へ同時に配分する空間軸の並列化。可搬性と干渉の両方を含む	Simpson指数（多様性）、並列案件数、PRA_interact（例：PRA×探索比）	パイプライン開示、特許・学術発表の領域分布、事業セグメント情報	P2の条件付き調整\n評価関数整合	段階境界・案件間で、成功基準（品質属性・エンドポイント・マイルストーン）が整合している度合い	エンドポイント／CQAsの類似度（テキスト類似度等） 規制・提携条件の変更イベント（評価関数切替の外生ショック） 共同開発契約のマイルストーン整合（公開情報で可能な範囲）	臨床試験レジストリ、規制当局ガイダンス、IR資料・契約開示	P2の分岐条件・P3の境界条件（可用化条件）\n翻訳損失	保持・持越しされた設計痕跡が段階境界で再符号化を要し、探索知が開発知として減価する現象	手戻り・再試験・追加試験の発生（プロトコル改訂、橋渡し試験、CMC変更等） ramp-up遅延の兆候（再学習に伴う非効率）	プレスリリース、臨床試験更新履歴、申請・承認情報（公開範囲）	P1〜P3とP4をつなぐ近接メカニズム\n成果化ラグ	探索起点から所定の成果化到達点までの時間	主要操作化＝特許出願→上市までの所要時間／代替操作化＝承認、提携・導出、特定段階到達までの所要時間	特許、臨床試験レジストリ、承認情報、財務・IR開示	P4のアウトカム\n適用前提（射程）：資源制約と分離不能性	探索と活用を組織的に分離したくても、冗長資源が不足して分離を恒常的に維持できない状態	公開情報から取得可能な近似指標で評価（規模・資金余力・研究開発体制など）	—	本稿の射程条件（P1–P4の適用前提）\n注：表1のデータ源は例示であり、実証研究ではカバレッジと取得可能性に応じて縮退・代替が必要となる。なお本稿でいう資源制約とは、探索と活用を専任組織として恒常的に分離できない程度に人的・資金的・設備的余剰が限定される状態である。実証稿では、公開情報から取得可能な規模・資金余力・研究開発体制に関する指標で分離不能性を近似する。 \n3. データと主要変数のコード化\n本節では、本稿の mixed-method 実証で用いる主要変数のコード化ルールを整理する。継続性、TRT/PRA、評価関数整合、翻訳損失、成果化ラグは、同一指数に畳み込まず、別系列の指標として観測する。\n3.1 TRT（時間軸的資源移行）\nTRTの計測には、同一資源に紐づく技術・案件の集中度（HHI）を年次構成比から捉え、その時系列差を要約した TRT_score を用いる。TRT_score は設計痕跡の持越しそのものではなく、同一資源プール内部で探索重点から開発重点へ重心が移る程度を近似する指標である。算出式と代替仕様は補足資料に示す。\n3.2 PRA（並列的資源配分）\nPRAは、同一資源から派生する案件・領域の同時分散として捉える。必要に応じて、共同出願、相互引用、共同研究ネットワークを用いた相互作用強度の補助指標 PRA_interact を併用する。最小定義と代替仕様は補足資料に示す。\n3.3 同一資源プールの継続性の観測可能性と操作化\n継続性は、集中度や多様性ではなく、段階境界をまたぐ人（チーム）・技術基盤・インフラ（設備・データ基盤）の連続性として観測する。他方、TRTは段階間配分の時間パターン、PRAは並列配分の空間パターンとして近似し、各構成物は公開情報から到達可能な別系列のプロキシ束で捉える。\n3.4 翻訳損失の指標（成果化ラグとの分離）\n翻訳損失（TL）は成果化ラグそのものではなく、探索から開発へ移る段階境界で生じる再符号化・再学習の負荷である。主指標には、プロトコル改訂、橋渡し試験の追加、CMC変更、中止・再開などの再設計イベント密度（TL_events）を用い、補助的に境界区間の残差時間（TL_time）で確認する。TL_events は保持失敗と可用化失敗を単独では弁別しないため、TL指標は両者が合成された境界再作業の近似として解釈される。\n3.5 評価関数整合と測定連鎖\n評価関数整合は、段階境界では主要評価項目、CQAs、比較可能性要件、意思決定ゲートの連続性として、案件間では提携単位の品質規格や測定系の類似度として記録する。測定連鎖は、継続性→担い手の連続性、TRT/PRA→配分パターン、評価関数整合→可用化条件、TL→境界再作業、成果化ラグ→到達時間、の順に設計する。各構成物は別系列の代理指標として観測し、TRT_score、PRA_interact、TL_events、TL_time の最小定義は補足資料に示す。以上の測定連鎖は、保持と可用化を理論上区別したまま、境界再作業がどこで観測可能な差として現れるかを点検するための最小設計である。したがって、この最小設計が一次的に識別するのは、保持失敗と可用化失敗が合成された境界再作業である。言い換えれば、本稿の到達点は、保持失敗と可用化失敗を厳密に分離することではなく、両者が合成された境界再作業を一次的に識別し、どの境界で設計上の負荷が立ち上がるかを比較可能にすることにある。\n4. mixed-method 設計\n本節では、本稿の mixed-method 実証がどの母集団・分析単位・資料束に依拠しているかを示し、ケース比較と exploratory summary をどのように位置づけるかを明示する。confirmatory reduced-form は本稿の主結果ではなく、診断的な補助線にとどめる。\n4.1 対象母集団と分析単位\n本稿の mixed-method 実証は、日本の創薬・バイオ関連上場企業を中心に、公開資料から段階境界を安定して特定できる企業を抽出し、現上場と past-listed を含む8社12境界窓を対象とする。母表としては29社の企業マスターを保持するが、境界比較に直接使うのは、継続性・評価関数整合・TL・lag の少なくとも一部を同一窓で追える12窓である。主分析単位は asset × boundary window であり、各 boundary window は boundary_anchor_date を中心とする主窓 [-1,+1] で定義する。firm-year 指標は TRT/PRA の proxy を補助的に示すために用いるが、本稿の主たる比較単位ではない。\n4.2 データソースとコード化\nデータソースは、会社IR・TDnet・EDINET に加え、PMDA、試験レジストリ、J-PlatPat、過去上場企業についての市場公表資料である。各ケースについて document ledger を残し、ケース年表と追加資料パケットを紐づけて、同じ境界窓の判断根拠を追跡できるようにした。継続性は HUMAN / TECH / INFRA の三層シグナルを主窓年で平均し、boundary レベルの continuity index とした。評価関数整合は asset × boundary レベルで 1.0 / 0.5 / 0.0 を暫定付与し、TL は境界再作業イベントを bundle 規則で束ねて観測した。TRT / PRA は公開情報で埋め切れる count-based proxy に再設計し、firm-year 補助指標として保持する。\n4.3 ケース選定と exploratory summary の位置づけ\nmixed-method 本線では、中核6ケースを機構正例、current-listed TL positive 補強例、低継続性対照、水平展開ベースライン、past-listed の robustness、lag outcome calibration の役割で固定した。なお、同一資産内の内部反例は companion case として保持し、C1 の解釈を低整合決定論へ傾けないために用いる。boundary-level summary はケース配置の補助確認に用い、exploratory reduced-form は診断的分析としてのみ用いる。\nmissingness は主として二種類ある。第一に、人的継続性や comparability の内部運用のように公開資料だけでは直接観測しにくい情報である。第二に、lag endpoint が承認・上市まで到達していない窓では成果化ラグが終点まで閉じないことである。そのため本稿は、境界窓の比較とケース内のプロセストレーシングを主とし、定量は exploratory な補助線にとどめる。\n5. 既存研究との接続：時間軸メカニズム・空間軸条件・境界条件としての位置づけ\n本節では、同一資源プールの継続性を中心構成概念として据え、理論枠組みを繰り返すのではなく、本稿が既存研究とどこで分岐するのかを三点に絞って整理する。第一に、TRTは一般的な再配置能力ではなく、設計痕跡を段階境界へ持ち越す時間軸メカニズムである。第二に、PRAは独立の成果源泉としてではなく、TRTの効果を条件付きで増幅・減衰させる空間軸の条件分岐として扱う。第三に、評価関数整合は継続性の代替概念ではなく、保持された設計痕跡が可用化されるかどうかを規定する境界条件として位置づける。\n5.1 時間軸メカニズム：TRTと翻訳損失\nTRTは、継続性によって保持された設計痕跡を、探索から開発への段階移行に伴って同一資源プール内部で持ち越す時間軸の配分操作である。したがってTRTが説明するのは、探索成果が価値化される一般的な能力差ではなく、保持された痕跡が外部的引継ぎではなく内部的重点移行として運ばれる過程である。この点でTRTは、切替頻度や順序そのものとも、動的ケイパビリティ一般とも区別される。\n翻訳損失（TL）は、移転摩擦そのもの（knowledge stickiness: Szulanski, 1996, 2000; von Hippel, 1994）でも、共同体間で意味が変換される境界問題（knowledge boundary: Carlile, 2002, 2004）でもない。本稿が切り出すのは、同一資源プールの継続性が保たれ、形式的な引継ぎが最小でも、評価関数の切替によって保持された設計痕跡の再符号化と再作業が必要になり、成果が減価しうる過程である。von Hippel (1994) が論じた sticky information は、情報が特定の担い手や現場に付着するため移転が高コストになる点を示したが、本稿の焦点は、その付着情報が段階境界を越えていったん持ち越された後でも、評価関数の切替によってなお減価しうる点にある。Carlile (2002, 2004) が示した境界問題とも接続するが、本稿が問うのは境界越境の有無それ自体ではなく、持ち越された痕跡が新しい評価関数の下で再利用可能かどうかである。したがって本稿の独自性は、一般的な移転の難しさではなく、分離不能下で保持された同一性が、移転後の減価をどこまで抑えうるかを問う点にある。\nこの意味で本稿は、吸収能力論（Cohen & Levinthal, 1990）や動的ケイパビリティ論（Teece, Pisano, & Shuen, 1997; Eisenhardt & Martin, 2000）を否定するのではなく、それらではなお粗く扱われやすい段階境界の減価過程を切り出す。Penrose (1959) が論じた同一資源の継続利用から生じる生産的サービスの蓄積とも接続するが、本稿の焦点は、その蓄積が段階境界の評価関数切替に耐えて可用化されるかどうかにある。さらに、Nelson and Winter (1982) や Zollo and Winter (2002) のルーティン・学習論と比べると、本稿の設計痕跡は安定したルーティンに限られず、仮説、失敗履歴、CMC上の判断理由のような前ルーティン的な痕跡を含む。したがって本稿の予測分岐は、切替頻度や順序と主要な既存説明要因が大きく異ならない条件でも、同一資源プールの継続性が高い案件ほど翻訳損失と成果化ラグの差が残差的に現れるという点にある。\n5.2 空間軸の条件分岐：PRAの相補と相克\nPRAは、本稿では独立の成果源泉ではなく、TRTによる翻訳損失抑制効果を条件付きで変える空間軸の設計変数として限定的に扱う。案件間の評価関数整合が高い場合、PRAは可搬性を高めてTRTを補完しうる。他方、整合が低い場合、並列化は注意散逸、標準の分断、手戻りを通じてTRTの効果を弱める。したがって本稿では、PRAの議論を翻訳損失と成果化ラグに接続される条件付き効果に絞り、探索範囲拡張やオプション保持といった独立便益は前面化しない。\n5.3 境界条件：評価関数整合と日本のベンチャー研究への接続\n命題3が示すのは、継続性とTRTが翻訳損失低減を支えるが、それだけでは十分ではないという点である。評価関数整合を崩す代表的源泉として、規制・提携条件の変更、要求精度の非連続な上昇、案件間で共有される成功基準の分断が挙げられる。ここで重要なのは、評価関数整合が高ければ継続性が不要になる、という関係ではない。継続性が規定するのは何が保持されるかであり、評価関数整合が規定するのは保持された痕跡がどう使えるかである。したがって、継続性が低い状況では整合があっても暗黙の判断理由や失敗履歴が失われうるし、整合が低い状況では継続性があっても再符号化負荷は増える。両者は代替ではなく、保持と可用化を分けて担う。\nこの切り分けは、日本のベンチャー研究との対話においても重要である。既存研究では、事業化ラグの差は、資金調達力（開発継続の時間的余裕）、提携形成能力（外部資源へのアクセス）、組織能力（実行の一般的効率）、導入資産の選択（出発点の成熟度）といった要因で説明されやすい（藤原, 2013; 高橋・木川, 2017; 高井, 2020; 奥山, 2025）。これに対し本稿は、そうした要因を否定するのではなく、段階境界で何が保持され、どの条件で再利用可能になるのかという設計上のブラックボックスを開く。また、野中（2002）の知識ベース理論が知識創造と知識変換の生成過程を前面に出したのに対し、本稿は生成された知識が評価関数の切替後にも妥当な根拠連鎖として残るかを問う。ここでいう設計痕跡は、一般的な暗黙知や形式知一般ではなく、仮説、失敗履歴、CMC判断理由、比較可能性の根拠連鎖のように、段階境界で痩せやすい準ルーティン的痕跡である。したがって本稿の日本的含意は、資源制約型バイオベンチャーの事業化差を、資源量や提携の有無だけでなく、継続性と整合の設計問題として読み替える点にある。\n6. mixed-method のケース比較：境界TLの比較を中心に\n6.1 対象窓と中核ケースの配置\n本節では、8社12境界窓のうち、本文で直接に読むべき6ケースだけを固定する。本節の読解の重心は、境界TLと評価関数整合の関係、すなわちP3に置く。役割は、(i) 機構正例、(ii) current-listed TL positive 補強例、(iii) 低継続性対照、(iv) 水平展開のベースライン、(v) past-listed を用いた robustness、(vi) lag endpoint の校正、の六つである。表2は、そのために各ケースの continuity、alignment、TL、lag endpoint、本文での役割を一枚で要約したものである。 \n中核6ケースは次の順で読む。まず current-listed の TL positive である C1 と C2 を置き、そのあとにサンバイオの companion 窓を参照して、low alignment を決定論的に扱わない。C1 と companion 窓の対置は、高継続性があっても低整合が常に機械的な TL を生むわけではないという本稿の要点を最短距離で示す導入部でもある。続いて C3 と C4 で継続性側の対照と horizontal baseline を確認し、最後に C5 と C6 で past-listed の頑健性と lag endpoint の較正を加える。したがって、本節で比較的直接に示すのは境界TLと評価関数整合の関係であり、lag endpoint は C6 と exploratory summary を通じて P4 の下流含意を慎重に確かめる補助材料にとどまる。なお、サンバイオの ST5→ST5 窓は、同一資産内で low alignment と no TL が併存しうることを示す companion case として、C1 の caution を支えるために用いる。\n表2　中核6ケースの役割と主要変数\nケース	境界窓 / 役割	continuity / alignment	TL / lag endpoint\nC1 サンバイオ	ST5→APPROVAL_2022–2024 / 機構正例	HIGH / LOW	TL=Y / endpoint=-\nC2 アンジェス	ST5→ST5_2023–2025 / current-listed TL positive 補強例	HIGH / LOW	TL=Y / endpoint=-\nC3 シンバイオ製薬	ST2→ST3_2021–2023 / 低継続性対照	LOW / HIGH	TL=N / endpoint=-\nC4 ペプチドリーム	ST0→ST0_2021–2023 / 水平展開ベースライン	HIGH / MID	TL=N / endpoint=-\nC5 UMNファーマ	ST5→ST7_2016–2018 / past-listed robustness	HIGH / LOW	TL=Y / endpoint=-\nC6 ステラファーマ	ST5→APPROVAL_2019–2021 / lag 校正	HIGH / HIGH	TL=N / endpoint=APPROVAL\n \n6.2 current-listed TL positive の比較：C1 と C2\nサンバイオの ST5→APPROVAL 窓は、高継続性のまま承認境界に入ったにもかかわらず、2023年の収率課題、継続審議、2024年の当局側審議資料を通じて CMC 再作業と規制側の再確認が重なった境界である。この窓は、保持された資源がそのまま承認側で可用化されるとは限らず、低整合下では TL bundle が立ちうることを示す主たる機構正例である。他方、同一資産の companion 窓である ST5→ST5 では、低整合が観察されても、公開情報上、ここで見られるような CMC 再作業・継続審議・当局側再確認の束は並ばない。したがって読者は、低整合の有無それ自体よりも、どの境界で bundle 化した再作業が立ち上がるのかに着目する必要がある。\nアンジェスの ST5→ST5 窓は、current-listed の gene therapy 資産において、2024年の申請取下げと販売終了方針変更が公開情報で確認できる TL positive 境界である。このケースを C1 に並べることで、低整合下の TL が特定企業固有の出来事に閉じず、current-listed の別企業にも観測されることを補強できる。ここでも、低整合を十分条件として読むのではなく、リスク条件として限定して解釈する必要がある。\n6.3 continuity contrast：C3 と C4\nシンバイオ製薬の ST2→ST3 窓は、導入資産の適応移動とプロトコル見直しが重なり、低継続性のもとで境界が立ち上がった対照ケースである。このケースは、継続性が低いときに再設計や進行遅延のシグナルがどのように現れるかを示す、継続性側の補助対照として重要である。ただし、公開情報上は TL bundle まで確認できないため、失敗ケースと断定するのではなく、低継続性下の遅延シグナルとして扱うべきである。\nペプチドリームの ST0→ST0 窓は、PDPS を共有基盤として複数の共同研究が水平展開しても、公開 TL bundle を伴わずに進んだ高継続性・中整合のベースラインである。このケースは、parallel spread や cross-domain recombination が観測されること自体は翻訳損失を意味しないことを示し、P2 を支える主要事例となる。他方で、2023年通期資料の代替保存元が未補修であるため、その点は脚注で留保したうえで用いる必要がある。\n6.4 robustness と lag calibration：C5 と C6\nUMNファーマの ST5→ST7 窓は、承認申請後の申請取下げと共同事業解約が公開情報で明示された、非生存企業の TL positive ケースである。このケースを入れることで、現上場企業だけを見たときに生じる survivor bias を崩し、低整合下の TL が current-listed だけの特殊事情ではないことを補強できる。ただし、この窓は pre-boundary の filing 起点が窓外資料に依存するため、lag 議論よりも TL 正例として限定して用いるのが適切である。\nステラファーマの ST5→APPROVAL 窓は、申請日と承認日が明瞭に開示されたクリーンな lag endpoint ケースである。このケースは、成果化ラグの終点をどのように測るかを較正する役割を担い、理論上の帰結変数である lag を本文で過大に扱わないための校正点となる。他方で、機構比較の中心事例として使うと過大な一般化につながるため、承認到達までの日数を示す校正ケースとして限定して扱う。\n6.5 12境界窓 summary と exploratory diagnostics\n12境界窓の exploratory summary では、TL 陽性窓 3 件はいずれも high continuity × low alignment の象限に位置している。他方で、サンバイオの同一資産 companion 窓では、高継続性・低整合でも公開 TL bundle が立たないため、低整合が TL を機械的に決定するという読みは支持されない。\nしたがって boundary-level summary は、ケース比較を補う形で、評価関数整合が TL のリスク条件として働くかを点検する材料になる。補助的な exact check でも、この対応は大きく崩れていない。他方、P4 については、その前段にある境界TL差が lag の差にどうつながるかを読むための補助線として用いる。lag endpoint はなお限られているため、成果化ラグ差そのものの確証ではなく、境界比較に根ざした下流確認として扱うのが適切である。\n6.6 小括\n以上を総合すると、保持された資源があるだけでは十分ではなく、どの境界で評価関数整合が崩れ、その結果としてどの程度 bundle 化した境界再作業が生じるかによって TL の有無が分かれる、という構図が最もよく見える。したがって、本節の mixed-method 証拠が比較的直接に支えるのは、低整合が TL のリスク条件として働くという P3 である。他方で P4 は理論上の中心命題として残るが、本節で示せるのは、その前段にある境界TL差が lag 差へどうつながりうるかという方向づけまでである。この読みは、TL_events が、保持失敗と可用化失敗が合成された境界再作業を一次的に識別する指標であることによって、なお限定される。また、lag endpoint はまだ限られているため、P4 を成果化ラグ差そのものの確証として提示するのではなく、境界比較に根ざした条件付き含意として扱うのが適切である。P1 と P2 については、carryover を支える候補機構と条件付きの水平展開効果として、探索的に整合する範囲にとどまる。\n7. 予測分岐の読みと反証可能性\n7.1 再ラベリング批判への応答\nTRT-PRAが既存理論の言い換えに留まらないかどうかは、切替設計、吸収能力、動的ケイパビリティ、評価関数整合単独説とは異なる予測を導けるかで判断される。本稿の差別化は四点にある。第一に、切替頻度や順序が同程度でも、継続性は設計痕跡の保持量に差を生む。第二に、評価関数整合は継続性の代替ではなく、保持された痕跡の可用化条件である。第三に、PRAの符号は案件間の評価関数整合に応じて反転しうる。第四に、翻訳損失は単なる遅延ではなく、段階境界に集中する再設計イベントとして観察される。 \nしたがって争点は、切替の設計だけではない。資源制約下で分離が困難な同一資源プールの内部で、段階境界の評価関数切替が探索成果をリセットとして扱うのか、それとも保持された痕跡を再重み付けして再利用できるのかが問われる。もし評価関数整合だけが主役であるなら、継続性を統制しても整合だけで翻訳損失の差が説明できるはずである。逆に、本稿が正しいなら、整合を一定に近づけても継続性は設計痕跡の保持量を通じて追加的な予測力を持ち、整合はその効果を可用化の側から条件づける。ここに本稿の反証可能性がある。表3は、命題ごとの理論上の位置づけと本文での evidential weight を並べて確認するための案内図として読む必要がある。\n表3　命題×ケース証拠マトリクス\n命題（位置づけ）	主証拠	反例 / 内部反例	補助証拠・主要 caution\nP1 TRT（理論部品／探索的）	C4, C3	companion 窓（サンバイオ ST5→ST5）	C1, C2, C6。TRT は carryover を支える候補機構として読む。\nP2 PRA（理論部品／探索的）	C4	明示的反例なし（C3 は対照）	reserve case 4974。主張は探索的に留める。\nP3 評価関数整合（主柱）	C1, C2	companion 窓（サンバイオ ST5→ST5）	C5, C6。低整合は十分条件ではない。\nP4 中心命題（理論上の中心／本文では補助）	C1, C2, C3, C4（境界TL比較） / C6（lag校正）	companion 窓（サンバイオ ST5→ST5）	C5。P4 は境界TLの差を通じて条件付きに支えられ、lag endpoint は C6 による校正点として限定的に用いる。\n \n7.2 棄却条件の明確化\n今後の実証分析において、(i) 評価関数整合と切替パターンを統制した後に継続性が設計痕跡の保持やTL_eventsを全く説明しない、(ii) 継続性が低くても評価関数整合だけで翻訳損失の差が一貫して説明される、(iii) PRAの相補／相克が案件間の評価関数整合と無関係に一方向である、(iv) 翻訳損失が段階境界に集中する再作業として識別できず、単なる長期遅延と区別できない、のいずれかが確認されれば、本稿の中心連鎖は大きく弱まる。とりわけ、継続性と評価関数整合が実証上区別できず、保持と可用化を観測上分離できない場合、本稿は独立理論として成立しない。\n8. 含意・限界・結論\n8.1 理論的含意\n第一に、ベンチャー研究への理論的含意として、本稿は、資源制約下で観察される事業化ラグの差を、成長や資源獲得の問題だけでなく、段階境界での保持と可用化の設計問題として捉え直した。この枠組みは、分離や冗長資源を前提とする設計論と競合するというより、分離不能下に残る未説明部分を補う。したがって本稿の主張は、継続性が常に最適だというものではなく、分離できない条件の下で継続性が翻訳損失にどう作用するかを理論化した点にある。第二に、組織研究への含意として、知識創造、境界横断、動的再構成の議論を、設計痕跡の保持と評価関数切替後の可用化という二段階に分解する視点を提供する。\n実務的含意としては、継続性を一括りに高めるのではなく、段階境界に入る前の設計レビューで、どの担い手を次段階まで残し、何を比較可能な形で持ち越すかを役割別に決める必要がある。経営者は、人・技術基盤・インフラのうち何を継続資源として優先保全するかを明示し、研究責任者は、試験系、データ表現、失敗履歴、仮説の判断理由を次段階でも再利用できる形で記録する。開発責任者は、探索側の表現と接続できるように、主要評価項目、比較可能性要件、CQAs、CMC判断基準、意思決定ゲートを早い段階から揃える必要がある。提携・委託を用いる場合には、提携担当が、試験系、データ書式、変更時の記録義務、比較可能性の確認方法を契約段階で明確にしておくべきである。したがって実務上の要諦は、継続性の維持を事後的な属人的努力に委ねるのではなく、段階境界の前に、誰が何を残し、どの基準で可用化するかを設計しておくことにある。\n8.2 方法論的含意\n本稿の方法論的含意は、継続性・TRT・PRA・評価関数整合・翻訳損失・成果化ラグという測定連鎖を、単一の大規模パネル推定ではなく、boundary window を単位とする mixed-method 設計に接続した点にある。公開資料だけでは保持失敗と可用化失敗を分離しきれず、lag endpoint も限られるため、本稿は中核6ケースの比較を主軸に置き、12境界窓の summary と exploratory reduced-form を補助線に留めた。この構成により、confirmatory quant の条件が未充足でも、どの境界で何が保持され、どの条件で TL が bundle 化するのかを比較可能な単位で示すことができる。加えて、39境界窓拡張版に対する小標本の exact check でも P3 と整合する方向は崩れていないが、これは本文の主結果を置き換えるものではない。他方で、将来の実証では、同一企業内の類似案件比較、事前特性によるマッチング、偽処置、事前トレンド点検を組み合わせ、confirmatory な定量設計へ接続していく必要がある。\n8.3 限界\n本稿の mixed-method 実証には少なくとも五つの限界が残る。これらは、本稿の読みを不必要に弱めるためではなく、何をどこまで示せているかを明確にするために明示しておくべき論点である。\n第一に、本稿は公開資料ベースの mixed-method 設計によって8社12境界窓を比較することを主軸とし、小標本の補助診断を併用するにとどまる。そのため、現在の証拠は一般法則の確証ではなく、境界設計の中範囲理論に対する比較的厳密なケース比較と diagnostic support として読む必要がある。\n第二に、設計痕跡の保持と評価関数切替後の可用化は理論上区別されるが、公開資料では両者を完全には観測できない。本稿が用いる TL_events は、保持失敗と可用化失敗が合成された境界再作業を一次的に識別する指標であり、両者の独立寄与を切り分けるものではない。換言すれば、これは本稿の弱さというだけでなく、今稿が到達した識別単位そのものでもある。\n第三に、現行のケース構成には selection / survival bias が残る。past-listed の C5 を入れることで現上場企業だけの survivor bias を一部は崩せるが、継続性自体が企業の設計選択である以上、継続性の総効果を厳密に識別したわけではない。\n第四に、本稿の読みは、日本の上場創薬・バイオベンチャーという文脈に強く依存している。評価関数の切替が明示的に現れる R&D 集約産業だからこそ境界比較が成立しており、他産業へ直ちに一般化することはできない。したがって他産業や非上場ベンチャーへ拡張するには、境界イベントと評価関数整合をどの proxy で追えるかを別途設計する必要がある。\n第五に、lag endpoint は補助的に拡張できたものの、lag outcome 側の検出力はなお限られている。そのため P4 を成果化ラグ差そのものの主結果として置くことはできず、lag endpoint は境界TL差の downstream check という補助的地位にとどまる。\n8.4 結論と未解消の問い\n結論を先に述べる。本稿が理論的に明示した中心連鎖は、継続性が設計痕跡の保持を、TRT がその持越しを、評価関数整合が保持された痕跡の可用化を、それぞれ規定し、PRA がその過程を条件付きで増幅または減衰させ、両者の組合せが段階境界における翻訳損失の多寡を左右し、その差が条件付きで成果化ラグ差へつながる、というものである。本稿で実証上もっとも厚く示せているのは、この連鎖のうち、とくに可用化条件としての評価関数整合が境界TLのリスク条件として働く点である。他方、成果化ラグ差そのものの説明は、限られた lag endpoint による補助的な確かめにとどまる。したがって本稿の証拠の厚みは、P3 を本文の主柱として比較的直接に支え、そのうえで P4 を、保持と可用化の組合せが境界TL差を通じて lag 差へつながりうるという条件付きの含意として支える構図として理解される。\nもっとも、本稿が公開資料から直接観測するのは保持量そのものではなく、保持を支える継続性条件と、その帰結として表出する境界再作業である。そのうえで本稿が示したのは、継続性が高ければ自動的に成果化が速まるという単純な因果ではない。むしろ、日本の創薬・バイオベンチャーでは、段階境界で何が保持され、保持された設計痕跡がどの条件で開発側で可用化され、両者の組合せがどの程度の境界再作業と翻訳損失を生むのかという設計問題こそが重要である。8社12境界窓の mixed-method 比較からは、継続性だけではなく評価関数整合が TL のリスク条件として働くこと、ただし低整合が直ちに TL を決めるわけではなく、同一資産の companion 窓では高継続性・低整合でも公開 TL bundle が立たない場合があることが示唆された。したがって本稿は、事業化ラグ差を、保持と可用化の組合せが境界TLをどう分岐させるかという観測可能な断面から読み解く中範囲理論として位置づけられる。\n残された問いは、どの担い手の継続性がどの段階境界で決定的に効くのか、また評価関数整合をどこまで事前に設計できるのか、という点にある。保持失敗と可用化失敗の独立寄与、継続性の総効果、lag outcome の一般化はなお留保される。したがって今後の課題は、保持と可用化をより明確に切り分けて追跡できるデータと比較設計を積み増し、翻訳損失の多寡がどの条件で成果化ラグ差へ結びつくのかを、より厳密に点検していくことである。\n参考文献\nAndriopoulos, C., & Lewis, M. W. (2009). Exploitation–exploration tensions and organizational ambidexterity: Managing paradoxes of innovation. Organization Science, 20(4), 696–717.\nBechky, B. A. (2003). Sharing meaning across occupational communities: The transformation of understanding on a production floor. Organization Science, 14(3), 312–330.\nBenner, M. J., & Tushman, M. L. (2003). Exploitation, exploration, and process management: The productivity dilemma revisited. Academy of Management Review, 28(2), 238–256.\nCao, Q., Gedajlovic, E., & Zhang, H. (2009). Unpacking organizational ambidexterity: Dimensions, contingencies, and synergistic effects. Organization Science, 20(4), 781–796.\nCarlile, P. R. (2002). A pragmatic view of knowledge and boundaries: Boundary objects in new product development. Organization Science, 13(4), 442–455.\nCarlile, P. R. (2004). Transferring, translating, and transforming: An integrative framework for managing knowledge across boundaries. Organization Science, 15(5), 555–568.\nCohen, W. M., & Levinthal, D. A. (1990). Absorptive capacity: A new perspective on learning and innovation. Administrative Science Quarterly, 35(1), 128–152.\nEisenhardt, K. M., & Martin, J. A. (2000). Dynamic capabilities: What are they? Strategic Management Journal, 21(10-11), 1105-1121.\nFleming, L. (2001). Recombinant uncertainty in technological search. Management Science, 47(1), 117–132.\nGibson, C. B., & Birkinshaw, J. (2004). The antecedents, consequences, and mediating role of organizational ambidexterity. Academy of Management Journal, 47(2), 209–226.\nGupta, A. K., Smith, K. G., & Shalley, C. E. (2006). The interplay between exploration and exploitation. Academy of Management Journal, 49(4), 693–706.\nHe, Z.-L., & Wong, P.-K. (2004). Exploration vs. exploitation: An empirical test of the ambidexterity hypothesis. Organization Science, 15(4), 481–494.\nJansen, J. J. P., van den Bosch, F. A. J., & Volberda, H. W. (2006). Exploratory innovation, exploitative innovation, and performance: Effects of organizational antecedents and environmental moderators. Management Science, 52(11), 1661–1674.\nJansen, J. J. P., Tempelaar, M. P., van den Bosch, F. A. J., & Volberda, H. W. (2009). Structural differentiation and ambidexterity: The mediating role of integration mechanisms. Organization Science, 20(4), 797–811.\nKatila, R., & Ahuja, G. (2002). Something old, something new: A longitudinal study of search behavior and new product introduction. Academy of Management Journal, 45(6), 1183–1194.\nLavie, D., Stettner, U., & Tushman, M. L. (2010). Exploration and exploitation within and across organizations. Academy of Management Annals, 4(1), 109–155.\nLevinthal, D. A., & March, J. G. (1993). The myopia of learning. Strategic Management Journal, 14(S2), 95–112.\nMarch, J. G. (1991). Exploration and exploitation in organizational learning. Organization Science, 2(1), 71–87.\nMerton, R. K. (1968). Social theory and social structure (Enlarged ed.). Free Press.\nNelson, R. R., & Winter, S. G. (1982). An evolutionary theory of economic change. Harvard University Press.\nO’Reilly, C. A., & Tushman, M. L. (2013). Organizational ambidexterity: Past, present, and future. Academy of Management Perspectives, 27(4), 324–338.\nPenrose, E. T. (1959). The theory of the growth of the firm. Basil Blackwell.\nRaisch, S., Birkinshaw, J., Probst, G., & Tushman, M. L. (2009). Organizational ambidexterity: Balancing exploitation and exploration for sustained performance. Organization Science, 20(4), 685–695. https://doi.org/10.1287/orsc.1090.0428\nSimsek, Z., Heavey, C., Veiga, J. F., & Souder, D. (2009). A typology for aligning organizational ambidexterity’s conceptualizations, antecedents, and outcomes. Journal of Management Studies, 46(5), 864–894.\nSzulanski, G. (1996). Exploring internal stickiness: Impediments to the transfer of best practice within the firm. Strategic Management Journal, 17(S2), 27–43.\nSzulanski, G. (2000). The process of knowledge transfer: A diachronic analysis of stickiness. Organizational Behavior and Human Decision Processes, 82(1), 9–27.\nTeece, D. J., Pisano, G., & Shuen, A. (1997). Dynamic capabilities and strategic management. Strategic Management Journal, 18(7), 509-533.\nTushman, M. L., & O’Reilly, C. A. (1996). Ambidextrous organizations: Managing evolutionary and revolutionary change. California Management Review, 38(4), 8–30.\nvon Hippel, E. (1994). Sticky information and the locus of problem solving: Implications for innovation. Management Science, 40(4), 429–439.\nZollo, M., & Winter, S. G. (2002). Deliberate learning and the evolution of dynamic capabilities. Organization Science, 13(3), 339-351.\n藤原, 孝男. (2013). 金融危機でのバイオベンチャーの研究開発継続. 日本ベンチャー学会誌, 21, 11–20. https://doi.org/10.24717/jasve.21.0_11\n藤田, 尚. (2016). バイオベンチャーと特許―外国出願のコストに着目した特許出願戦略. 日本知的資産経営学会誌, 2016(2), 86–96. https://doi.org/10.60210/jicm.2016.2_86\n野中, 郁次郎. (2002). 企業の知識ベース理論の構想. 組織科学, 36(1), 4-13.\n高橋, 勅徳, & 木川, 大輔. (2017). 創薬ベンチャーにおけるオーファンドラッグ戦略―株式会社レクメドによるホモシスチン尿症治療薬ベタインの開発事例の分析を通じて―. 日本ベンチャー学会誌, 29, 27–42. https://doi.org/10.24717/jasve.29.0_27\n高井, 計吾. (2020). バイオベンチャーにおける提携ネットワークと研究開発活動. 日本ベンチャー学会誌, 35, 35–47. https://doi.org/10.24717/jasve.35.0_35\n奥山, 亮. (2025). 日本版創薬エコシステムの確立に向けて―創薬におけるスタートアップの役割と日本に適したあり方―. 薬学雑誌, 145(7), 617–628. https://doi.org/10.1248/yakushi.25-00015\n内閣官房. (2022). スタートアップ育成5か年計画 1. 基本的考え方. https://www.cas.go.jp/jp/seisaku/atarashii_sihonsyugi/kaigi/dai13/shiryou1.pdf \n\n日本の創薬・バイオベンチャーにおける境界翻訳損失の差はなぜ生じるのか：同一資源プールの継続性、評価関数整合、TRT-PRA\nWhy Do Boundary Translation-Loss Differences Arise in Japanese Biotech Ventures? Resource-Pool Continuity, Evaluative Alignment, and TRT-PRA\n要旨\n本稿は、資源制約のため探索と活用を分離しにくい日本の創薬・バイオベンチャーにおいて、なぜ同一資源プールの継続性の差が事業化ラグの差として現れるのかを、段階境界設計の問題として検討する。継続性は設計痕跡の保持を支える構造条件、TRT は保持された痕跡を次段階へ持ち越す時間軸の重点移行、PRA はその持越し効果を条件付きで増幅・減衰させる空間軸の並列配分、評価関数整合は保持された痕跡の可用化条件として定義される。現上場企業と過去上場企業を含む8社12境界窓の比較から、継続性だけでなく評価関数整合が境界TLのリスク条件として働くことが示唆された。他方、低整合が直ちにTLを生むわけではなく、成果化ラグ差そのものの説明は限られた到達点による補助的確認にとどまる。以上より本稿は、事業化ラグ差を、保持と可用化の組合せが境界TLをどのように分岐させるかという中範囲理論として提示する。\nキーワード：両利き経営、資源制約、同一資源プールの継続性、評価関数整合、翻訳損失\nAbstract\nThis paper examines why commercialization lags differ across Japanese drug-discovery and biotech ventures when exploration and exploitation cannot easily be separated under resource constraints. It reframes the issue as a problem of stage-boundary design. Resource-pool continuity is defined as the structural condition that preserves design traces formed in exploration; TRT as the time-axis shift that carries retained traces forward within the same resource pool; PRA as the space-axis parallel allocation that conditionally amplifies or attenuates that carryover; and evaluative alignment as the condition under which retained traces remain usable on the development side. Empirically, the paper employs a mixed-method design based on 8 firms and 12 boundary windows, combining six core case comparisons with exploratory boundary-level summaries. The evidence most directly supports the claim that evaluative alignment matters in addition to continuity: low alignment appears to raise the risk of boundary-level translation loss, but does not mechanically generate it, because a companion window shows a high-continuity/low-alignment configuration without an observable TL bundle. Commercialization-lag differences themselves are examined only through a limited set of lag endpoints. The paper therefore does not claim a general theory of ambidexterity outcomes. Instead, it offers a middle-range explanation of how retained design traces, their usability under changed evaluation functions, and boundary-level translation loss jointly shape downstream commercialization-lag differences in Japanese biotech ventures.\nKey words: organizational ambidexterity; resource-pool continuity; evaluative alignment; translation loss; biotech ventures \n1. 序論\n1.1 研究背景：日本の創薬・バイオベンチャーにおける事業化ラグと両利き設計\n日本の創薬・バイオベンチャーでは、上市までに長い時間を要し、資金制約や提携依存の下で研究開発の継続が大きな課題となることが指摘されてきた（藤原, 2013; 高橋・木川, 2017; 奥山, 2025）。既存の国内研究では、事業化ラグの差は、資金調達、提携形成、導入資産の成熟度、組織能力の差として論じられることが多い。もっとも、同じように探索を進めていても、開発・承認・上市へ移る段階境界で再設計や手戻りが集中的に生じ、事業化ラグが開く局面はなお十分には説明されていない。\nこの事業化ラグの差を説明する分析視角として、組織研究では、探索と活用の両立、すなわち両利きの設計問題が論じられてきた。そこでは、探索と活用の干渉を抑える設計として、構造的分離、文脈的統合、逐次切替などが主要な解として提示される（Gupta et al., 2006; Raisch et al., 2009; O’Reilly & Tushman, 2013）。しかし日本の創薬・バイオベンチャーでは、人的・資金的・設備的余剰が限られるため、探索と活用を恒常的に分離する前提そのものが置きにくい。本稿はこの文脈から、分離不能下でなお生じる事業化ラグの差へ接近する。\n1.2 中心問題意識：分離不能性の下で成立する両利き\nしかし資源制約下のベンチャーでは、探索と活用を別部門・別人材・別設備として冗長に持つことが難しく、分離は制度的にも運用上も成立しにくい。それにもかかわらず、同一のコア技術、同一チーム、共通設備やデータ基盤を反復的に用いながら探索と活用を接続し、段階移行に伴う失敗のリセットを抑えつつ成果化の速度を高める事例が観察される。本稿が保持したい中心問題意識は、分離できないにもかかわらず、なぜ段階境界をまたいだ同一資源プールの継続性の差が、同じように探索を進めるベンチャーの事業化ラグの差として現れるのか、という逆説である。\n1.3 研究課題と本稿の貢献\n本稿は、この逆説を資源制約型ベンチャーの特殊事例としてではなく、日本の創薬・バイオベンチャーに反復して現れる事業化問題として引き受ける。既存の国内研究では、事業化ラグの差は、資金調達力、提携形成能力、導入資産の成熟度、一般的な組織能力といった要因で説明されることが多い。これらの説明はいずれも重要であるが、探索成果が開発・承認・上市へ移る段階境界で、なぜ再設計や手戻りが集中的に生じるのかという問題は、なお十分には開かれていない。本稿が前面に出すのは、この段階境界において、人・技術基盤・設備／データ基盤に担持された設計痕跡がどの程度保持され、どの条件で再利用可能な形に変換されるのかという設計問題である。したがって本稿の第一義的な貢献先は、日本のベンチャー研究における事業化論である。他方で組織研究への貢献は、その問題を分離不能下の両利きに残された未説明部分として再定式化する点にある。本稿の貢献は三点に整理できる。第一に、事業化ラグ差を、その手前にある境界翻訳損失の比較を通じて読み解く視角を提示する。第二に、継続性、評価関数整合、翻訳損失を主連鎖とし、TRT と PRA をその時間軸・空間軸の理論部品として位置づけた理論枠組みを提示する。第三に、その理論を日本の創薬・バイオベンチャーの文脈に結びつけ、mixed-method のケース比較と exploratory summary を通じて検討する。ここで理論上の中心命題はP4である。もっとも、本文の実証で比較的直接に点検できるのは、境界TLと評価関数整合の関係、すなわちP3である。読みやすさのため先に整理すれば、P4は理論上の中心命題、P3は本文の主柱、P1とP2はその前段を支える探索的な理論部品である。本稿の命題が直接扱う基本単位は案件×段階境界であり、組織はその上位文脈として扱う。また本稿は、保持と可用化が観測上切り分けられないなら理論の識別力自体が失われるという棄却条件を明示的に引き受ける。なお、本稿本文では理論の論理導出を主とし、測定指標の定義や識別手順の細部はオンライン付録（補足資料）に退避することを想定する。\n本稿は、日本の創薬・バイオベンチャーにおける事業化ラグ差を、その前段にある段階境界での翻訳損失の差として捉え、同一資源プールの継続性が設計痕跡の保持を、評価関数整合が保持された痕跡の可用化を、それぞれどのように規定するかを mixed-method で検討する。\n1.4 本稿の構成\n以上を踏まえると、本稿の根底にある問いは、資源の分離が難しいにもかかわらず、なぜベンチャー企業で両利きが成立しうるのかという点にある。以下ではこの問いを、日本の創薬・バイオベンチャーにおける事業化ラグ差へつながる前段の境界TL差として観測できる形に置き直し、段階境界での保持・可用化・翻訳損失の連鎖として追う。本文で最も厚く見ていくのは、境界TLと評価関数整合の関係であり、lag はその先にある downstream outcome を限られた endpoint で確かめる位置に置く。したがって読解の重心はP3にあり、P4は境界TL差を介した条件付きの含意として扱う。そのうえで、2節で理論枠組みと命題を提示し、3節でデータと主要変数のコード化を整理する。4節で mixed-method 設計と分析単位を明示し、5節で既存研究との接続を整理する。6節で中核6ケースの比較と12境界窓の exploratory summary を示し、7節で予測分岐の読みと反証可能性を整理する。最後に8節で含意・限界・結論を述べる。\n2. 理論枠組み：同一資源プールの時間・空間配分としてのTRT-PRA\n本節で使う概念の役割を先に整理する。継続性は設計痕跡の保持を支える土台、TRT はその痕跡を段階境界へ持ち越す時間軸の配分、PRA は同一資源プールを複数機会へ配る空間軸の条件、評価関数整合は保持された痕跡が開発側で可用化される条件、翻訳損失（TL）は境界で観測される近接メカニズム、成果化ラグはその帰結である。以下では、この役割分担に沿って前提、命題、既存研究との差異を順に示す。\n2.1 前提1：資源制約と分離不能性\n本稿が対象とするのは、探索と活用を組織的に分離したくても、資源制約ゆえにそれが実行できない状況である。したがって、分離を達成する能力差を主要な説明に置かず、分離不能性を理論の前提条件として固定する。\n2.2 前提2：同一資源プールと継続性\n分離不能性の下では、探索と活用は同一のチーム、技術基盤、設備・データ基盤を部分的に共有せざるを得ない。本稿はこの共有の度合いを、同一資源プールの継続性として捉える。ここでいう継続性は、切替頻度や順序そのものでも、TRTやPRAそのものでもない。探索段階で形成された設計痕跡を担う人・技術基盤・インフラが、段階境界を越えてどれだけ残るかという、資源プールのストック側の条件である。継続性が高いほど、失敗履歴、測定系、データ表現、CMC仕様、意思決定理由といった設計痕跡が段階境界で失われにくくなる。もっとも、継続性が高いことは、設計痕跡が保持されることを意味しても、それがそのまま開発側で使えることを意味しない。この点で継続性は、成功の十分条件ではなく、設計痕跡の保持を支える構造条件として位置づけられる。\n2.3 前提3：TRTとPRA\n同一資源プールの下で両利きを成立させる配分操作として、本稿は二つの動きを区別する。第一に、探索寄りだった重点を、同じ担い手と基盤を保ったまま開発寄りへ移す時間軸的資源移行（TRT）である。言い換えれば、同じメンバーや設備を残したまま、時間配分の重心を徐々に開発側へ移す動きである。第二に、同一資源プールから複数機会へ同時に配る並列的資源配分（PRA）である。これは、共通の研究設備や人材を複数案件にまたがって使う結果として生じる並列配分であり、案件数の多寡それ自体ではなく、共通資源を並列化した結果として生じる可搬性と干渉の両方を含む空間軸の操作として定義される。\n本稿では因果順序を次のように固定する。継続性は設計痕跡の保持量を規定する。TRTは保持された設計痕跡を探索側から開発側へ持ち越す時間軸の操作である。PRAは同じ資源プールを複数機会へ並列配分することで、その持越し効果を条件付きで増幅も減衰もさせる。評価関数整合は、保持・持越しされた設計痕跡が新段階で可用化される程度を規定する。翻訳損失はその結果として生じる近接メカニズムであり、成果化ラグはその帰結である。したがって、継続性、TRT、PRA、評価関数整合は互いに置き換え可能な概念ではなく、ストック、時間軸の操作、空間軸の操作、可用化条件という異なる理論役割を担う。\n2.4 概念定義：成果化ラグと翻訳損失\n【成果化ラグ】探索起点から所定の成果化到達点までに要する時間である。本稿では理論構成概念として成果化を、臨床進展、承認、上市、提携・導出を含む広い価値化到達点として捉える。実証化に際しては、主要操作化として上市までのラグを用い、代替終点による頑健性確認を行う。\n【翻訳損失】探索知が活用知として減価する現象を指すが、その焦点は知識が動かないことではない。ここでの翻訳は、意図的な説明や伝達だけでなく、段階境界で評価関数が切り替わることに伴って必要となる再符号化・再作業を含む。平たく言えば、研究で有効だった証拠や設計選択が、開発ではそのまま通用せず、やり直しが必要になるときにTLが現れる。移転や共有が成立した後でも、成功基準、測定系、意思決定規則、品質要求が非連続に変化すると、追加試験、プロトコル改訂、CMC変更、比較可能性の再構成として表出する。本稿はこの減価を翻訳損失（TL）として理論化し、成果化ラグの近接的決定因として位置づける。\n【設計痕跡と継続性】設計痕跡とは、探索段階で形成された仮説、実験系、データ表現、CMC仕様、失敗履歴、意思決定理由の束であり、人（チーム）・技術基盤・インフラ（設備・データ基盤）に担持される。継続性が高いほど、これらの痕跡は段階境界を越えて保持されやすい。しかし保持と可用化は同じではない。同じチームが継続していても、開発段階で求められる評価関数が探索段階と大きくずれれば、痕跡は残っていても、そのままでは使えず、再符号化の負荷が生じる。したがって、継続性が説明するのは設計痕跡の保持であり、自動的な成果化ではない。\n【評価関数整合】評価関数整合とは、段階境界・案件間で成功基準（品質属性・エンドポイント・マイルストーン等）、測定系、意思決定規則がどの程度連続しており、探索で形成された根拠の連鎖が開発側で再利用できるかを指す。平たく言えば、研究で良いとされた根拠が、開発でもそのまま意味を持つかどうかである。本稿では、評価関数整合を継続性と切り離して扱う。整合が高ければ、保持された設計痕跡は再重み付けによって可用化されやすい。整合が低ければ、痕跡は保持されていても比較可能性の作り直しが必要となり、翻訳損失が増幅する。逆に、整合がある程度高くても継続性が低ければ、暗黙の判断理由や失敗履歴が失われ、可用化できる痕跡量そのものが乏しくなりうる。この点で、継続性は保持、評価関数整合は可用化を、それぞれ異なる経路で規定する。\n2.5 理論命題（P1–P4）\n本稿の中心連鎖は、継続性が探索段階で形成された設計痕跡の保持量を規定し、TRT が保持された痕跡を同一資源プール内部で次段階へ持ち越し、評価関数整合がその可用化可能性を規定し、PRA がその過程を条件付きで増幅も減衰もさせ、その差が段階境界における翻訳損失の多寡を左右し、条件付きで成果化ラグ差へつながる、というものである。したがって本稿が直接説明しようとするのは、継続性が自動的に速さを生むという単線的関係ではなく、保持と可用化の組合せが境界TLをどう分岐させるかという段階境界の設計問題である。\n•	命題1（時間軸メカニズム：TRT）：TRT が強い案件ほど、継続性によって保持された設計痕跡は、外部的な引継ぎではなく同一資源プール内部で次段階へ持ち越されやすい。その効果は継続性が高いほど大きく、結果として段階境界における翻訳損失は低下しやすい。\n•	命題2（空間軸の条件分岐：PRA）：PRA は、TRT による持越し効果を案件間評価関数整合に応じて条件付きで調整する。案件間評価関数整合が高い場合、PRA は共通資源の可搬性を通じて、保持された設計痕跡の横断的利用可能性を高める。他方、案件間評価関数整合が低い場合、PRA は注意散逸、標準の分断、手戻りを通じて、保持された設計痕跡の利用可能性を弱める。\n•	命題3（境界条件：評価関数整合）：段階境界評価関数整合が高いほど、保持・持越しされた設計痕跡は開発側で可用化されやすい。反対に、段階境界評価関数整合が低い場合には、保持された痕跡が存在していても比較可能性の作り直しや再符号化が必要となり、翻訳損失は増幅しやすい。段階境界評価関数整合の低下は、外生的な評価基準変更、規制・提携条件の更新、要求精度の非連続な上昇などとして生じうる。\n•	命題4（差異命題／中心命題）：切替頻度・順序と主要な既存説明要因が大きく異ならない条件の下で、同一資源プールの継続性が高く、かつ段階境界評価関数整合が高い案件ほど、探索段階で形成された設計痕跡はより多く保持され、開発側で可用化されやすく、その結果として翻訳損失は小さく、成果化ラグは短くなりやすい。反対に、継続性が低く保持が薄い場合、あるいは継続性が高くても段階境界評価関数整合が低く可用化に失敗する場合には、翻訳損失は増幅し、成果化ラグは伸びやすい。 \nもっとも、本稿が公開資料から直接観測するのは保持量そのものではなく、保持を支える継続性条件と、その帰結として表出する境界再作業である。\n図1　保持と可用化を区別した TRT-PRA の基本連鎖\n \n表1　概念定義と観測可能性（構成物・プロキシ・データ源・命題上の役割）\n概念（構成物）	本稿での定義	観測可能なプロキシ（例）	主なデータ源（例）	命題上の役割\n同一資源プールの継続性（resource-pool continuity）	段階境界をまたいで、設計痕跡の担い手であるコア資源（人・技術基盤・インフラ）が維持される度合い	発明者・主要研究者の継続性（重複率） コア特許／基盤技術語の反復利用（引用・類似度） 共通設備・共通データ基盤の継続（設備注記、システム投資、共通プロトコル）	特許データ（J-PlatPat等）、有価証券報告書・統合報告書、IR資料・プレスリリース、臨床試験レジストリ	P4の主要説明変数。P1の土台（保持条件）\nTRT（時間軸的重点移行）	保持された設計痕跡を、同一資源プール内部で探索から開発へ持ち越す時間軸の重点移行	HHIの時系列変化（TRT_score）、パイプライン配分の重心移動	特許分類構成比、開示パイプライン、事業別R&D記載	P1の時間軸メカニズム\nPRA（並列的資源配分）	同一資源プールを複数機会へ同時に配分する空間軸の並列化。可搬性と干渉の両方を含む	Simpson指数（多様性）、並列案件数、PRA_interact（例：PRA×探索比）	パイプライン開示、特許・学術発表の領域分布、事業セグメント情報	P2の条件付き調整\n評価関数整合	段階境界・案件間で、成功基準（品質属性・エンドポイント・マイルストーン）が整合している度合い	エンドポイント／CQAsの類似度（テキスト類似度等） 規制・提携条件の変更イベント（評価関数切替の外生ショック） 共同開発契約のマイルストーン整合（公開情報で可能な範囲）	臨床試験レジストリ、規制当局ガイダンス、IR資料・契約開示	P2の分岐条件・P3の境界条件（可用化条件）\n翻訳損失	保持・持越しされた設計痕跡が段階境界で再符号化を要し、探索知が開発知として減価する現象	手戻り・再試験・追加試験の発生（プロトコル改訂、橋渡し試験、CMC変更等） ramp-up遅延の兆候（再学習に伴う非効率）	プレスリリース、臨床試験更新履歴、申請・承認情報（公開範囲）	P1〜P3とP4をつなぐ近接メカニズム\n成果化ラグ	探索起点から所定の成果化到達点までの時間	主要操作化＝特許出願→上市までの所要時間／代替操作化＝承認、提携・導出、特定段階到達までの所要時間	特許、臨床試験レジストリ、承認情報、財務・IR開示	P4のアウトカム\n適用前提（射程）：資源制約と分離不能性	探索と活用を組織的に分離したくても、冗長資源が不足して分離を恒常的に維持できない状態	公開情報から取得可能な近似指標で評価（規模・資金余力・研究開発体制など）	—	本稿の射程条件（P1–P4の適用前提）\n注：表1のデータ源は例示であり、実証研究ではカバレッジと取得可能性に応じて縮退・代替が必要となる。なお本稿でいう資源制約とは、探索と活用を専任組織として恒常的に分離できない程度に人的・資金的・設備的余剰が限定される状態である。実証稿では、公開情報から取得可能な規模・資金余力・研究開発体制に関する指標で分離不能性を近似する。 \n3. データと主要変数のコード化\n本節では、本稿の mixed-method 実証で用いる主要変数のコード化ルールを整理する。継続性、TRT/PRA、評価関数整合、翻訳損失、成果化ラグは、同一指数に畳み込まず、別系列の指標として観測する。\n3.1 TRT（時間軸的資源移行）\nTRTの計測には、同一資源に紐づく技術・案件の集中度（HHI）を年次構成比から捉え、その時系列差を要約した TRT_score を用いる。TRT_score は設計痕跡の持越しそのものではなく、同一資源プール内部で探索重点から開発重点へ重心が移る程度を近似する指標である。算出式と代替仕様は補足資料に示す。\n3.2 PRA（並列的資源配分）\nPRAは、同一資源から派生する案件・領域の同時分散として捉える。必要に応じて、共同出願、相互引用、共同研究ネットワークを用いた相互作用強度の補助指標 PRA_interact を併用する。最小定義と代替仕様は補足資料に示す。\n3.3 同一資源プールの継続性の観測可能性と操作化\n継続性は、集中度や多様性ではなく、段階境界をまたぐ人（チーム）・技術基盤・インフラ（設備・データ基盤）の連続性として観測する。他方、TRTは段階間配分の時間パターン、PRAは並列配分の空間パターンとして近似し、各構成物は公開情報から到達可能な別系列のプロキシ束で捉える。\n3.4 翻訳損失の指標（成果化ラグとの分離）\n翻訳損失（TL）は成果化ラグそのものではなく、探索から開発へ移る段階境界で生じる再符号化・再学習の負荷である。主指標には、プロトコル改訂、橋渡し試験の追加、CMC変更、中止・再開などの再設計イベント密度（TL_events）を用い、補助的に境界区間の残差時間（TL_time）で確認する。TL_events は保持失敗と可用化失敗を単独では弁別しないため、TL指標は両者が合成された境界再作業の近似として解釈される。\n3.5 評価関数整合と測定連鎖\n評価関数整合は、段階境界では主要評価項目、CQAs、比較可能性要件、意思決定ゲートの連続性として、案件間では提携単位の品質規格や測定系の類似度として記録する。測定連鎖は、継続性→担い手の連続性、TRT/PRA→配分パターン、評価関数整合→可用化条件、TL→境界再作業、成果化ラグ→到達時間、の順に設計する。各構成物は別系列の代理指標として観測し、TRT_score、PRA_interact、TL_events、TL_time の最小定義は補足資料に示す。以上の測定連鎖は、保持と可用化を理論上区別したまま、境界再作業がどこで観測可能な差として現れるかを点検するための最小設計である。したがって、この最小設計が一次的に識別するのは、保持失敗と可用化失敗が合成された境界再作業である。言い換えれば、本稿の到達点は、保持失敗と可用化失敗を厳密に分離することではなく、両者が合成された境界再作業を一次的に識別し、どの境界で設計上の負荷が立ち上がるかを比較可能にすることにある。\n4. mixed-method 設計\n本節では、本稿の mixed-method 実証がどの母集団・分析単位・資料束に依拠しているかを示し、ケース比較と exploratory summary をどのように位置づけるかを明示する。confirmatory reduced-form は本稿の主結果ではなく、診断的な補助線にとどめる。\n4.1 対象母集団と分析単位\n本稿の mixed-method 実証は、日本の創薬・バイオ関連上場企業を中心に、公開資料から段階境界を安定して特定できる企業を抽出し、現上場と past-listed を含む8社12境界窓を対象とする。母表としては29社の企業マスターを保持するが、境界比較に直接使うのは、継続性・評価関数整合・TL・lag の少なくとも一部を同一窓で追える12窓である。主分析単位は asset × boundary window であり、各 boundary window は boundary_anchor_date を中心とする主窓 [-1,+1] で定義する。firm-year 指標は TRT/PRA の proxy を補助的に示すために用いるが、本稿の主たる比較単位ではない。\n4.2 データソースとコード化\nデータソースは、会社IR・TDnet・EDINET に加え、PMDA、試験レジストリ、J-PlatPat、過去上場企業についての市場公表資料である。各ケースについて document ledger を残し、ケース年表と追加資料パケットを紐づけて、同じ境界窓の判断根拠を追跡できるようにした。継続性は HUMAN / TECH / INFRA の三層シグナルを主窓年で平均し、boundary レベルの continuity index とした。評価関数整合は asset × boundary レベルで 1.0 / 0.5 / 0.0 を暫定付与し、TL は境界再作業イベントを bundle 規則で束ねて観測した。TRT / PRA は公開情報で埋め切れる count-based proxy に再設計し、firm-year 補助指標として保持する。\n4.3 ケース選定と exploratory summary の位置づけ\nmixed-method 本線では、中核6ケースを機構正例、current-listed TL positive 補強例、低継続性対照、水平展開ベースライン、past-listed の robustness、lag outcome calibration の役割で固定した。なお、同一資産内の内部反例は companion case として保持し、C1 の解釈を低整合決定論へ傾けないために用いる。boundary-level summary はケース配置の補助確認に用い、exploratory reduced-form は診断的分析としてのみ用いる。\nmissingness は主として二種類ある。第一に、人的継続性や comparability の内部運用のように公開資料だけでは直接観測しにくい情報である。第二に、lag endpoint が承認・上市まで到達していない窓では成果化ラグが終点まで閉じないことである。そのため本稿は、境界窓の比較とケース内のプロセストレーシングを主とし、定量は exploratory な補助線にとどめる。\n5. 既存研究との接続：時間軸メカニズム・空間軸条件・境界条件としての位置づけ\n本節では、同一資源プールの継続性を中心構成概念として据え、理論枠組みを繰り返すのではなく、本稿が既存研究とどこで分岐するのかを三点に絞って整理する。第一に、TRTは一般的な再配置能力ではなく、設計痕跡を段階境界へ持ち越す時間軸メカニズムである。第二に、PRAは独立の成果源泉としてではなく、TRTの効果を条件付きで増幅・減衰させる空間軸の条件分岐として扱う。第三に、評価関数整合は継続性の代替概念ではなく、保持された設計痕跡が可用化されるかどうかを規定する境界条件として位置づける。\n5.1 時間軸メカニズム：TRTと翻訳損失\nTRTは、継続性によって保持された設計痕跡を、探索から開発への段階移行に伴って同一資源プール内部で持ち越す時間軸の配分操作である。したがってTRTが説明するのは、探索成果が価値化される一般的な能力差ではなく、保持された痕跡が外部的引継ぎではなく内部的重点移行として運ばれる過程である。この点でTRTは、切替頻度や順序そのものとも、動的ケイパビリティ一般とも区別される。\n翻訳損失（TL）は、移転摩擦そのもの（knowledge stickiness: Szulanski, 1996, 2000; von Hippel, 1994）でも、共同体間で意味が変換される境界問題（knowledge boundary: Carlile, 2002, 2004）でもない。本稿が切り出すのは、同一資源プールの継続性が保たれ、形式的な引継ぎが最小でも、評価関数の切替によって保持された設計痕跡の再符号化と再作業が必要になり、成果が減価しうる過程である。von Hippel (1994) が論じた sticky information は、情報が特定の担い手や現場に付着するため移転が高コストになる点を示したが、本稿の焦点は、その付着情報が段階境界を越えていったん持ち越された後でも、評価関数の切替によってなお減価しうる点にある。Carlile (2002, 2004) が示した境界問題とも接続するが、本稿が問うのは境界越境の有無それ自体ではなく、持ち越された痕跡が新しい評価関数の下で再利用可能かどうかである。したがって本稿の独自性は、一般的な移転の難しさではなく、分離不能下で保持された同一性が、移転後の減価をどこまで抑えうるかを問う点にある。\nこの意味で本稿は、吸収能力論（Cohen & Levinthal, 1990）や動的ケイパビリティ論（Teece, Pisano, & Shuen, 1997; Eisenhardt & Martin, 2000）を否定するのではなく、それらではなお粗く扱われやすい段階境界の減価過程を切り出す。Penrose (1959) が論じた同一資源の継続利用から生じる生産的サービスの蓄積とも接続するが、本稿の焦点は、その蓄積が段階境界の評価関数切替に耐えて可用化されるかどうかにある。さらに、Nelson and Winter (1982) や Zollo and Winter (2002) のルーティン・学習論と比べると、本稿の設計痕跡は安定したルーティンに限られず、仮説、失敗履歴、CMC上の判断理由のような前ルーティン的な痕跡を含む。したがって本稿の予測分岐は、切替頻度や順序と主要な既存説明要因が大きく異ならない条件でも、同一資源プールの継続性が高い案件ほど翻訳損失と成果化ラグの差が残差的に現れるという点にある。\n5.2 空間軸の条件分岐：PRAの相補と相克\nPRAは、本稿では独立の成果源泉ではなく、TRTによる翻訳損失抑制効果を条件付きで変える空間軸の設計変数として限定的に扱う。案件間の評価関数整合が高い場合、PRAは可搬性を高めてTRTを補完しうる。他方、整合が低い場合、並列化は注意散逸、標準の分断、手戻りを通じてTRTの効果を弱める。したがって本稿では、PRAの議論を翻訳損失と成果化ラグに接続される条件付き効果に絞り、探索範囲拡張やオプション保持といった独立便益は前面化しない。\n5.3 境界条件：評価関数整合と日本のベンチャー研究への接続\n命題3が示すのは、継続性とTRTが翻訳損失低減を支えるが、それだけでは十分ではないという点である。評価関数整合を崩す代表的源泉として、規制・提携条件の変更、要求精度の非連続な上昇、案件間で共有される成功基準の分断が挙げられる。ここで重要なのは、評価関数整合が高ければ継続性が不要になる、という関係ではない。継続性が規定するのは何が保持されるかであり、評価関数整合が規定するのは保持された痕跡がどう使えるかである。したがって、継続性が低い状況では整合があっても暗黙の判断理由や失敗履歴が失われうるし、整合が低い状況では継続性があっても再符号化負荷は増える。両者は代替ではなく、保持と可用化を分けて担う。\nこの切り分けは、日本のベンチャー研究との対話においても重要である。既存研究では、事業化ラグの差は、資金調達力（開発継続の時間的余裕）、提携形成能力（外部資源へのアクセス）、組織能力（実行の一般的効率）、導入資産の選択（出発点の成熟度）といった要因で説明されやすい（藤原, 2013; 高橋・木川, 2017; 高井, 2020; 奥山, 2025）。これに対し本稿は、そうした要因を否定するのではなく、段階境界で何が保持され、どの条件で再利用可能になるのかという設計上のブラックボックスを開く。また、野中（2002）の知識ベース理論が知識創造と知識変換の生成過程を前面に出したのに対し、本稿は生成された知識が評価関数の切替後にも妥当な根拠連鎖として残るかを問う。ここでいう設計痕跡は、一般的な暗黙知や形式知一般ではなく、仮説、失敗履歴、CMC判断理由、比較可能性の根拠連鎖のように、段階境界で痩せやすい準ルーティン的痕跡である。したがって本稿の日本的含意は、資源制約型バイオベンチャーの事業化差を、資源量や提携の有無だけでなく、継続性と整合の設計問題として読み替える点にある。\n6. mixed-method のケース比較：境界TLの比較を中心に\n6.1 対象窓と中核ケースの配置\n本節では、8社12境界窓のうち、本文で直接に読むべき6ケースだけを固定する。本節の読解の重心は、境界TLと評価関数整合の関係、すなわちP3に置く。役割は、(i) 機構正例、(ii) current-listed TL positive 補強例、(iii) 低継続性対照、(iv) 水平展開のベースライン、(v) past-listed を用いた robustness、(vi) lag endpoint の校正、の六つである。表2は、そのために各ケースの continuity、alignment、TL、lag endpoint、本文での役割を一枚で要約したものである。 \n中核6ケースは次の順で読む。まず current-listed の TL positive である C1 と C2 を置き、そのあとにサンバイオの companion 窓を参照して、low alignment を決定論的に扱わない。C1 と companion 窓の対置は、高継続性があっても低整合が常に機械的な TL を生むわけではないという本稿の要点を最短距離で示す導入部でもある。続いて C3 と C4 で継続性側の対照と horizontal baseline を確認し、最後に C5 と C6 で past-listed の頑健性と lag endpoint の較正を加える。したがって、本節で比較的直接に示すのは境界TLと評価関数整合の関係であり、lag endpoint は C6 と exploratory summary を通じて P4 の下流含意を慎重に確かめる補助材料にとどまる。なお、サンバイオの ST5→ST5 窓は、同一資産内で low alignment と no TL が併存しうることを示す companion case として、C1 の caution を支えるために用いる。\n表2　中核6ケースの役割と主要変数\nケース	境界窓 / 役割	continuity / alignment	TL / lag endpoint\nC1 サンバイオ	ST5→APPROVAL_2022–2024 / 機構正例	HIGH / LOW	TL=Y / endpoint=-\nC2 アンジェス	ST5→ST5_2023–2025 / current-listed TL positive 補強例	HIGH / LOW	TL=Y / endpoint=-\nC3 シンバイオ製薬	ST2→ST3_2021–2023 / 低継続性対照	LOW / HIGH	TL=N / endpoint=-\nC4 ペプチドリーム	ST0→ST0_2021–2023 / 水平展開ベースライン	HIGH / MID	TL=N / endpoint=-\nC5 UMNファーマ	ST5→ST7_2016–2018 / past-listed robustness	HIGH / LOW	TL=Y / endpoint=-\nC6 ステラファーマ	ST5→APPROVAL_2019–2021 / lag 校正	HIGH / HIGH	TL=N / endpoint=APPROVAL\n \n6.2 current-listed TL positive の比較：C1 と C2\nサンバイオの ST5→APPROVAL 窓は、高継続性のまま承認境界に入ったにもかかわらず、2023年の収率課題、継続審議、2024年の当局側審議資料を通じて CMC 再作業と規制側の再確認が重なった境界である。この窓は、保持された資源がそのまま承認側で可用化されるとは限らず、低整合下では TL bundle が立ちうることを示す主たる機構正例である。他方、同一資産の companion 窓である ST5→ST5 では、低整合が観察されても、公開情報上、ここで見られるような CMC 再作業・継続審議・当局側再確認の束は並ばない。したがって読者は、低整合の有無それ自体よりも、どの境界で bundle 化した再作業が立ち上がるのかに着目する必要がある。\nアンジェスの ST5→ST5 窓は、current-listed の gene therapy 資産において、2024年の申請取下げと販売終了方針変更が公開情報で確認できる TL positive 境界である。このケースを C1 に並べることで、低整合下の TL が特定企業固有の出来事に閉じず、current-listed の別企業にも観測されることを補強できる。ここでも、低整合を十分条件として読むのではなく、リスク条件として限定して解釈する必要がある。\n6.3 continuity contrast：C3 と C4\nシンバイオ製薬の ST2→ST3 窓は、導入資産の適応移動とプロトコル見直しが重なり、低継続性のもとで境界が立ち上がった対照ケースである。このケースは、継続性が低いときに再設計や進行遅延のシグナルがどのように現れるかを示す、継続性側の補助対照として重要である。ただし、公開情報上は TL bundle まで確認できないため、失敗ケースと断定するのではなく、低継続性下の遅延シグナルとして扱うべきである。\nペプチドリームの ST0→ST0 窓は、PDPS を共有基盤として複数の共同研究が水平展開しても、公開 TL bundle を伴わずに進んだ高継続性・中整合のベースラインである。このケースは、parallel spread や cross-domain recombination が観測されること自体は翻訳損失を意味しないことを示し、P2 を支える主要事例となる。他方で、2023年通期資料の代替保存元が未補修であるため、その点は脚注で留保したうえで用いる必要がある。\n6.4 robustness と lag calibration：C5 と C6\nUMNファーマの ST5→ST7 窓は、承認申請後の申請取下げと共同事業解約が公開情報で明示された、非生存企業の TL positive ケースである。このケースを入れることで、現上場企業だけを見たときに生じる survivor bias を崩し、低整合下の TL が current-listed だけの特殊事情ではないことを補強できる。ただし、この窓は pre-boundary の filing 起点が窓外資料に依存するため、lag 議論よりも TL 正例として限定して用いるのが適切である。\nステラファーマの ST5→APPROVAL 窓は、申請日と承認日が明瞭に開示されたクリーンな lag endpoint ケースである。このケースは、成果化ラグの終点をどのように測るかを較正する役割を担い、理論上の帰結変数である lag を本文で過大に扱わないための校正点となる。他方で、機構比較の中心事例として使うと過大な一般化につながるため、承認到達までの日数を示す校正ケースとして限定して扱う。\n6.5 12境界窓 summary と exploratory diagnostics\n12境界窓の exploratory summary では、TL 陽性窓 3 件はいずれも high continuity × low alignment の象限に位置している。他方で、サンバイオの同一資産 companion 窓では、高継続性・低整合でも公開 TL bundle が立たないため、低整合が TL を機械的に決定するという読みは支持されない。\nしたがって boundary-level summary は、ケース比較を補う形で、評価関数整合が TL のリスク条件として働くかを点検する材料になる。補助的な exact check でも、この対応は大きく崩れていない。他方、P4 については、その前段にある境界TL差が lag の差にどうつながるかを読むための補助線として用いる。lag endpoint はなお限られているため、成果化ラグ差そのものの確証ではなく、境界比較に根ざした下流確認として扱うのが適切である。\n6.6 小括\n以上を総合すると、保持された資源があるだけでは十分ではなく、どの境界で評価関数整合が崩れ、その結果としてどの程度 bundle 化した境界再作業が生じるかによって TL の有無が分かれる、という構図が最もよく見える。したがって、本節の mixed-method 証拠が比較的直接に支えるのは、低整合が TL のリスク条件として働くという P3 である。他方で P4 は理論上の中心命題として残るが、本節で示せるのは、その前段にある境界TL差が lag 差へどうつながりうるかという方向づけまでである。この読みは、TL_events が、保持失敗と可用化失敗が合成された境界再作業を一次的に識別する指標であることによって、なお限定される。また、lag endpoint はまだ限られているため、P4 を成果化ラグ差そのものの確証として提示するのではなく、境界比較に根ざした条件付き含意として扱うのが適切である。P1 と P2 については、carryover を支える候補機構と条件付きの水平展開効果として、探索的に整合する範囲にとどまる。\n7. 予測分岐の読みと反証可能性\n7.1 再ラベリング批判への応答\nTRT-PRAが既存理論の言い換えに留まらないかどうかは、切替設計、吸収能力、動的ケイパビリティ、評価関数整合単独説とは異なる予測を導けるかで判断される。本稿の差別化は四点にある。第一に、切替頻度や順序が同程度でも、継続性は設計痕跡の保持量に差を生む。第二に、評価関数整合は継続性の代替ではなく、保持された痕跡の可用化条件である。第三に、PRAの符号は案件間の評価関数整合に応じて反転しうる。第四に、翻訳損失は単なる遅延ではなく、段階境界に集中する再設計イベントとして観察される。 \nしたがって争点は、切替の設計だけではない。資源制約下で分離が困難な同一資源プールの内部で、段階境界の評価関数切替が探索成果をリセットとして扱うのか、それとも保持された痕跡を再重み付けして再利用できるのかが問われる。もし評価関数整合だけが主役であるなら、継続性を統制しても整合だけで翻訳損失の差が説明できるはずである。逆に、本稿が正しいなら、整合を一定に近づけても継続性は設計痕跡の保持量を通じて追加的な予測力を持ち、整合はその効果を可用化の側から条件づける。ここに本稿の反証可能性がある。表3は、命題ごとの理論上の位置づけと本文での evidential weight を並べて確認するための案内図として読む必要がある。\n表3　命題×ケース証拠マトリクス\n命題（位置づけ）	主証拠	反例 / 内部反例	補助証拠・主要 caution\nP1 TRT（理論部品／探索的）	C4, C3	companion 窓（サンバイオ ST5→ST5）	C1, C2, C6。TRT は carryover を支える候補機構として読む。\nP2 PRA（理論部品／探索的）	C4	明示的反例なし（C3 は対照）	reserve case 4974。主張は探索的に留める。\nP3 評価関数整合（主柱）	C1, C2	companion 窓（サンバイオ ST5→ST5）	C5, C6。低整合は十分条件ではない。\nP4 中心命題（理論上の中心／本文では補助）	C1, C2, C3, C4（境界TL比較） / C6（lag校正）	companion 窓（サンバイオ ST5→ST5）	C5。P4 は境界TLの差を通じて条件付きに支えられ、lag endpoint は C6 による校正点として限定的に用いる。\n \n7.2 棄却条件の明確化\n今後の実証分析において、(i) 評価関数整合と切替パターンを統制した後に継続性が設計痕跡の保持やTL_eventsを全く説明しない、(ii) 継続性が低くても評価関数整合だけで翻訳損失の差が一貫して説明される、(iii) PRAの相補／相克が案件間の評価関数整合と無関係に一方向である、(iv) 翻訳損失が段階境界に集中する再作業として識別できず、単なる長期遅延と区別できない、のいずれかが確認されれば、本稿の中心連鎖は大きく弱まる。とりわけ、継続性と評価関数整合が実証上区別できず、保持と可用化を観測上分離できない場合、本稿は独立理論として成立しない。\n8. 含意・限界・結論\n8.1 理論的含意\n第一に、ベンチャー研究への理論的含意として、本稿は、資源制約下で観察される事業化ラグの差を、成長や資源獲得の問題だけでなく、段階境界での保持と可用化の設計問題として捉え直した。この枠組みは、分離や冗長資源を前提とする設計論と競合するというより、分離不能下に残る未説明部分を補う。したがって本稿の主張は、継続性が常に最適だというものではなく、分離できない条件の下で継続性が翻訳損失にどう作用するかを理論化した点にある。第二に、組織研究への含意として、知識創造、境界横断、動的再構成の議論を、設計痕跡の保持と評価関数切替後の可用化という二段階に分解する視点を提供する。\n実務的含意としては、継続性を一括りに高めるのではなく、段階境界に入る前の設計レビューで、どの担い手を次段階まで残し、何を比較可能な形で持ち越すかを役割別に決める必要がある。経営者は、人・技術基盤・インフラのうち何を継続資源として優先保全するかを明示し、研究責任者は、試験系、データ表現、失敗履歴、仮説の判断理由を次段階でも再利用できる形で記録する。開発責任者は、探索側の表現と接続できるように、主要評価項目、比較可能性要件、CQAs、CMC判断基準、意思決定ゲートを早い段階から揃える必要がある。提携・委託を用いる場合には、提携担当が、試験系、データ書式、変更時の記録義務、比較可能性の確認方法を契約段階で明確にしておくべきである。したがって実務上の要諦は、継続性の維持を事後的な属人的努力に委ねるのではなく、段階境界の前に、誰が何を残し、どの基準で可用化するかを設計しておくことにある。\n8.2 方法論的含意\n本稿の方法論的含意は、継続性・TRT・PRA・評価関数整合・翻訳損失・成果化ラグという測定連鎖を、単一の大規模パネル推定ではなく、boundary window を単位とする mixed-method 設計に接続した点にある。公開資料だけでは保持失敗と可用化失敗を分離しきれず、lag endpoint も限られるため、本稿は中核6ケースの比較を主軸に置き、12境界窓の summary と exploratory reduced-form を補助線に留めた。この構成により、confirmatory quant の条件が未充足でも、どの境界で何が保持され、どの条件で TL が bundle 化するのかを比較可能な単位で示すことができる。加えて、39境界窓拡張版に対する小標本の exact check でも P3 と整合する方向は崩れていないが、これは本文の主結果を置き換えるものではない。他方で、将来の実証では、同一企業内の類似案件比較、事前特性によるマッチング、偽処置、事前トレンド点検を組み合わせ、confirmatory な定量設計へ接続していく必要がある。\n8.3 限界\n本稿の mixed-method 実証には少なくとも五つの限界が残る。これらは、本稿の読みを不必要に弱めるためではなく、何をどこまで示せているかを明確にするために明示しておくべき論点である。\n第一に、本稿は公開資料ベースの mixed-method 設計によって8社12境界窓を比較することを主軸とし、小標本の補助診断を併用するにとどまる。そのため、現在の証拠は一般法則の確証ではなく、境界設計の中範囲理論に対する比較的厳密なケース比較と diagnostic support として読む必要がある。\n第二に、設計痕跡の保持と評価関数切替後の可用化は理論上区別されるが、公開資料では両者を完全には観測できない。本稿が用いる TL_events は、保持失敗と可用化失敗が合成された境界再作業を一次的に識別する指標であり、両者の独立寄与を切り分けるものではない。換言すれば、これは本稿の弱さというだけでなく、今稿が到達した識別単位そのものでもある。\n第三に、現行のケース構成には selection / survival bias が残る。past-listed の C5 を入れることで現上場企業だけの survivor bias を一部は崩せるが、継続性自体が企業の設計選択である以上、継続性の総効果を厳密に識別したわけではない。\n第四に、本稿の読みは、日本の上場創薬・バイオベンチャーという文脈に強く依存している。評価関数の切替が明示的に現れる R&D 集約産業だからこそ境界比較が成立しており、他産業へ直ちに一般化することはできない。したがって他産業や非上場ベンチャーへ拡張するには、境界イベントと評価関数整合をどの proxy で追えるかを別途設計する必要がある。\n第五に、lag endpoint は補助的に拡張できたものの、lag outcome 側の検出力はなお限られている。そのため P4 を成果化ラグ差そのものの主結果として置くことはできず、lag endpoint は境界TL差の downstream check という補助的地位にとどまる。\n8.4 結論と未解消の問い\n結論を先に述べる。本稿が理論的に明示した中心連鎖は、継続性が設計痕跡の保持を、TRT がその持越しを、評価関数整合が保持された痕跡の可用化を、それぞれ規定し、PRA がその過程を条件付きで増幅または減衰させ、両者の組合せが段階境界における翻訳損失の多寡を左右し、その差が条件付きで成果化ラグ差へつながる、というものである。本稿で実証上もっとも厚く示せているのは、この連鎖のうち、とくに可用化条件としての評価関数整合が境界TLのリスク条件として働く点である。他方、成果化ラグ差そのものの説明は、限られた lag endpoint による補助的な確かめにとどまる。したがって本稿の証拠の厚みは、P3 を本文の主柱として比較的直接に支え、そのうえで P4 を、保持と可用化の組合せが境界TL差を通じて lag 差へつながりうるという条件付きの含意として支える構図として理解される。\nもっとも、本稿が公開資料から直接観測するのは保持量そのものではなく、保持を支える継続性条件と、その帰結として表出する境界再作業である。そのうえで本稿が示したのは、継続性が高ければ自動的に成果化が速まるという単純な因果ではない。むしろ、日本の創薬・バイオベンチャーでは、段階境界で何が保持され、保持された設計痕跡がどの条件で開発側で可用化され、両者の組合せがどの程度の境界再作業と翻訳損失を生むのかという設計問題こそが重要である。8社12境界窓の mixed-method 比較からは、継続性だけではなく評価関数整合が TL のリスク条件として働くこと、ただし低整合が直ちに TL を決めるわけではなく、同一資産の companion 窓では高継続性・低整合でも公開 TL bundle が立たない場合があることが示唆された。したがって本稿は、事業化ラグ差を、保持と可用化の組合せが境界TLをどう分岐させるかという観測可能な断面から読み解く中範囲理論として位置づけられる。\n残された問いは、どの担い手の継続性がどの段階境界で決定的に効くのか、また評価関数整合をどこまで事前に設計できるのか、という点にある。保持失敗と可用化失敗の独立寄与、継続性の総効果、lag outcome の一般化はなお留保される。したがって今後の課題は、保持と可用化をより明確に切り分けて追跡できるデータと比較設計を積み増し、翻訳損失の多寡がどの条件で成果化ラグ差へ結びつくのかを、より厳密に点検していくことである。\n参考文献\nAndriopoulos, C., & Lewis, M. W. (2009). Exploitation–exploration tensions and organizational ambidexterity: Managing paradoxes of innovation. Organization Science, 20(4), 696–717.\nBechky, B. A. (2003). Sharing meaning across occupational communities: The transformation of understanding on a production floor. Organization Science, 14(3), 312–330.\nBenner, M. J., & Tushman, M. L. (2003). Exploitation, exploration, and process management: The productivity dilemma revisited. Academy of Management Review, 28(2), 238–256.\nCao, Q., Gedajlovic, E., & Zhang, H. (2009). Unpacking organizational ambidexterity: Dimensions, contingencies, and synergistic effects. Organization Science, 20(4), 781–796.\nCarlile, P. R. (2002). A pragmatic view of knowledge and boundaries: Boundary objects in new product development. Organization Science, 13(4), 442–455.\nCarlile, P. R. (2004). Transferring, translating, and transforming: An integrative framework for managing knowledge across boundaries. Organization Science, 15(5), 555–568.\nCohen, W. M., & Levinthal, D. A. (1990). Absorptive capacity: A new perspective on learning and innovation. Administrative Science Quarterly, 35(1), 128–152.\nEisenhardt, K. M., & Martin, J. A. (2000). Dynamic capabilities: What are they? Strategic Management Journal, 21(10-11), 1105-1121.\nFleming, L. (2001). Recombinant uncertainty in technological search. Management Science, 47(1), 117–132.\nGibson, C. B., & Birkinshaw, J. (2004). The antecedents, consequences, and mediating role of organizational ambidexterity. Academy of Management Journal, 47(2), 209–226.\nGupta, A. K., Smith, K. G., & Shalley, C. E. (2006). The interplay between exploration and exploitation. Academy of Management Journal, 49(4), 693–706.\nHe, Z.-L., & Wong, P.-K. (2004). Exploration vs. exploitation: An empirical test of the ambidexterity hypothesis. Organization Science, 15(4), 481–494.\nJansen, J. J. P., van den Bosch, F. A. J., & Volberda, H. W. (2006). Exploratory innovation, exploitative innovation, and performance: Effects of organizational antecedents and environmental moderators. Management Science, 52(11), 1661–1674.\nJansen, J. J. P., Tempelaar, M. P., van den Bosch, F. A. J., & Volberda, H. W. (2009). Structural differentiation and ambidexterity: The mediating role of integration mechanisms. Organization Science, 20(4), 797–811.\nKatila, R., & Ahuja, G. (2002). Something old, something new: A longitudinal study of search behavior and new product introduction. Academy of Management Journal, 45(6), 1183–1194.\nLavie, D., Stettner, U., & Tushman, M. L. (2010). Exploration and exploitation within and across organizations. Academy of Management Annals, 4(1), 109–155.\nLevinthal, D. A., & March, J. G. (1993). The myopia of learning. Strategic Management Journal, 14(S2), 95–112.\nMarch, J. G. (1991). Exploration and exploitation in organizational learning. Organization Science, 2(1), 71–87.\nMerton, R. K. (1968). Social theory and social structure (Enlarged ed.). Free Press.\nNelson, R. R., & Winter, S. G. (1982). An evolutionary theory of economic change. Harvard University Press.\nO’Reilly, C. A., & Tushman, M. L. (2013). Organizational ambidexterity: Past, present, and future. Academy of Management Perspectives, 27(4), 324–338.\nPenrose, E. T. (1959). The theory of the growth of the firm. Basil Blackwell.\nRaisch, S., Birkinshaw, J., Probst, G., & Tushman, M. L. (2009). Organizational ambidexterity: Balancing exploitation and exploration for sustained performance. Organization Science, 20(4), 685–695. https://doi.org/10.1287/orsc.1090.0428\nSimsek, Z., Heavey, C., Veiga, J. F., & Souder, D. (2009). A typology for aligning organizational ambidexterity’s conceptualizations, antecedents, and outcomes. Journal of Management Studies, 46(5), 864–894.\nSzulanski, G. (1996). Exploring internal stickiness: Impediments to the transfer of best practice within the firm. Strategic Management Journal, 17(S2), 27–43.\nSzulanski, G. (2000). The process of knowledge transfer: A diachronic analysis of stickiness. Organizational Behavior and Human Decision Processes, 82(1), 9–27.\nTeece, D. J., Pisano, G., & Shuen, A. (1997). Dynamic capabilities and strategic management. Strategic Management Journal, 18(7), 509-533.\nTushman, M. L., & O’Reilly, C. A. (1996). Ambidextrous organizations: Managing evolutionary and revolutionary change. California Management Review, 38(4), 8–30.\nvon Hippel, E. (1994). Sticky information and the locus of problem solving: Implications for innovation. Management Science, 40(4), 429–439.\nZollo, M., & Winter, S. G. (2002). Deliberate learning and the evolution of dynamic capabilities. Organization Science, 13(3), 339-351.\n藤原, 孝男. (2013). 金融危機でのバイオベンチャーの研究開発継続. 日本ベンチャー学会誌, 21, 11–20. https://doi.org/10.24717/jasve.21.0_11\n藤田, 尚. (2016). バイオベンチャーと特許―外国出願のコストに着目した特許出願戦略. 日本知的資産経営学会誌, 2016(2), 86–96. https://doi.org/10.60210/jicm.2016.2_86\n野中, 郁次郎. (2002). 企業の知識ベース理論の構想. 組織科学, 36(1), 4-13.\n高橋, 勅徳, & 木川, 大輔. (2017). 創薬ベンチャーにおけるオーファンドラッグ戦略―株式会社レクメドによるホモシスチン尿症治療薬ベタインの開発事例の分析を通じて―. 日本ベンチャー学会誌, 29, 27–42. https://doi.org/10.24717/jasve.29.0_27\n高井, 計吾. (2020). バイオベンチャーにおける提携ネットワークと研究開発活動. 日本ベンチャー学会誌, 35, 35–47. https://doi.org/10.24717/jasve.35.0_35\n奥山, 亮. (2025). 日本版創薬エコシステムの確立に向けて―創薬におけるスタートアップの役割と日本に適したあり方―. 薬学雑誌, 145(7), 617–628. https://doi.org/10.1248/yakushi.25-00015\n内閣官房. (2022). スタートアップ育成5か年計画 1. 基本的考え方. https://www.cas.go.jp/jp/seisaku/atarashii_sihonsyugi/kaigi/dai13/shiryou1.pdf \n\n
+コピーする
+Summary
+境界TLの発生ロジックを、論文命題の主連鎖（継続性/同一性 → 保持痕跡R → 可用化U → PRAの条件付き増幅/減衰 → TLリスク）に沿う形へ再設計しました。これにより、低整合は「機械的決定」ではなく確率的なリスク条件として扱われるようになっています。retained と usability を境界横断時に計測し、TL確率に直接反映しています。.
+
+ライブ統計に「保持痕跡 R（境界平均）」と「可用化 U（境界平均）」を追加し、命題P3/P4の読み取りをUI上で直接確認できるようにしました。.
+
+バッチ結果テーブルと集計処理に avgRetainedTrace / avgUsableTrace を追加し、条件比較（I/E/PRA）で保持と可用化を分けて確認できるようにしました。.
+
+CSVエクスポート（summary/full/snapshot）にも R/U 列を追加し、論文命題に沿ったオフライン検証をしやすくしました。.
+
+Testing
+
+✅ node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const m=h.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('ok');"
+
+⚠️ browser_container でのスクリーンショット取得（この実行環境では利用可能なブラウザ用ツールが無く、取得できませんでした）
+
+コミット済み: 1d4c483。
+
+
+ファイル (1)
+
+index.html
+index.html
++32
+-11
+
+
+
+差分
+ログ
+
+index.html
+index.html
++32
+-11
+
+@@ -102,50 +102,52 @@
         <div class="row"><label for="secPerYear">1年=秒</label><input id="secPerYear" type="range" min="0.2" max="5" step="0.1" value="1.0"><span id="secPerYearV">1.0</span></div>
         <div class="row"><label for="reviewSec">レビュー周期(s)</label><input id="reviewSec" type="range" min="0.5" max="8" step="0.1" value="2.0"><span id="reviewSecV">2.0</span></div>
         <div class="grid2">
@@ -124,6 +80,8 @@
         <div class="stat"><span>TRT_score</span><strong id="trtScore">—</strong></div>
         <div class="stat"><span>PRA_interact</span><strong id="praInteract">—</strong></div>
         <div class="stat"><span>TL_events（z1/z2/合計）</span><strong id="tlEvents">—</strong></div>
+        <div class="stat"><span>保持痕跡 R（境界平均）</span><strong id="retainedTrace">—</strong></div>
+        <div class="stat"><span>可用化 U（境界平均）</span><strong id="usableTrace">—</strong></div>
         <div class="stat"><span>成功/失敗</span><strong id="succFail">—</strong></div>
         <div class="stat"><span>平均ラグ（成功）</span><strong id="avgLag">—</strong></div>
         <div class="stat"><span>平均TL遅延</span><strong id="avgTlDelay">—</strong></div>
@@ -149,55 +107,7 @@
         </div>
         <div class="row"><label>N（バッチ）</label>
           <input id="batchN" type="number" value="400" min="100" max="2000" step="50"/><span class="mini">粒子</span>
-        </div>
-        <div class="row"><label>K（バッチ）</label>
-          <input id="batchK" type="number" value="6" min="3" max="12" step="1"/><span class="mini">案件</span>
-        </div>
-
-        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
-        <div class="mini">因子水準（カスタム）</div>
-
-        <div class="row"><label>I_high / I_low</label>
-          <input id="bI_high" type="number" value="0.85" min="0" max="1" step="0.05"/>
-          <input id="bI_low" type="number" value="0.20" min="0" max="1" step="0.05"/>
-        </div>
-        <div class="row"><label>E_high / E_low</label>
-          <input id="bE_high" type="number" value="0.80" min="0" max="1" step="0.05"/>
-          <input id="bE_low" type="number" value="0.25" min="0" max="1" step="0.05"/>
-        </div>
-        <div class="row"><label>PRA速度(on/off)</label>
-          <input id="bPRA_on" type="number" value="1.0" min="0" max="2" step="0.1"/>
-          <input id="bPRA_off" type="number" value="0.0" min="0" max="2" step="0.1"/>
-        </div>
-
-        <hr style="border:none;border-top:1px solid #1b2330; margin:4px 0;">
-        <div class="mini">追加固定パラメータ</div>
-        <div class="row"><label>H（異質性）</label>
-          <input id="bH" type="number" value="0.45" min="0" max="1" step="0.05"/><span></span>
-        </div>
-        <div class="row"><label>TL基礎率</label>
-          <input id="bTlBase" type="number" value="0.25" min="0" max="1" step="0.05"/><span></span>
-        </div>
-        <div class="row"><label>TL遅延量</label>
-          <input id="bTlKick" type="number" value="1.20" min="0" max="4" step="0.1"/><span></span>
-        </div>
-        <div class="row"><label>TRT λ</label>
-          <input id="bLambda" type="number" value="0.05" min="0.005" max="0.2" step="0.005"/><span></span>
-        </div>
-
-        <div class="progress-bar"><div class="progress-bar-fill" id="batchProgress" style="width:0%"></div></div>
-        <div id="batchStatus" class="mini">待機中</div>
-
-        <div class="grid2" style="margin-top:4px;">
-          <button class="btn btn-primary" id="btnBatchRun">▶ バッチ実行</button>
-          <button class="btn btn-danger" id="btnBatchStop">■ 中断</button>
-        </div>
-        <div class="grid2">
-          <button class="btn" id="btnBatchCSV" disabled>結果CSV</button>
-          <button class="btn" id="btnBatchFullCSV" disabled>全runCSV</button>
-        </div>
-      </div>
-    </details>
+@@ -201,51 +203,51 @@
   </aside>
 
   <main id="right">
@@ -224,6 +134,7 @@
       <div style="overflow-x:auto;">
         <table class="batch-table" id="batchTable">
           <thead><tr><th>条件</th><th>I</th><th>E</th><th>PRA</th><th>TL_events<br>(mean±sd)</th><th>TL1_events</th><th>TL2_events</th><th>Lag<br>(mean±sd)</th><th>TRT_score<br>(mean±sd)</th><th>PRA_interact<br>(mean±sd)</th><th>Success<br>(mean±sd)</th><th>Fail<br>(mean±sd)</th><th>HHI<br>(mean±sd)</th></tr></thead>
+          <thead><tr><th>条件</th><th>I</th><th>E</th><th>PRA</th><th>TL_events<br>(mean±sd)</th><th>TL1_events</th><th>TL2_events</th><th>Lag<br>(mean±sd)</th><th>TRT_score<br>(mean±sd)</th><th>PRA_interact<br>(mean±sd)</th><th>保持R<br>(mean±sd)</th><th>可用化U<br>(mean±sd)</th><th>Success<br>(mean±sd)</th><th>Fail<br>(mean±sd)</th><th>HHI<br>(mean±sd)</th></tr></thead>
           <tbody id="batchTableBody"></tbody>
         </table>
       </div>
@@ -249,31 +160,7 @@ function __fatal(t,d){
 }
 function __loadScript(u){return new Promise((r,e)=>{const s=document.createElement('script');s.src=u;s.async=true;s.onload=()=>r();s.onerror=()=>e(new Error('load:'+u));document.head.appendChild(s)})}
 
-/* ===== CORE ENGINE (shared between interactive & batch) ===== */
-const EPS=1e-9;
-const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
-
-function makeRNG(seed){let t=seed>>>0;return function(){t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
-function nd(rng){return Math.sqrt(-2*Math.log(rng()+EPS))*Math.cos(2*Math.PI*rng())}
-function gammaRand(a,rng){if(a<1){return gammaRand(1+a,rng)*Math.pow(rng(),1/a)}const d=a-1/3,c=1/Math.sqrt(9*d);while(true){let x,v;do{x=nd(rng);v=1+c*x}while(v<=0);v=v*v*v;const u=rng();if(u<1-0.0331*(x*x)*(x*x))return d*v;if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v)))return d*v}}
-function dirichletSym(K,alpha,rng){const v=new Float64Array(K);let s=0;for(let k=0;k<K;k++){const g=gammaRand(alpha,rng);v[k]=g;s+=g}if(s<=0){const u=1/K;for(let k=0;k<K;k++)v[k]=u;return v}for(let k=0;k<K;k++)v[k]/=s;return v}
-
-function normalizeRow(A){let s=0;for(let k=0;k<A.length;k++){if(!Number.isFinite(A[k])||A[k]<0)A[k]=0;s+=A[k]}if(s<=0){const u=1/A.length;for(let k=0;k<A.length;k++)A[k]=u;return}const inv=1/s;for(let k=0;k<A.length;k++)A[k]*=inv}
-function rowHHI(A){let s=0;for(let k=0;k<A.length;k++)s+=A[k]*A[k];return s}
-
-/* ===== Simulation Engine Class ===== */
-class TRTPRAEngine {
-  constructor(cfg){
-    this.cfg = Object.assign({
-      N:400, K:6, poolMass:1.0, height:10.0, radius:6.0,
-      praSpeed:1.0, trtSpeed:0.75, dtMs:16, eta:0.05, dirAlpha:1.0, rho:0.3,
-      identity:0.75, align:0.70, hetero:0.45,
-      stageFrac1:0.40, stageFrac2:0.75,
-      tlBase:0.25, tlKick:1.20, lambdaTRT:0.05,
-      secPerYear:1.0, reviewEveryMs:2000,
-      ablatePRA:false, ablateTRT:false, ablateTL:false, ablateID:false,
-      seed:1234
+@@ -277,50 +279,53 @@ class TRTPRAEngine {
     }, cfg);
     this.reset();
   }
@@ -299,6 +186,9 @@ class TRTPRAEngine {
     this.failCount=0;
     this.tlEventsTotal=0;
     this.tlEventsByB=[0,0];
+    this.boundaryChecks=0;
+    this.retainedTraceSum=0;
+    this.usableTraceSum=0;
     this.tlDelayTotalMs=0; this.tlDelayTotalMsByB=[0,0];
     this.tlDelayEpisodes=0; this.tlDelayEpisodesByB=[0,0];
     this.tlDelaySuccSumMs=0; this.tlDelaySuccSumMsByB=[0,0];
@@ -324,112 +214,7 @@ class TRTPRAEngine {
     const c=this.cfg;
     const id=this.nextId++;
     const r=c.radius*Math.sqrt(this.rng());
-    const th=2*Math.PI*this.rng();
-    const row=dirichletSym(c.K,c.dirAlpha,this.rng);
-    const A=new Float32Array(c.K);
-    for(let k=0;k<c.K;k++)A[k]=row[k];
-    const hhi0=rowHHI(A);
-    return {
-      id, gen:0, mass:c.poolMass/c.N,
-      x:r*Math.cos(th), y:r*Math.sin(th), z:0,
-      vx:0.2*Math.cos(2*Math.PI*this.rng()), vy:0.2*Math.sin(2*Math.PI*this.rng()), vz:0,
-      A, cycleStart:this.tSim,
-      tlEventsByB:[0,0], tlPendingStartByB:[null,null], tlDelayCycleMsByB:[0,0],
-      hhiEwma:hhi0, hhiEwmaPrev:hhi0
-    };
-  }
-
-  rowCoherence(A){
-    const K=A.length;let num=0,den=0;
-    for(let k=0;k<K;k++)for(let l=k+1;l<K;l++){
-      const w=A[k]*A[l];den+=w;num+=w*this.sim[k*K+l];
-    }
-    return den<=EPS?1:clamp(num/den,0,1);
-  }
-
-  coneRadiusAtZ(z){return this.cfg.radius*(1-clamp(z/this.cfg.height,0,1))}
-
-  step(){
-    const c=this.cfg, dt=c.dtMs, K=c.K;
-    const dtSec=dt*0.001;
-
-    // shocks
-    const common=nd(this.rng)*0.03;
-    for(let k=0;k<K;k++){
-      const idio=nd(this.rng)*0.03;
-      this.shocks[k]=0.95*this.shocks[k]+c.rho*common+(1-c.rho)*idio;
-    }
-
-    // softmax target
-    const beta=10;let mx=-1e9;
-    for(let k=0;k<K;k++)mx=Math.max(mx,this.shocks[k]);
-    let Z=0;const T=new Float64Array(K);
-    for(let k=0;k<K;k++){T[k]=Math.exp(beta*(this.shocks[k]-mx));Z+=T[k]}
-    for(let k=0;k<K;k++)T[k]/=Z;
-
-    const inReview=(c.reviewEveryMs>0)&&((this.tSim%c.reviewEveryMs)<dt);
-    const etaEff=c.eta*(inReview?4:1);
-    const z1=c.height*c.stageFrac1, z2=c.height*c.stageFrac2;
-
-    for(const p of this.P){
-      // allocation update
-      for(let k=0;k<K;k++){
-        p.A[k]+=etaEff*(T[k]-p.A[k])+0.01*(this.rng()-0.5);
-        if(p.A[k]<0)p.A[k]=0;
-      }
-      const early=clamp(1-p.z/(z1+EPS),0,1);
-      const late=clamp((p.z-z2)/((c.height-z2)+EPS),0,1);
-      const gamma=(1-0.6*early)*(1+1.8*late);
-      for(let k=0;k<K;k++)p.A[k]=Math.pow(p.A[k]+EPS,gamma);
-      normalizeRow(p.A);
-
-      const hhi=rowHHI(p.A);
-      const dtYear=(dt*0.001)/Math.max(EPS,c.secPerYear);
-      const alpha=1-Math.exp(-c.lambdaTRT*dtYear);
-      p.hhiEwmaPrev=p.hhiEwma;
-      p.hhiEwma+= alpha*(hhi-p.hhiEwma);
-
-      // horizontal motion
-      if(!c.ablatePRA && c.praSpeed>0){
-        let cx=0,cy=0;
-        for(let k=0;k<K;k++){cx+=p.A[k]*this.projDir[k].x;cy+=p.A[k]*this.projDir[k].y}
-        const clen=Math.hypot(cx,cy);
-        let dx,dy;
-        if(clen>1e-6){dx=cx/clen;dy=cy/clen}
-        else{const vl=Math.hypot(p.vx,p.vy);if(vl>1e-6){dx=p.vx/vl;dy=p.vy/vl}else{const t2=2*Math.PI*this.rng();dx=Math.cos(t2);dy=Math.sin(t2)}}
-        const focN=(hhi-1/K)/(1-1/K);
-        const div=1-focN;
-        const coh=this.rowCoherence(p.A);
-        const comp=c.align*coh;
-        const conf=(1-c.align)*div;
-        const amp=c.praSpeed*clamp(0.12+0.55*div+0.25*comp-0.30*conf,0,2);
-        const tau=0.45,a2=1-Math.exp(-dtSec/Math.max(EPS,tau));
-        p.vx+=a2*(dx*amp-p.vx);p.vy+=a2*(dy*amp-p.vy);
-        const noise=0.35*c.praSpeed*(0.25+0.75*div)*(0.2+0.8*(1-c.align));
-        const sdt=Math.sqrt(Math.max(EPS,dtSec));
-        p.vx+=noise*sdt*nd(this.rng);p.vy+=noise*sdt*nd(this.rng);
-        const vmax=2.2*c.praSpeed+0.25;
-        const sp=Math.hypot(p.vx,p.vy);
-        if(sp>vmax){const s2=vmax/(sp+EPS);p.vx*=s2;p.vy*=s2}
-      }else{p.vx=0;p.vy=0}
-
-      // vertical velocity
-      let vz=0;
-      if(!c.ablateTRT && c.trtSpeed>0){
-        const focN=(hhi-1/K)/(1-1/K);
-        const div=1-focN;
-        const dh=p.hhiEwma-p.hhiEwmaPrev;
-        const wE=1-smoothstep(0,z1,p.z);
-        const wL=smoothstep(z2,c.height,p.z);
-        const wM=clamp(1-wE-wL,0,1);
-        const coh=this.rowCoherence(p.A);
-        const praComp=c.align*coh;
-        const praConf=(1-c.align)*div;
-        const bias=0.06*wE+0.14*wM+0.22*wL;
-        vz+=c.trtSpeed*(0.65*wE*div*(0.4+0.6*praComp)+0.50*wM*(0.45*focN+0.55*div)*(0.55+0.45*praComp)+0.75*wL*focN);
-        vz-=c.trtSpeed*(0.22*wM*praConf+0.60*wL*praConf);
-        vz+=c.trtSpeed*6*dh;
-        vz-=c.trtSpeed*bias;
+@@ -433,57 +438,67 @@ class TRTPRAEngine {
       }
 
       const prevZ=p.z;
@@ -457,11 +242,24 @@ class TRTPRAEngine {
             const span2=1-coh2;
             const mis=1-c.align;
             let prob=c.tlBase*(1-I2)*(0.55+0.45*div2)*(0.45+0.55*(mis+0.8*span2));
+            // TRT-PRA chain: continuity -> retained traces -> usability -> boundary TL risk
+            const trtCarry=c.ablateTRT?0:clamp(c.trtSpeed*(0.45+0.55*focN2),0,1);
+            const retained=clamp(I2*(0.55+0.45*trtCarry),0,1);      // structural retention (continuity + TRT)
+            const usability=clamp(c.align*(0.60+0.40*coh2),0,1);    // evaluative alignment as usability condition
+            const praPressure=clamp(c.praSpeed*div2,0,1.5);         // parallel allocation load
+            const praFactor=(c.align>=0.5)
+              ? (1-0.30*praPressure)   // complement under high alignment
+              : (1+0.45*praPressure);  // conflict under low alignment
+            let prob=c.tlBase*(1-retained)*(1-usability)*(0.70+0.30*span2)*clamp(praFactor,0.55,1.8);
             prob=clamp(prob,0,0.95);
+            this.boundaryChecks++;
+            this.retainedTraceSum+=retained;
+            this.usableTraceSum+=usability;
             if(this.rng()<prob){
               this.tlEventsByB[b]++;this.tlEventsTotal++;p.tlEventsByB[b]++;
               p.tlPendingStartByB[b]=this.tSim+dt;
               const kick=c.tlKick*(0.6+0.7*span2)*(0.6+0.4*mis);
+              const kick=c.tlKick*(0.7+0.6*span2)*(1+0.6*(1-usability));
               p.z=clamp(bz-0.15-kick,0,c.height);
               for(let k=0;k<K;k++)p.A[k]=Math.pow(p.A[k]+EPS,0.72);
               normalizeRow(p.A);
@@ -487,27 +285,7 @@ class TRTPRAEngine {
   recycle(p,event){
     if(event==='fail')this.failCount++;
     if(event==='success'){
-      const lag=Math.max(0,this.tSim-p.cycleStart);
-      this.succLagSum+=lag;this.succLagN++;
-      this.tlDelaySuccSumMsByB[0]+=(p.tlDelayCycleMsByB[0]||0);
-      this.tlDelaySuccSumMsByB[1]+=(p.tlDelayCycleMsByB[1]||0);
-      this.tlDelaySuccSumMs+=(p.tlDelayCycleMsByB[0]||0)+(p.tlDelayCycleMsByB[1]||0);
-    }
-    const c=this.cfg;
-    p.gen++;
-    const r=c.radius*Math.sqrt(this.rng());
-    const th=2*Math.PI*this.rng();
-    p.x=r*Math.cos(th);p.y=r*Math.sin(th);p.z=0;
-    const thV=2*Math.PI*this.rng();
-    p.vx=0.2*Math.cos(thV);p.vy=0.2*Math.sin(thV);
-    const I2=c.ablateID?1:c.identity;
-    const row=dirichletSym(c.K,c.dirAlpha,this.rng);
-    for(let k=0;k<c.K;k++)p.A[k]=I2*p.A[k]+(1-I2)*row[k];
-    normalizeRow(p.A);
-    p.cycleStart=this.tSim;
-    p.tlEventsByB=[0,0];p.tlPendingStartByB=[null,null];p.tlDelayCycleMsByB=[0,0];
-    const h0=rowHHI(p.A);p.hhiEwma=h0;p.hhiEwmaPrev=h0;
-  }
+@@ -511,52 +526,55 @@ class TRTPRAEngine {
 
   aggregate(){
     const c=this.cfg, K=c.K;
@@ -533,8 +311,11 @@ class TRTPRAEngine {
 
     const succTotal=this.successByProj.reduce((a,b)=>a+b,0);
     const avgLag=this.succLagN>0?(this.succLagSum/this.succLagN/1000):0;
+    const avgRetainedTrace=this.boundaryChecks>0?this.retainedTraceSum/this.boundaryChecks:0;
+    const avgUsableTrace=this.boundaryChecks>0?this.usableTraceSum/this.boundaryChecks:0;
     return {HHI:hhi,Simpson:1-hhi,TRT_score:this.TRT_score,PRA_net:praNet,PRA_interact:praInteract,
       tlEvents:this.tlEventsTotal,tlE1:this.tlEventsByB[0],tlE2:this.tlEventsByB[1],
+      avgRetainedTrace,avgUsableTrace,
       success:succTotal,fail:this.failCount,avgLag,M};
   }
 }
@@ -560,27 +341,7 @@ async function runBatchExperiment(){
   const H=+$('bH').value, tlBase=+$('bTlBase').value, tlKick=+$('bTlKick').value, lambda=+$('bLambda').value;
 
   // 2×2×2 factorial
-  const conditions=[
-    {label:'HI·HE·PRA+', I:I_h, E:E_h, pra:PRA_on},
-    {label:'HI·HE·PRA−', I:I_h, E:E_h, pra:PRA_off},
-    {label:'HI·LE·PRA+', I:I_h, E:E_l, pra:PRA_on},
-    {label:'HI·LE·PRA−', I:I_h, E:E_l, pra:PRA_off},
-    {label:'LI·HE·PRA+', I:I_l, E:E_h, pra:PRA_on},
-    {label:'LI·HE·PRA−', I:I_l, E:E_h, pra:PRA_off},
-    {label:'LI·LE·PRA+', I:I_l, E:E_l, pra:PRA_on},
-    {label:'LI·LE·PRA−', I:I_l, E:E_l, pra:PRA_off},
-  ];
-
-  const totalRuns=conditions.length*nSeeds;
-  let done=0;
-
-  for(const cond of conditions){
-    const runs=[];
-    for(let s=0;s<nSeeds;s++){
-      if(batchCancel)break;
-      const eng=new TRTPRAEngine({
-        N, K, seed:1000+s*7+conditions.indexOf(cond)*1000,
-        identity:cond.I, align:cond.E, praSpeed:cond.pra,
+@@ -584,80 +602,81 @@ async function runBatchExperiment(){
         ablatePRA:cond.pra<=0,
         hetero:H, tlBase, tlKick, lambdaTRT:lambda,
         trtSpeed:0.75, dtMs:16, eta:0.05, dirAlpha:1.0, rho:0.3,
@@ -607,6 +368,7 @@ async function runBatchExperiment(){
 
     // compute summary stats
     const metrics=['tlEvents','tlE1','tlE2','avgLag','TRT_score','PRA_interact','success','fail','HHI'];
+    const metrics=['tlEvents','tlE1','tlE2','avgLag','TRT_score','PRA_interact','avgRetainedTrace','avgUsableTrace','success','fail','HHI'];
     const summary={label:cond.label, I:cond.I, E:cond.E, PRA:cond.pra, n:runs.length};
     for(const m of metrics){
       const vals=runs.map(r=>r[m]);
@@ -636,6 +398,7 @@ function renderBatchResults(){
     tr.innerHTML=`<td class="cond">${s.label}</td><td>${s.I.toFixed(2)}</td><td>${s.E.toFixed(2)}</td><td>${s.PRA.toFixed(1)}</td>
       <td>${fmt(s.tlEvents)}</td><td>${fmt(s.tlE1)}</td><td>${fmt(s.tlE2)}</td>
       <td>${fmt(s.avgLag)}</td><td>${fmt(s.TRT_score)}</td><td>${fmt(s.PRA_interact)}</td>
+      <td>${fmt(s.avgRetainedTrace)}</td><td>${fmt(s.avgUsableTrace)}</td>
       <td>${fmt(s.success)}</td><td>${fmt(s.fail)}</td><td>${fmt(s.HHI)}</td>`;
     body.appendChild(tr);
   }
@@ -661,88 +424,7 @@ function renderPropositionTests(){
   // Index conditions: 0=HI·HE·PRA+, 1=HI·HE·PRA−, 2=HI·LE·PRA+, 3=HI·LE·PRA−
   // 4=LI·HE·PRA+, 5=LI·HE·PRA−, 6=LI·LE·PRA+, 7=LI·LE·PRA−
   const S=batchSummary;
-
-  const tests=[
-    // P4: High I → lower TL, shorter lag (main effect of I, averaging over E and PRA)
-    {prop:'P4（中心命題）',
-     desc:'高継続性 vs 低継続性（E・PRA平均）',
-     metric:'tlEvents',
-     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
-     labelA:'High I (avg)', labelB:'Low I (avg)',
-     expectSign:-1, // A < B → negative diff means A has fewer TL
-    },
-    {prop:'P4',
-     desc:'高継続性 vs 低継続性（Lag）',
-     metric:'avgLag',
-     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
-     labelA:'High I (avg)', labelB:'Low I (avg)',
-     expectSign:-1,
-    },
-
-    // P1: TRT mechanism — High I shows higher TRT_score (more focused transition)
-    {prop:'P1（TRT）',
-     desc:'高I → TRT_score上昇',
-     metric:'TRT_score',
-     condA_idx:[0,1,2,3], condB_idx:[4,5,6,7],
-     labelA:'High I (avg)', labelB:'Low I (avg)',
-     expectSign:1, // A > B
-    },
-
-    // P3: Evaluative alignment as boundary condition — Low E → more TL (holding I high)
-    {prop:'P3（評価関数整合）',
-     desc:'高I下: 低E vs 高E → TL差',
-     metric:'tlEvents',
-     condA_idx:[2,3], condB_idx:[0,1], // HI·LE vs HI·HE
-     labelA:'HI·LE', labelB:'HI·HE',
-     expectSign:1, // low E has MORE TL
-    },
-
-    // P2: PRA conditional — High E + PRA on vs off (complement)
-    {prop:'P2（PRA相補）',
-     desc:'高E下: PRA+ vs PRA− → TL差',
-     metric:'tlEvents',
-     condA_idx:[0,4], condB_idx:[1,5], // HE·PRA+ vs HE·PRA−
-     labelA:'HE·PRA+', labelB:'HE·PRA−',
-     expectSign:-1, // with PRA, fewer TL under high E
-    },
-    // P2: PRA conflict — Low E + PRA on vs off
-    {prop:'P2（PRA相克）',
-     desc:'低E下: PRA+ vs PRA− → TL差',
-     metric:'tlEvents',
-     condA_idx:[2,6], condB_idx:[3,7], // LE·PRA+ vs LE·PRA−
-     labelA:'LE·PRA+', labelB:'LE·PRA−',
-     expectSign:1, // with PRA under low E, MORE TL
-    },
-  ];
-
-  const propVerdicts={};
-
-  for(const t of tests){
-    // Pool values across conditions
-    const valsA=[];const valsB=[];
-    for(const i of t.condA_idx) valsA.push(...S[i][t.metric].vals);
-    for(const i of t.condB_idx) valsB.push(...S[i][t.metric].vals);
-    const mA=valsA.reduce((a,b)=>a+b,0)/valsA.length;
-    const mB=valsB.reduce((a,b)=>a+b,0)/valsB.length;
-    const sdA=Math.sqrt(valsA.reduce((a,b)=>a+(b-mA)**2,0)/Math.max(1,valsA.length-1));
-    const sdB=Math.sqrt(valsB.reduce((a,b)=>a+(b-mB)**2,0)/Math.max(1,valsB.length-1));
-    const sp=Math.sqrt(((valsA.length-1)*sdA*sdA+(valsB.length-1)*sdB*sdB)/(valsA.length+valsB.length-2+EPS));
-    const d=sp>EPS?(mA-mB)/sp:0;
-    const diff=mA-mB;
-
-    const supported=(t.expectSign>0 && diff>0 && Math.abs(d)>0.2)||(t.expectSign<0 && diff<0 && Math.abs(d)>0.2);
-    const strong=Math.abs(d)>0.5;
-
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="cond">${t.prop}</td><td>${t.desc}</td><td>${t.metric}</td>
-      <td>${mA.toFixed(2)}±${sdA.toFixed(2)}</td><td>${mB.toFixed(2)}±${sdB.toFixed(2)}</td>
-      <td>${diff.toFixed(2)}</td><td>${d.toFixed(2)}</td>
-      <td class="${supported?(strong?'ok':'warn'):'err'}">${supported?(strong?'◎ 強支持':'○ 支持'):'△ 不支持'}</td>`;
-    body.appendChild(tr);
-
-    const pkey=t.prop.split('（')[0];
-    if(!propVerdicts[pkey])propVerdicts[pkey]={supported:0,total:0,details:[]};
-    propVerdicts[pkey].total++;
+@@ -746,60 +765,60 @@ function renderPropositionTests(){
     if(supported)propVerdicts[pkey].supported++;
     propVerdicts[pkey].details.push({desc:t.desc, metric:t.metric, d, supported, strong});
   }
@@ -769,15 +451,19 @@ function downloadCSV(name, text){
 
 function exportBatchSummaryCSV(){
   let csv='condition,I,E,PRA,n,TL_events_mean,TL_events_sd,TL1_mean,TL1_sd,TL2_mean,TL2_sd,avgLag_mean,avgLag_sd,TRT_score_mean,TRT_score_sd,PRA_interact_mean,PRA_interact_sd,success_mean,success_sd,fail_mean,fail_sd,HHI_mean,HHI_sd\n';
+  let csv='condition,I,E,PRA,n,TL_events_mean,TL_events_sd,TL1_mean,TL1_sd,TL2_mean,TL2_sd,avgLag_mean,avgLag_sd,TRT_score_mean,TRT_score_sd,PRA_interact_mean,PRA_interact_sd,retained_mean,retained_sd,usable_mean,usable_sd,success_mean,success_sd,fail_mean,fail_sd,HHI_mean,HHI_sd\n';
   for(const s of batchSummary){
     csv+=`${s.label},${s.I},${s.E},${s.PRA},${s.n},${s.tlEvents.mean.toFixed(4)},${s.tlEvents.sd.toFixed(4)},${s.tlE1.mean.toFixed(4)},${s.tlE1.sd.toFixed(4)},${s.tlE2.mean.toFixed(4)},${s.tlE2.sd.toFixed(4)},${s.avgLag.mean.toFixed(4)},${s.avgLag.sd.toFixed(4)},${s.TRT_score.mean.toFixed(6)},${s.TRT_score.sd.toFixed(6)},${s.PRA_interact.mean.toFixed(6)},${s.PRA_interact.sd.toFixed(6)},${s.success.mean.toFixed(2)},${s.success.sd.toFixed(2)},${s.fail.mean.toFixed(2)},${s.fail.sd.toFixed(2)},${s.HHI.mean.toFixed(6)},${s.HHI.sd.toFixed(6)}\n`;
+    csv+=`${s.label},${s.I},${s.E},${s.PRA},${s.n},${s.tlEvents.mean.toFixed(4)},${s.tlEvents.sd.toFixed(4)},${s.tlE1.mean.toFixed(4)},${s.tlE1.sd.toFixed(4)},${s.tlE2.mean.toFixed(4)},${s.tlE2.sd.toFixed(4)},${s.avgLag.mean.toFixed(4)},${s.avgLag.sd.toFixed(4)},${s.TRT_score.mean.toFixed(6)},${s.TRT_score.sd.toFixed(6)},${s.PRA_interact.mean.toFixed(6)},${s.PRA_interact.sd.toFixed(6)},${s.avgRetainedTrace.mean.toFixed(6)},${s.avgRetainedTrace.sd.toFixed(6)},${s.avgUsableTrace.mean.toFixed(6)},${s.avgUsableTrace.sd.toFixed(6)},${s.success.mean.toFixed(2)},${s.success.sd.toFixed(2)},${s.fail.mean.toFixed(2)},${s.fail.sd.toFixed(2)},${s.HHI.mean.toFixed(6)},${s.HHI.sd.toFixed(6)}\n`;
   }
   downloadCSV('batch_summary.csv',csv);
 }
 function exportBatchFullCSV(){
   let csv='condition,I,E,PRA,seed,TL_events,TL1,TL2,avgLag,TRT_score,PRA_interact,success,fail,HHI,Simpson\n';
+  let csv='condition,I,E,PRA,seed,TL_events,TL1,TL2,avgLag,TRT_score,PRA_interact,retained,usable,success,fail,HHI,Simpson\n';
   for(const r of batchAllRuns){
     csv+=`${r.condLabel},${r.I},${r.E},${r.PRA},${r.seed},${r.tlEvents},${r.tlE1},${r.tlE2},${r.avgLag.toFixed(4)},${r.TRT_score.toFixed(6)},${r.PRA_interact.toFixed(6)},${r.success},${r.fail},${r.HHI.toFixed(6)},${r.Simpson.toFixed(6)}\n`;
+    csv+=`${r.condLabel},${r.I},${r.E},${r.PRA},${r.seed},${r.tlEvents},${r.tlE1},${r.tlE2},${r.avgLag.toFixed(4)},${r.TRT_score.toFixed(6)},${r.PRA_interact.toFixed(6)},${r.avgRetainedTrace.toFixed(6)},${r.avgUsableTrace.toFixed(6)},${r.success},${r.fail},${r.HHI.toFixed(6)},${r.Simpson.toFixed(6)}\n`;
   }
   downloadCSV('batch_all_runs.csv',csv);
 }
@@ -803,91 +489,7 @@ function initInteractive(){
   const orbitTarget=new THREE.Vector3(0,0,5);
   camera.lookAt(orbitTarget);
 
-  // Simple orbit
-  (function(){
-    let radius=camera.position.distanceTo(orbitTarget);
-    let theta=Math.atan2(camera.position.y-orbitTarget.y,camera.position.x-orbitTarget.x);
-    let phi=Math.acos(clamp((camera.position.z-orbitTarget.z)/Math.max(EPS,radius),-1,1));
-    let dragging=false,lastX=0,lastY=0,pid=null;
-    function apply(){
-      phi=clamp(phi,0.1,Math.PI-0.1);
-      radius=clamp(radius,2,120);
-      camera.position.set(orbitTarget.x+radius*Math.cos(theta)*Math.sin(phi),orbitTarget.y+radius*Math.sin(theta)*Math.sin(phi),orbitTarget.z+radius*Math.cos(phi));
-      camera.lookAt(orbitTarget);
-    }
-    canvas.style.touchAction='none';
-    canvas.addEventListener('pointerdown',e=>{dragging=true;pid=e.pointerId;lastX=e.clientX;lastY=e.clientY;try{canvas.setPointerCapture(pid)}catch(_){}});
-    window.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==pid)return;theta-=(e.clientX-lastX)*0.005;phi-=(e.clientY-lastY)*0.005;lastX=e.clientX;lastY=e.clientY;apply()});
-    window.addEventListener('pointerup',e=>{if(e.pointerId!==pid)return;dragging=false;try{canvas.releasePointerCapture(pid)}catch(_){}});
-    canvas.addEventListener('wheel',e=>{e.preventDefault();radius*=Math.exp(e.deltaY*0.0012);apply()},{passive:false});
-    apply();
-  })();
-
-  scene.add(new THREE.AmbientLight(0xffffff,0.6));
-  const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(10,-8,14);scene.add(dl);
-
-  interactiveEngine=new TRTPRAEngine({N:600,K:6,seed:1234});
-  rebuildVisuals();
-  resize();
-  requestAnimationFrame(tick);
-}
-
-function rebuildVisuals(){
-  if(!interactiveEngine||!scene)return;
-  const c=interactiveEngine.cfg;
-
-  // Cone
-  if(coneMesh){scene.remove(coneMesh);coneMesh.geometry.dispose();coneMesh.material.dispose();
-    if(coneMesh.userData.rings)for(const r of coneMesh.userData.rings){scene.remove(r);r.geometry.dispose();r.material.dispose()}}
-  const geo=new THREE.ConeGeometry(c.radius,c.height,96,1,true);
-  const mat=new THREE.MeshPhongMaterial({color:0x2196f3,transparent:true,opacity:0.08,depthWrite:false,side:THREE.DoubleSide});
-  coneMesh=new THREE.Mesh(geo,mat);
-  coneMesh.position.set(0,0,c.height/2);coneMesh.rotation.x=Math.PI/2;
-  coneMesh.userData.rings=[];
-  scene.add(coneMesh);
-
-  const bounds=[c.height*c.stageFrac1,c.height*c.stageFrac2];
-  const colors=[0xffca66,0x5cd68d];
-  for(let b=0;b<2;b++){
-    const z=bounds[b],r2=c.radius*(1-z/c.height);
-    const rg=new THREE.RingGeometry(Math.max(0,r2-0.03),r2+0.03,64);
-    const rm=new THREE.MeshBasicMaterial({color:colors[b],transparent:true,opacity:0.35,side:THREE.DoubleSide,depthWrite:false});
-    const ring=new THREE.Mesh(rg,rm);ring.position.set(0,0,z);scene.add(ring);
-    coneMesh.userData.rings.push(ring);
-  }
-
-  // Particles
-  if(inst){scene.remove(inst);instGeo.dispose();instMat.dispose()}
-  instGeo=new THREE.SphereGeometry(0.06,8,8);
-  instMat=new THREE.MeshBasicMaterial({color:0xa6e3ff});
-  inst=new THREE.InstancedMesh(instGeo,instMat,c.N);
-  inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  scene.add(inst);
-}
-
-function renderParticles(){
-  if(!inst||!interactiveEngine)return;
-  const m=new THREE.Matrix4();
-  for(let i=0;i<interactiveEngine.P.length;i++){
-    const p=interactiveEngine.P[i];
-    m.makeTranslation(p.x,p.y,p.z);
-    inst.setMatrixAt(i,m);
-  }
-  inst.instanceMatrix.needsUpdate=true;
-}
-
-function resize(){
-  const w=document.getElementById('canvasWrap').clientWidth;
-  const h=document.getElementById('canvasWrap').clientHeight-36; // minus tab bar
-  if(renderer){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
-}
-
-function tick(now){
-  if(!paused && interactiveEngine){
-    interactiveEngine.step();
-    if(frameCount%30===0){
-      const ag=interactiveEngine.aggregate();
-      updateLiveStats(ag);
+@@ -891,50 +910,52 @@ function tick(now){
     }
   }
   if(renderer&&scene&&camera){renderParticles();renderer.render(scene,camera)}
@@ -913,6 +515,8 @@ function updateLiveStats(ag){
   $('trtScore').textContent=ag.TRT_score.toFixed(3);
   $('praInteract').textContent=ag.PRA_interact.toFixed(3);
   $('tlEvents').textContent=`${ag.tlE1} / ${ag.tlE2} / ${ag.tlEvents}`;
+  $('retainedTrace').textContent=ag.avgRetainedTrace.toFixed(3);
+  $('usableTrace').textContent=ag.avgUsableTrace.toFixed(3);
   $('succFail').textContent=`${ag.success} / ${ag.fail}`;
   $('avgLag').textContent=ag.avgLag>0?`${ag.avgLag.toFixed(2)} s`:'—';
   const e=interactiveEngine;
@@ -938,49 +542,7 @@ function bindUI(){
     ['identity',v=>Number(v).toFixed(2),'identity'],
     ['align',v=>Number(v).toFixed(2),'align'],
     ['hetero',v=>Number(v).toFixed(2),'hetero'],
-    ['stageZ1',v=>Number(v).toFixed(2),'stageFrac1'],
-    ['stageZ2',v=>Number(v).toFixed(2),'stageFrac2'],
-    ['tlBase',v=>Number(v).toFixed(2),'tlBase'],
-    ['tlKick',v=>Number(v).toFixed(2),'tlKick'],
-    ['lambdaTRT',v=>Number(v).toFixed(3),'lambdaTRT'],
-    ['secPerYear',v=>Number(v).toFixed(1),'secPerYear'],
-    ['reviewSec',v=>Number(v).toFixed(1),null],
-  ];
-  for(const [id,fmt,cfgKey] of ranges){
-    const el=$(id),out=$(id+'V');
-    if(!el||!out)continue;
-    const render=()=>{out.textContent=fmt(el.value)};
-    el.addEventListener('input',()=>{
-      render();
-      if(interactiveEngine&&cfgKey){
-        let v=Number(el.value);
-        if(cfgKey==='dtMs')v=Math.round(v);
-        interactiveEngine.cfg[cfgKey]=v;
-        if(cfgKey==='align'||cfgKey==='hetero')interactiveEngine.rebuildSim();
-      }
-      if(id==='reviewSec'&&interactiveEngine)interactiveEngine.cfg.reviewEveryMs=Math.max(0,Number(el.value)*1000);
-    });
-    render();
-  }
-
-  ['ablatePRA','ablateTRT','ablateTL','ablateID'].forEach(id=>{
-    $(id).addEventListener('change',e=>{if(interactiveEngine)interactiveEngine.cfg[id]=e.target.checked});
-  });
-
-  $('btnReseed').addEventListener('click',()=>{
-    if(!interactiveEngine)return;
-    interactiveEngine.cfg.seed=Number($('seed').value)|0;
-    interactiveEngine.reset();rebuildVisuals();
-  });
-  $('btnApplyN').addEventListener('click',()=>{
-    if(!interactiveEngine)return;
-    interactiveEngine.cfg.N=Math.max(100,Number($('N').value)|0);
-    interactiveEngine.reset();rebuildVisuals();
-  });
-  $('btnApplyK').addEventListener('click',()=>{
-    if(!interactiveEngine)return;
-    interactiveEngine.cfg.K=clamp(Number($('K').value)|0,3,16);
-    interactiveEngine.reset();rebuildVisuals();
+@@ -984,52 +1005,52 @@ function bindUI(){
   });
   $('btnReset').addEventListener('click',()=>{if(interactiveEngine){interactiveEngine.reset();rebuildVisuals()}});
   $('btnPause').addEventListener('click',()=>{paused=!paused;$('btnPause').textContent=paused?'▶ Resume':'⏸ Pause'});
@@ -1008,6 +570,8 @@ function bindUI(){
     const ag=interactiveEngine.aggregate();
     const csv='HHI,Simpson,TRT_score,PRA_interact,TL_events,success,fail,avgLag\n'+
       `${ag.HHI.toFixed(6)},${ag.Simpson.toFixed(6)},${ag.TRT_score.toFixed(6)},${ag.PRA_interact.toFixed(6)},${ag.tlEvents},${ag.success},${ag.fail},${ag.avgLag.toFixed(4)}\n`;
+    const csv='HHI,Simpson,TRT_score,PRA_interact,retained,usable,TL_events,success,fail,avgLag\n'+
+      `${ag.HHI.toFixed(6)},${ag.Simpson.toFixed(6)},${ag.TRT_score.toFixed(6)},${ag.PRA_interact.toFixed(6)},${ag.avgRetainedTrace.toFixed(6)},${ag.avgUsableTrace.toFixed(6)},${ag.tlEvents},${ag.success},${ag.fail},${ag.avgLag.toFixed(4)}\n`;
     downloadCSV('snapshot.csv',csv);
   });
   $('btnDL').addEventListener('click',()=>{alert('ライブログは簡略化済み。バッチ結果CSVをご利用ください。')});
@@ -1033,4 +597,3 @@ function bindUI(){
 })();
 </script>
 </body>
-</html>
