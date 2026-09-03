@@ -1,0 +1,24 @@
+TRT–PRA Paper 1R Forward External Timestamp Commitment v1.0
+
+created_at_utc: 2026-09-03T18:29:53Z
+created_at_jst: 2026-09-04T03:29:53+09:00
+characterization: post-structural-analysis, pre-outcome-unblinding forward checkpoint
+not_a_pre_analysis_preregistration: true
+public_disclosure: hash-only; no research file contents are published
+
+checkpoint_bundle_sha256: ab88ee89788e783f229f01daf2e3e2bfcc3b5be2d1d6bd829a532c5c6c576250
+checkpoint_bundle_size_bytes: 9887206
+detailed_manifest_sha256: b4f9c19e61cd9a68cac9919d7d3921630c140e31f4456d390e2d07d415c152c6
+markdown_manifest_sha256: c28664832d700da0bc1c4bd480a91a70b90a1befe1889347934b7dfde650de2e
+sha256sums_file_sha256: a6fabf361c0f81153909ad20049f67b079ebc7e28f8dcf56773df0a59778446e
+included_file_count: 11
+
+prior_checkpoint_chain:
+  prior_v0.7_bundle_sha256: 038eb2951ce044965819acf49780188deb7e3f1a520d24ace770b2791d262ddc
+  prior_frozen_master_sha256: 4fee6340eb7a38abdff16a8cbcc6268c44df1b2d1616bbd466daac4f94b62ad7
+  prior_current_model_sha256: 9e8da24cd7f4b1482266ccf5574ce31fc2ba38155ee6278f8afcefa04b72a02d
+
+integrity_locks:
+  outcome_used_flag: 0
+  canonical_master_write: 0
+  human_layer_inference: outside_current_scope
