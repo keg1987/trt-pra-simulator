@@ -1,0 +1,44 @@
+TRT–PRA Paper 1R Direct-Measurement External Timestamp Checkpoint v0.11
+
+characterization: post-public-source-extension, pre-Coder-2-return, pre-outcome-unblinding
+not_a_pre_analysis_preregistration: true
+public_disclosure: hash-only; no research-file contents are published
+
+checkpoint_bundle_file: TRT_PRA_Paper1R_v0.11_継続作業bundle_v0.4.zip
+checkpoint_bundle_sha256: 1d64f9a9647fa2594ee7ae4a2bc40a8d4c0caddb25370d0f38f798aec9cd87c5
+checkpoint_bundle_member_count: 10
+
+bundle_manifest_sha256: 6875eeb356925033ed9c9a88294478c154c52408f4d6af9bb6222c4e00a8b96e
+v0_11_sidecar_sha256: 6e168355c88c1b0aadbb10ad00cde15ca8e55b8a9f2cff919551daaff4bae7a5
+coder2_parent_packet_sha256: 0426b5812967425b4c3a772ada94118cff1010f327d7cd01f37f2d5ab7d96a40
+coder2_neutral_supplement_v0_2_sha256: 9d224f9ee3296d0900306cde8c962f15528bafad0050ef173c23e9b3cb68a70e
+adjudication_coordinator_v0_3_sha256: bbdec1d7fe1230ce5cc50fb887be4796ccef1156ad14cceaa6731fe866f9f11f
+preissue_integrity_audit_sha256: 14e311d1e446bab500ae328916323cdfa7ba068e024c1969e34f6b7375220d3a
+external_coder_bundle_v0_3_sha256: 7b5b3806ab36b72970a2c497be4af7c7839fe07eff8b132afe88783fc4b4817b
+raw_archive_manifest_36_sha256: 9f8601e49e0d63bc586c09f8b5b641d397fa36e8ab7f252f80091097c031797b
+v0_11_evidence_snapshot_sha256: ebf83908cda1f0123e78c2312ea14a17375333625c7964768a3012860bdd6c86
+
+fixed_counts:
+  cumulative_source_acquisition_rows: 36
+  frozen_second_coder_tasks: 30
+  cumulative_supplement_links: 22
+  unique_supplemented_tasks: 14
+  raw_archive_queue_rows: 36
+  raw_archive_completed: 0
+  stable_pool_ids_assigned: 0
+  stable_resource_unit_ids_assigned: 0
+  trt_magnitude_directly_codable: 0
+  fully_measured_pra_configurations: 0
+
+integrity_locks:
+  outcome_used_flag: 0
+  canonical_write_flag: 0
+  coder1_key_changed: 0
+  coder2_task_denominator_changed: 0
+  coder2_decisions_prefilled: 0
+  outcome_opening: false
+
+prior_checkpoint_chain:
+  v0_10_sidecar_sha256: e2b2cb7a916543ed7e2d43af54b2fbcb18c3fa5274a29f48861fb0a65901dac6
+  v0_10_internal_bundle_sha256: 16cc521cebc968d097a43b6d19fedb0898d2701a58aef1a527ed996af1822749
+  prior_external_timestamp_commit: 7ccc4468895ba2bc4802a87b305f399712154238
