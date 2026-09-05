@@ -1,0 +1,53 @@
+TRT–PRA Paper 1R Direct-Measurement External Timestamp Checkpoint v0.13
+
+characterization: post-temporal-overlap-reconstruction, pre-Coder-2-return, pre-outcome-unblinding
+not_a_pre_analysis_preregistration: true
+public_disclosure: hash-only; no research-file contents are published
+
+checkpoint_bundle_file: TRT_PRA_Paper1R_v0.13_継続作業bundle_v0.6.zip
+checkpoint_bundle_sha256: 6bd2c8270b616bf52eabf5f1cd66089e34446b41aeaa18041a42a26801f18198
+checkpoint_bundle_member_count: 12
+
+bundle_manifest_sha256: d7581b5d99445f5624ef1a7b783db1b1d972bb0098f725456a4b0fb7e1442625
+v0_13_sidecar_sha256: db849bf9435f444808417226f5e85cc2eb98abf72ed4d469a70eaa479190595d
+coder2_parent_packet_sha256: 0426b5812967425b4c3a772ada94118cff1010f327d7cd01f37f2d5ab7d96a40
+coder2_neutral_supplement_v0_4_sha256: 03ea3985c0b1f4a449d84e37dc0f67eca041c9ca8591c9c007fff1ff8d21d843
+adjudication_coordinator_v0_5_sha256: 0d60858b5d8983f09f3623e58e2692d0795b5bb908572bf1ea1a5ee378fe3220
+preissue_integrity_audit_v0_3_sha256: 49e87473646d344f877a7d420ada9f8e819be8a39e7f619fefaededeac69fcb2
+external_coder_bundle_v0_5_sha256: 984f41932a16d7b88f39cb36237a2425fe996a1fcb76d35c0d94250575863ed2
+raw_archive_runner_bundle_sha256: 6f99ee5c04feafa8de373933f3317a3bc497fb234b5ca5a84893c1fb763bd037
+raw_archive_manifest_40_sha256: a15533d403bb5bd49a21c00a036fff07149d6f198133e8cfaf0df56a99cfb27c
+v0_13_evidence_snapshot_sha256: 89db62b5e8c567b5d80e209ed81bdcb18655b2a1f7ba712f77d27ba398241e1e
+temporal_overlap_methods_note_sha256: cce1e4002f8d686cd18898948bbdb8ae8e52e15dc684745d69c88b6d61d90523
+
+fixed_counts:
+  target_time_windows: 6
+  overlap_configurations: 3
+  pra_breadth_lower_bounds: 3
+  pra_intensity_directly_measured: 0
+  pra_evenness_directly_measured: 0
+  trt_magnitude_directly_measured: 0
+  frozen_second_coder_tasks: 30
+  raw_archive_queue_rows: 40
+  raw_archive_completed: 0
+  stable_pool_ids_assigned: 0
+  stable_resource_unit_ids_assigned: 0
+
+temporal_bounds:
+  hlcm051_overlap_days_inclusive: 1079
+  hlcm051_date_precision: MIXED_ACTUAL_AND_PLANNED
+  sb623_overlap_days_inclusive: 883
+  sb623_date_precision: ACTUAL_START_AND_COMPLETION
+  rbm007_overlap_days_inclusive: 615
+  rbm007_date_precision: ACTUAL_FIRST_ENROLLMENT_AND_REGISTERED_END
+
+integrity_locks:
+  outcome_used_flag: 0
+  canonical_write_flag: 0
+  coder1_key_changed: 0
+  coder2_task_denominator_changed: 0
+  coder2_decisions_prefilled: 0
+  outcome_opening: false
+
+prior_checkpoint_chain:
+  prior_public_checkpoint_commit: c14caa3271afbb502685ef84fb3828f9a5a0a3ea
