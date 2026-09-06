@@ -1,0 +1,44 @@
+TRT–PRA Paper 1R Direct-Measurement External Timestamp Checkpoint v0.14
+
+characterization: post-actual-use-and-return-validation-extension, pre-Coder-2-return, pre-outcome-unblinding
+not_a_pre_analysis_preregistration: true
+public_disclosure: hash-only; no research-file contents should be published
+
+checkpoint_bundle_file: TRT_PRA_Paper1R_v0.14_継続作業bundle_v0.8.zip
+checkpoint_bundle_sha256: 0eab49325014744921af84d1ae7072aa7fb85a4e07e4092b935f51abbbd9d4b4
+checkpoint_bundle_member_count: 18
+
+bundle_manifest_sha256: a25bd318672b36176445932e7b14b7102e0488670ec41d1db759d3c1f6268180
+v0_14_sidecar_sha256: b5ef41c1018293f76c153f754564439fa71cc2345fdb521dc6f2aa4d9e1db2f7
+coder2_neutral_supplement_v0_5_sha256: 8b7dfe6694e386848186c967a71401475d9c1c660ea572d8155ff7e7788f0d64
+adjudication_coordinator_v0_6_sha256: 1ba5124e57e8c1472b11f8752c42ff01a9544f1883ddbd732ecf9e6eb79ea246
+preissue_integrity_audit_v0_4_sha256: abf6055e01f6f239edc43f8badf98965b19f38d01ded08070ceb72696f425197
+external_coder_bundle_v0_6_sha256: 724e0dc63d33db8708665654743082af56c039e394bd6070fa60d37e6e59e81c
+raw_archive_manifest_47_sha256: 411a6b4d6f90cb9332c27afa29ae5dafeb154fe02944a4dff54bbb7ba0347a72
+raw_archive_runner_bundle_v0_2_sha256: 5b66a7e7ae860341310dbd183df9c27b37e044a79ca6274fe8769cde5abb418a
+synthetic_irr_selftest_sha256: eb62ae5639e87d1b4c5db1181098240cd28a218f4f2b7f51e571b8848d1e4a67
+return_validator_bundle_sha256: cfcc1922da87abcc0042a4119bf49117405a35d3038d9bc17145a869eb3ceaa7
+v0_14_evidence_snapshot_sha256: 87c6c66a549ae82844d6f2aa535c7dcd23df99ddbac7a011d35ecfcac21a1cd2
+
+fixed_counts:
+  cumulative_source_acquisition_rows: 47
+  frozen_second_coder_tasks: 30
+  raw_archive_queue_rows: 47
+  raw_archive_completed: 0
+  stable_pool_ids_assigned: 0
+  stable_resource_unit_ids_assigned: 0
+  direct_pra_evenness_configurations: 0
+  trt_magnitude_directly_codable: 0
+  synthetic_irr_tasks: 12
+  return_validator_expected_tasks: 30
+
+integrity_locks:
+  outcome_used_flag: 0
+  canonical_write_flag: 0
+  coder1_key_changed: 0
+  coder2_task_denominator_changed: 0
+  coder2_decisions_prefilled: 0
+  outcome_opening: false
+
+prior_checkpoint_chain:
+  prior_public_checkpoint_commit: 8efb7719f04fe75248d11d29a88231a5e8f5c381
